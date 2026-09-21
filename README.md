@@ -17,7 +17,7 @@ On first launch Minutes asks for two permissions and downloads the speech model 
 - **Microphone**: your side of the conversation.
 - **Screen & System Audio Recording**: macOS files call audio under this permission. Minutes captures sound only. Quit and reopen the app after granting it.
 
-Builds are ad-hoc signed, so macOS asks for both permissions again after every rebuild, and the Keychain asks once to let the new build read your saved sign-in.
+`install.sh` signs with the shared Developer ID certificate from 1Password (see `~/Documents/GitHub/APPLE_SIGNING.md`; `scripts/load-apple-creds.sh` mirrors the Strix loader). That gives the app a stable identity, so the Keychain's "Always Allow" and both permissions survive rebuilds. `./install.sh --adhoc` and plain `scripts/bundle.sh` sign ad hoc instead, and macOS then asks again after every build.
 
 ## How it works
 

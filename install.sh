@@ -1,5 +1,7 @@
 #!/bin/bash
-# Builds Minutes and installs it to /Applications. Usage: ./install.sh [--open]
+# Builds Minutes and installs it to /Applications. Usage: ./install.sh [--open] [--adhoc]
+# Signs with the shared Developer ID certificate from 1Password (see ~/Documents/GitHub/APPLE_SIGNING.md).
+# --adhoc skips that; macOS then re-asks for Keychain and privacy permissions after every build.
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -9,6 +11,27 @@ DEST="/Applications/Minutes.app"
 if ! command -v swift >/dev/null; then
     echo "error: Swift was not found. Install Xcode or the Command Line Tools first." >&2
     exit 1
+fi
+
+OPEN=0
+ADHOC=0
+for arg in "$@"; do
+    case "$arg" in
+        --open) OPEN=1 ;;
+        --adhoc) ADHOC=1 ;;
+        *) echo "error: unknown option $arg" >&2; exit 1 ;;
+    esac
+done
+
+if [ "$ADHOC" = 0 ]; then
+    echo "Loading the Developer ID certificate from 1Password…"
+    # The shared loader does not pick an account; the certificate lives in this one.
+    export OP_ACCOUNT="${OP_ACCOUNT:-you@example.com}"
+    # shellcheck disable=SC1091
+    source scripts/load-apple-creds.sh
+    trap minutes_cleanup_apple_creds EXIT
+    minutes_disable_notarization_env
+    minutes_require_developer_id
 fi
 
 echo "Building Minutes (release)…"
@@ -43,8 +66,8 @@ ditto "$SOURCE" "$DEST"
 touch "$DEST"
 
 echo "Installed Minutes $(defaults read "$DEST/Contents/Info" CFBundleShortVersionString)."
-echo "macOS asks for Microphone and Screen & System Audio Recording again after each new build."
+codesign -dv "$DEST" 2>&1 | sed -n '/^Authority=Developer ID Application/p;/^Signature=adhoc/p' | head -1
 
-if [ "${1:-}" = "--open" ]; then
+if [ "$OPEN" = 1 ]; then
     open "$DEST"
 fi
