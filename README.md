@@ -5,8 +5,8 @@ A macOS app that notices when you are in a Zoom or Google Meet call, records the
 ## Build and run
 
 ```bash
-scripts/bundle.sh          # builds build/Minutes.app (release)
-open build/Minutes.app
+./install.sh --open        # builds and installs to /Applications, then opens it
+scripts/bundle.sh          # or: build build/Minutes.app without installing
 swift test                 # unit tests for MinutesCore
 ```
 
