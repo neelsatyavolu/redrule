@@ -8,6 +8,7 @@ final class LoopbackServer: @unchecked Sendable {
     private let path: String
     private let queue = DispatchQueue(label: "minutes.oauth-loopback")
     private var continuation: CheckedContinuation<OAuthCallback, Error>?
+    private var cancelled = false
 
     init(port: UInt16, path: String) throws {
         let parameters = NWParameters.tcp
@@ -22,6 +23,10 @@ final class LoopbackServer: @unchecked Sendable {
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 queue.async {
+                    guard !self.cancelled else {
+                        continuation.resume(throwing: CancellationError())
+                        return
+                    }
                     self.continuation = continuation
                     self.listener.newConnectionHandler = { [weak self] in self?.handle($0) }
                     self.listener.stateUpdateHandler = { [weak self] state in
@@ -31,22 +36,40 @@ final class LoopbackServer: @unchecked Sendable {
                 }
             }
         } onCancel: {
-            queue.async { self.finish(.failure(CancellationError())) }
+            queue.async {
+                self.cancelled = true
+                self.listener.cancel()
+                self.finish(.failure(CancellationError()))
+            }
         }
     }
 
     private func handle(_ connection: NWConnection) {
         connection.start(queue: queue)
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { [weak self] data, _, _, _ in
-            guard let self, let data, let requestLine = String(decoding: data, as: UTF8.self).components(separatedBy: "\r\n").first,
-                  requestLine.contains(self.path)
-            else {
+        receiveRequestLine(on: connection, buffered: Data())
+    }
+
+    /// The request line can arrive in pieces; keep reading until its line ending shows up.
+    private func receiveRequestLine(on connection: NWConnection, buffered: Data) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { [weak self] data, _, isComplete, error in
+            guard let self else { return }
+            let received = buffered + (data ?? Data())
+            let text = String(decoding: received, as: UTF8.self)
+            guard let requestLine = text.components(separatedBy: "\r\n").first, text.contains("\r\n") else {
+                if isComplete || error != nil || received.count > 16_384 {
+                    connection.cancel()
+                } else {
+                    self.receiveRequestLine(on: connection, buffered: received)
+                }
+                return
+            }
+            // Browsers also open speculative connections and ask for favicons; ignore those and keep listening.
+            guard requestLine.contains(self.path) else {
                 connection.cancel()
                 return
             }
             let result = Result { try OAuthCallbackParser.parse(requestLine) }
-            let succeeded = (try? result.get()) != nil
-            self.respond(on: connection, succeeded: succeeded)
+            self.respond(on: connection, succeeded: (try? result.get()) != nil)
             self.finish(result)
         }
     }

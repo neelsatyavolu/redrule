@@ -97,9 +97,12 @@ private final class WavWriter: @unchecked Sendable {
     }
 
     func write(_ samples: [Float]) {
-        guard let file, let buffer = AVAudioPCMBuffer(pcmFormat: AudioFormat.transcription, frameCapacity: AVAudioFrameCount(samples.count)) else { return }
+        guard let file, file.processingFormat.commonFormat == .pcmFormatFloat32,
+              let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(samples.count)),
+              let channel = buffer.floatChannelData?[0]
+        else { return }
         buffer.frameLength = AVAudioFrameCount(samples.count)
-        samples.withUnsafeBufferPointer { buffer.floatChannelData![0].update(from: $0.baseAddress!, count: samples.count) }
+        samples.withUnsafeBufferPointer { channel.update(from: $0.baseAddress!, count: samples.count) }
         try? file.write(from: buffer)
     }
 }

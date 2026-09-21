@@ -21,27 +21,33 @@ extension AppModel {
 
         let pipeline = RecordingPipeline(transcriber: transcriber, audioFolder: keepAudio ? store.folder(for: meeting.id) : nil)
         self.pipeline = pipeline
-        Task {
+        rawSegments = []
+        startTask = Task {
             do {
                 try await pipeline.start(
                     onSegment: { [weak self] segment in Task { @MainActor in self?.append(segment, to: meeting.id) } },
                     onError: { [weak self] error in Task { @MainActor in self?.errorMessage = "Part of the audio could not be processed. \(error.localizedDescription)" } }
                 )
+                return true
             } catch {
                 self.pipeline = nil
                 recording = nil
                 persist(meeting.with(endedAt: Date(), status: .failed, errorMessage: "Recording could not start. \(error.localizedDescription)"))
+                return false
             }
         }
     }
 
     func stopRecording() {
-        guard let meeting = recording, let pipeline else { return }
+        guard let meeting = recording, let pipeline, let startTask else { return }
         banner = nil
         recording = nil
         self.pipeline = nil
+        self.startTask = nil
         let ended = persist(meeting.with(endedAt: Date(), status: .transcribing))
         Task {
+            // Stopping before capture has finished starting would leave it running with no owner.
+            guard await startTask.value else { return }
             // The pipeline's own list is authoritative: live updates reach the main actor asynchronously.
             let segments = await pipeline.stop()
             perform("The transcript could not be saved.") { try $0.saveTranscript(segments, for: ended.id) }
@@ -69,8 +75,10 @@ extension AppModel {
         // After stop, the pipeline's returned list is saved instead; a late update must not overwrite it.
         guard recording?.id == id else { return }
         liveSegments = TranscriptMerger.merge(liveSegments + [segment])
-        let raw = ((try? store?.transcript(for: id)) ?? []) + [segment]
-        perform("The transcript could not be saved.") { try $0.saveTranscript(raw, for: id) }
+        // Saved as the meeting runs so a crash keeps what was said so far.
+        rawSegments = rawSegments + [segment]
+        let snapshot = rawSegments
+        perform("The transcript could not be saved.") { try $0.saveTranscript(snapshot, for: id) }
     }
 
     private func summaryProvider() async throws -> any SummaryProvider {

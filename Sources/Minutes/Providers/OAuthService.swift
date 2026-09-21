@@ -40,7 +40,7 @@ actor OAuthService {
         guard let pkce = pending[provider] else { throw OAuthError.providerError("Start connecting first.") }
         if let state = callback.state, state != pkce.state { throw OAuthError.stateMismatch }
         let config = OAuthConfig.config(for: provider)
-        let data = try await postForm(config.tokenEndpoint, config.exchangeParameters(code: callback.code, verifier: pkce.verifier))
+        let (data, _) = try await postForm(config.tokenEndpoint, config.exchangeParameters(code: callback.code, verifier: pkce.verifier))
         let bundle = try TokenBundle.from(tokenResponse: data, previous: nil, now: Date(), expirySkew: config.expirySkew)
         try store(bundle, for: provider)
         pending[provider] = nil
@@ -57,13 +57,16 @@ actor OAuthService {
         guard let tokens = try storedTokens(provider) else { throw SummaryError.noProviderConnected }
         guard tokens.needsRefresh(now: Date()) else { return tokens }
         let config = OAuthConfig.config(for: provider)
+        let (data, status) = try await postForm(config.tokenEndpoint, config.refreshParameters(refreshToken: tokens.refreshToken))
         do {
-            let data = try await postForm(config.tokenEndpoint, config.refreshParameters(refreshToken: tokens.refreshToken))
             let refreshed = try TokenBundle.from(tokenResponse: data, previous: tokens, now: Date(), expirySkew: config.expirySkew)
             try store(refreshed, for: provider)
             return refreshed
         } catch let error as OAuthError {
-            // The refresh token was rejected: the user has to sign in again.
+            // Only a rejected grant means signing in again. An outage must not wipe the saved sign-in.
+            guard status == 400 || status == 401 else {
+                throw SummaryError.provider("\(provider.displayName) sign-in could not be refreshed (\(status)). Try again in a moment.")
+            }
             try? disconnect(provider)
             throw SummaryError.provider("\(provider.displayName) needs to be reconnected in Settings. \(error.localizedDescription)")
         }
@@ -81,7 +84,7 @@ actor OAuthService {
         cache[provider] = bundle
     }
 
-    private func postForm(_ url: URL, _ parameters: [String: String]) async throws -> Data {
+    private func postForm(_ url: URL, _ parameters: [String: String]) async throws -> (Data, Int) {
         var components = URLComponents()
         components.queryItems = parameters.map { URLQueryItem(name: $0.key, value: $0.value) }
         var request = URLRequest(url: url, timeoutInterval: 30)
@@ -90,7 +93,7 @@ actor OAuthService {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         // URLComponents leaves "+" unescaped, which form decoding would read as a space.
         request.httpBody = Data((components.percentEncodedQuery ?? "").replacingOccurrences(of: "+", with: "%2B").utf8)
-        let (data, _) = try await URLSession.shared.data(for: request)
-        return data
+        let (data, response) = try await URLSession.shared.data(for: request)
+        return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
     }
 }

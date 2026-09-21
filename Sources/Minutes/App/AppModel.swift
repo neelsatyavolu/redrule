@@ -36,6 +36,8 @@ final class AppModel {
     var speechModel: SpeechModelState = .loading
     @ObservationIgnored var onBannerChange: ((MeetingBanner?) -> Void)?
     @ObservationIgnored var pipeline: RecordingPipeline?
+    @ObservationIgnored var startTask: Task<Bool, Never>?
+    @ObservationIgnored var rawSegments: [TranscriptSegment] = []
 
     // Accounts
     var connected: Set<ProviderID> = []

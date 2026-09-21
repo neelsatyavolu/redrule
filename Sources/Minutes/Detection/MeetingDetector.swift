@@ -70,13 +70,15 @@ final class MeetingDetector {
         AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
     }
 
+    /// `T` must be a plain C scalar (UInt32, pid_t).
     private nonisolated static func value<T>(of selector: AudioObjectPropertySelector, on object: AudioObjectID) -> T? {
         var address = propertyAddress(selector)
         var size = UInt32(MemoryLayout<T>.size)
-        let pointer = UnsafeMutablePointer<T>.allocate(capacity: 1)
-        defer { pointer.deallocate() }
-        guard AudioObjectGetPropertyData(object, &address, 0, nil, &size, pointer) == noErr else { return nil }
-        return pointer.pointee
+        let bytes = UnsafeMutableRawPointer.allocate(byteCount: MemoryLayout<T>.size, alignment: MemoryLayout<T>.alignment)
+        defer { bytes.deallocate() }
+        bytes.initializeMemory(as: UInt8.self, repeating: 0, count: MemoryLayout<T>.size)
+        guard AudioObjectGetPropertyData(object, &address, 0, nil, &size, bytes) == noErr, size == UInt32(MemoryLayout<T>.size) else { return nil }
+        return bytes.load(as: T.self)
     }
 
     private nonisolated static func bundleID(of process: AudioObjectID) -> String? {

@@ -54,8 +54,19 @@ final class Resampler {
 final class MicCapture {
     private let engine = AVAudioEngine()
     private let resampler = Resampler()
+    private var observer: NSObjectProtocol?
 
     func start(onSamples: @escaping ([Float]) -> Void) throws {
+        try installTapAndRun(onSamples)
+        // Plugging in headphones or AirPods changes the input format; the tap has to be rebuilt.
+        observer = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            self.engine.inputNode.removeTap(onBus: 0)
+            try? self.installTapAndRun(onSamples)
+        }
+    }
+
+    private func installTapAndRun(_ onSamples: @escaping ([Float]) -> Void) throws {
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else { throw CaptureError.noMicrophone }
@@ -68,6 +79,8 @@ final class MicCapture {
     }
 
     func stop() {
+        if let observer { NotificationCenter.default.removeObserver(observer) }
+        observer = nil
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
     }
@@ -82,8 +95,10 @@ final class SystemAudioCapture: NSObject, SCStreamOutput, SCStreamDelegate {
     private var onStopped: ((Error) -> Void)?
 
     func start(onSamples: @escaping ([Float]) -> Void, onStopped: @escaping (Error) -> Void) async throws {
-        self.onSamples = onSamples
-        self.onStopped = onStopped
+        queue.sync {
+            self.onSamples = onSamples
+            self.onStopped = onStopped
+        }
 
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
         guard let display = content.displays.first else { throw CaptureError.noDisplay }
@@ -106,34 +121,29 @@ final class SystemAudioCapture: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     func stop() async {
+        // Clear first so a late "stopped" callback is not reported as an error for a finished recording.
+        queue.sync {
+            onSamples = nil
+            onStopped = nil
+        }
         try? await stream?.stopCapture()
         stream = nil
     }
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
-        guard type == .audio, sampleBuffer.isValid, let buffer = Self.pcmBuffer(from: sampleBuffer) else { return }
-        let samples = resampler.convert(buffer)
-        if !samples.isEmpty { onSamples?(samples) }
+        guard type == .audio, sampleBuffer.isValid,
+              var description = sampleBuffer.formatDescription?.audioStreamBasicDescription,
+              let format = AVAudioFormat(streamDescription: &description)
+        else { return }
+        // The buffer list is only valid inside this closure, so resample before leaving it.
+        let samples = try? sampleBuffer.withAudioBufferList { list, _ -> [Float] in
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: list.unsafePointer) else { return [] }
+            return resampler.convert(buffer)
+        }
+        if let samples, !samples.isEmpty { onSamples?(samples) }
     }
 
     func stream(_ stream: SCStream, didStopWithError error: Error) {
         onStopped?(error)
-    }
-
-    private static func pcmBuffer(from sampleBuffer: CMSampleBuffer) -> AVAudioPCMBuffer? {
-        guard let description = sampleBuffer.formatDescription?.audioStreamBasicDescription,
-              let format = AVAudioFormat(standardFormatWithSampleRate: description.mSampleRate, channels: description.mChannelsPerFrame)
-        else { return nil }
-        return try? sampleBuffer.withAudioBufferList { list, _ -> AVAudioPCMBuffer? in
-            guard let source = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: list.unsafePointer),
-                  let copy = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: source.frameLength)
-            else { return nil }
-            // Copy out: the list is only valid inside this closure.
-            copy.frameLength = source.frameLength
-            for channel in 0..<Int(format.channelCount) {
-                copy.floatChannelData?[channel].update(from: source.floatChannelData![channel], count: Int(source.frameLength))
-            }
-            return copy
-        }
     }
 }
