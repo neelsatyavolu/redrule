@@ -6,6 +6,15 @@ struct ModelChoice: Hashable, Identifiable {
     let provider: ProviderID
     let model: String
     let label: String
+    /// Reasoning effort sent with every request for this model.
+    let effort: String
+
+    init(provider: ProviderID, model: String, label: String, effort: String = "low") {
+        self.provider = provider
+        self.model = model
+        self.label = label
+        self.effort = effort
+    }
 
     var id: String { "\(provider.rawValue):\(model)" }
 
@@ -14,7 +23,7 @@ struct ModelChoice: Hashable, Identifiable {
         ModelChoice(provider: .codex, model: "gpt-6-astra", label: "GPT-6 Astra"),
         ModelChoice(provider: .codex, model: "gpt-5.6-sol", label: "GPT-5.6 Sol"),
         ModelChoice(provider: .codex, model: "gpt-5.6-terra", label: "GPT-5.6 Terra"),
-        ModelChoice(provider: .codex, model: "gpt-5.6-luna", label: "GPT-5.6 Luna"),
+        ModelChoice(provider: .codex, model: "gpt-5.6-luna", label: "GPT-5.6 Luna", effort: "medium"),
         ModelChoice(provider: .grok, model: "grok-4.7", label: "Grok 4.7"),
         ModelChoice(provider: .grok, model: "grok-4.6", label: "Grok 4.6"),
         ModelChoice(provider: .grok, model: "grok-4.5", label: "Grok 4.5"),
@@ -51,6 +60,7 @@ private func send(_ request: URLRequest, provider: ProviderID) async throws -> D
 struct CodexClient: SummaryProvider {
     let oauth: OAuthService
     let model: String
+    let effort: String
 
     func complete(system: String, user: String, jsonSchema: [String: any Sendable]?) async throws -> String {
         let tokens = try await oauth.activeTokens(.codex)
@@ -58,7 +68,7 @@ struct CodexClient: SummaryProvider {
             "model": model,
             "instructions": system,
             "input": [["role": "user", "content": [["type": "input_text", "text": user]]]],
-            "reasoning": ["effort": "low"],
+            "reasoning": ["effort": effort],
             "store": false,
             "stream": true,
         ]
@@ -84,6 +94,7 @@ struct CodexClient: SummaryProvider {
 struct GrokClient: SummaryProvider {
     let oauth: OAuthService
     let model: String
+    let effort: String
 
     func complete(system: String, user: String, jsonSchema: [String: any Sendable]?) async throws -> String {
         let tokens = try await oauth.activeTokens(.grok)
@@ -91,6 +102,7 @@ struct GrokClient: SummaryProvider {
             "model": model,
             "messages": [["role": "system", "content": system], ["role": "user", "content": user]],
             "temperature": 0.3,
+            "reasoning": ["effort": effort],
         ]
         var request = URLRequest(url: Endpoint.grok, timeoutInterval: Endpoint.timeout)
         request.httpMethod = "POST"

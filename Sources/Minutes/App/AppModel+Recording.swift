@@ -88,8 +88,8 @@ extension AppModel {
             ?? connected.sorted { $0.rawValue < $1.rawValue }.first.map(ModelChoice.defaultChoice)
         guard let choice else { throw SummaryError.noProviderConnected }
         switch choice.provider {
-        case .codex: return CodexClient(oauth: oauth, model: choice.model)
-        case .grok: return GrokClient(oauth: oauth, model: choice.model)
+        case .codex: return CodexClient(oauth: oauth, model: choice.model, effort: choice.effort)
+        case .grok: return GrokClient(oauth: oauth, model: choice.model, effort: choice.effort)
         }
     }
 }
