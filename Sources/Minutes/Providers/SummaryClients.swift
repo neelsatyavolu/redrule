@@ -1,7 +1,7 @@
 import Foundation
 import MinutesCore
 
-/// A provider and model choice, stored as "codex:gpt-5.5".
+/// A provider and model choice, stored as "codex:gpt-6-astra".
 struct ModelChoice: Hashable, Identifiable {
     let provider: ProviderID
     let model: String
@@ -9,13 +9,23 @@ struct ModelChoice: Hashable, Identifiable {
 
     var id: String { "\(provider.rawValue):\(model)" }
 
+    /// Newest first within each provider; the first entry is that provider's default.
     static let all: [ModelChoice] = [
-        ModelChoice(provider: .codex, model: "gpt-5.5", label: "GPT-5.5"),
+        ModelChoice(provider: .codex, model: "gpt-6-astra", label: "GPT-6 Astra"),
         ModelChoice(provider: .codex, model: "gpt-5.6-sol", label: "GPT-5.6 Sol"),
         ModelChoice(provider: .codex, model: "gpt-5.6-terra", label: "GPT-5.6 Terra"),
         ModelChoice(provider: .codex, model: "gpt-5.6-luna", label: "GPT-5.6 Luna"),
+        ModelChoice(provider: .grok, model: "grok-4.7", label: "Grok 4.7"),
         ModelChoice(provider: .grok, model: "grok-4.6", label: "Grok 4.6"),
+        ModelChoice(provider: .grok, model: "grok-4.5", label: "Grok 4.5"),
     ]
+
+    /// A saved choice that is no longer offered (a retired model) falls back to the same provider's default.
+    static func resolve(_ id: String?) -> ModelChoice {
+        if let match = all.first(where: { $0.id == id }) { return match }
+        let provider = id.flatMap { ProviderID(rawValue: String($0.prefix { $0 != ":" })) } ?? .codex
+        return defaultChoice(for: provider)
+    }
 
     static func defaultChoice(for provider: ProviderID) -> ModelChoice {
         all.first { $0.provider == provider }!

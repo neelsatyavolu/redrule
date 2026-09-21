@@ -60,7 +60,7 @@ final class AppModel {
 
     init() {
         let defaults = UserDefaults.standard
-        modelChoiceID = defaults.string(forKey: Key.modelChoice) ?? ModelChoice.all[0].id
+        modelChoiceID = ModelChoice.resolve(defaults.string(forKey: Key.modelChoice)).id
         keepAudio = defaults.bool(forKey: Key.keepAudio)
         hasOnboarded = defaults.bool(forKey: Key.onboarded)
 
