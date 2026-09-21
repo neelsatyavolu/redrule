@@ -42,9 +42,9 @@ extension AppModel {
         self.pipeline = nil
         let ended = persist(meeting.with(endedAt: Date(), status: .transcribing))
         Task {
-            await pipeline.stop()
-            // Segments from the final flush arrive through main-actor tasks queued before this line resumes.
-            await Task.yield()
+            // The pipeline's own list is authoritative: live updates reach the main actor asynchronously.
+            let segments = await pipeline.stop()
+            perform("The transcript could not be saved.") { try $0.saveTranscript(segments, for: ended.id) }
             await generateNotes(for: ended)
         }
     }
@@ -66,6 +66,8 @@ extension AppModel {
     }
 
     private func append(_ segment: TranscriptSegment, to id: UUID) {
+        // After stop, the pipeline's returned list is saved instead; a late update must not overwrite it.
+        guard recording?.id == id else { return }
         liveSegments = TranscriptMerger.merge(liveSegments + [segment])
         let raw = ((try? store?.transcript(for: id)) ?? []) + [segment]
         perform("The transcript could not be saved.") { try $0.saveTranscript(raw, for: id) }

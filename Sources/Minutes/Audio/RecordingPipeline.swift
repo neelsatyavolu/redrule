@@ -14,7 +14,7 @@ final class RecordingPipeline {
     private let mic = MicCapture()
     private let system = SystemAudioCapture()
     private var input: AsyncStream<Chunk>.Continuation?
-    private var worker: Task<Void, Never>?
+    private var worker: Task<[TranscriptSegment], Never>?
 
     /// - Parameter audioFolder: where to keep `me.wav` and `them.wav`, or nil to keep no audio.
     init(transcriber: any Transcriber, audioFolder: URL?) {
@@ -51,11 +51,15 @@ final class RecordingPipeline {
         worker = Task.detached(priority: .userInitiated) {
             var windowers: [Speaker: AudioWindower] = [.me: AudioWindower(), .them: AudioWindower()]
             var reportedError = false
+            var segments: [TranscriptSegment] = []
 
             func transcribe(_ window: AudioWindow, speaker: Speaker) async {
                 do {
                     let text = try await transcriber.transcribe(window)
-                    if !text.isEmpty { onSegment(TranscriptSegment(speaker: speaker, start: window.start, end: window.end, text: text)) }
+                    guard !text.isEmpty else { return }
+                    let segment = TranscriptSegment(speaker: speaker, start: window.start, end: window.end, text: text)
+                    segments.append(segment)
+                    onSegment(segment)
                 } catch {
                     if !reportedError { onError(error) }
                     reportedError = true
@@ -71,15 +75,16 @@ final class RecordingPipeline {
             for speaker in [Speaker.them, .me] {
                 if let window = windowers[speaker]!.flush() { await transcribe(window, speaker: speaker) }
             }
+            return segments
         }
     }
 
-    /// Stops capture and returns once every remaining second of audio has been transcribed.
-    func stop() async {
+    /// Stops capture, transcribes the remaining audio, and returns every segment of the meeting.
+    func stop() async -> [TranscriptSegment] {
         mic.stop()
         await system.stop()
         input?.finish()
-        await worker?.value
+        return await worker?.value ?? []
     }
 }
 

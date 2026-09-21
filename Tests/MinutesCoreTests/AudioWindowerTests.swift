@@ -9,7 +9,8 @@ import Testing
 
     @Test func holdsAudioUntilMaxWindow() {
         var windower = AudioWindower()
-        #expect(windower.append(tone(seconds: 10), endingAt: 10).isEmpty)
+        let windows = windower.append(tone(seconds: 10), endingAt: 10)
+        #expect(windows.isEmpty)
     }
 
     @Test func cutsAtQuietestPointInsideSearchRange() throws {
@@ -27,26 +28,32 @@ import Testing
         var windower = AudioWindower()
         let first = windower.append(tone(seconds: 18), endingAt: 18)
         let cut = Double(try #require(first.first).samples.count) / 16_000
-        let flushed = try #require(windower.flush())
+        let tail = windower.flush()
+        let flushed = try #require(tail)
         #expect(abs(flushed.start - cut) < 0.001)
-        #expect(windower.flush() == nil)
+        let again = windower.flush()
+        #expect(again == nil)
     }
 
     @Test func startReflectsWallClockOfFirstSample() throws {
         var windower = AudioWindower()
         _ = windower.append(tone(seconds: 2), endingAt: 32)
-        #expect(try #require(windower.flush()).start == 30)
+        let tail = windower.flush()
+        #expect(tail?.start == 30)
     }
 
     @Test func silentWindowsAreDropped() {
         var windower = AudioWindower()
-        #expect(windower.append([Float](repeating: 0.0001, count: 18 * 16_000), endingAt: 18).isEmpty)
-        #expect(windower.flush() == nil)
+        let windows = windower.append([Float](repeating: 0.0001, count: 18 * 16_000), endingAt: 18)
+        let tail = windower.flush()
+        #expect(windows.isEmpty)
+        #expect(tail == nil)
     }
 
     @Test func tinyTailIsDropped() {
         var windower = AudioWindower()
         _ = windower.append(tone(seconds: 0.2), endingAt: 0.2)
-        #expect(windower.flush() == nil)
+        let tail = windower.flush()
+        #expect(tail == nil)
     }
 }
