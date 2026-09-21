@@ -25,8 +25,12 @@ done
 
 if [ "$ADHOC" = 0 ]; then
     echo "Loading the Developer ID certificate from 1Password…"
-    # The shared loader does not pick an account; the certificate lives in this one.
-    export OP_ACCOUNT="${OP_ACCOUNT:-you@example.com}"
+    # The shared loader does not pick an account. This is the user ID of the account that
+    # holds the certificate: two accounts share my.1password.com, and the email does not select one.
+    export OP_ACCOUNT="${OP_ACCOUNT:-YOUR_1PASSWORD_ACCOUNT}"
+    # In that account the default vault is named "Private", not "Personal".
+    export AGMUX_APPLE_SIGNING_VAULT="${AGMUX_APPLE_SIGNING_VAULT:-Private}"
+    export AGMUX_APPLE_NOTARY_VAULT="${AGMUX_APPLE_NOTARY_VAULT:-Private}"
     # shellcheck disable=SC1091
     source scripts/load-apple-creds.sh
     trap minutes_cleanup_apple_creds EXIT
@@ -66,7 +70,7 @@ ditto "$SOURCE" "$DEST"
 touch "$DEST"
 
 echo "Installed Minutes $(defaults read "$DEST/Contents/Info" CFBundleShortVersionString)."
-codesign -dv "$DEST" 2>&1 | sed -n '/^Authority=Developer ID Application/p;/^Signature=adhoc/p' | head -1
+codesign -dvv "$DEST" 2>&1 | sed -n '/^Authority=Developer ID Application/p;/^Signature=adhoc/p' | head -1
 
 if [ "$OPEN" = 1 ]; then
     open "$DEST"
