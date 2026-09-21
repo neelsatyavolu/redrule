@@ -14,7 +14,9 @@ let package = Package(
             dependencies: [
                 "MinutesCore",
                 .product(name: "FluidAudio", package: "FluidAudio"),
-            ]
+            ],
+            // Audio and ScreenCaptureKit callbacks predate strict concurrency.
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(name: "MinutesCoreTests", dependencies: ["MinutesCore"]),
     ]

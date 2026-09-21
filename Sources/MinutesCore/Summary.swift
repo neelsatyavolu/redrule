@@ -51,18 +51,21 @@ public enum SummaryPrompt {
     }
 
     /// Strict JSON schema for providers that support structured output.
-    public static var schema: [String: Any] {
-        let string: [String: Any] = ["type": "string"]
-        let strings: [String: Any] = ["type": "array", "items": string]
-        func object(_ properties: [String: Any]) -> [String: Any] {
+    public static var schema: [String: any Sendable] {
+        let string: [String: any Sendable] = ["type": "string"]
+        let strings: [String: any Sendable] = ["type": "array", "items": string]
+        func object(_ properties: [String: any Sendable]) -> [String: any Sendable] {
             ["type": "object", "properties": properties, "required": properties.keys.sorted(), "additionalProperties": false]
+        }
+        func array(of item: [String: any Sendable]) -> [String: any Sendable] {
+            ["type": "array", "items": item]
         }
         return object([
             "title": string,
             "tldr": string,
-            "sections": ["type": "array", "items": object(["heading": string, "bullets": strings])],
+            "sections": array(of: object(["heading": string, "bullets": strings])),
             "decisions": strings,
-            "action_items": ["type": "array", "items": object(["owner": string, "task": string])],
+            "action_items": array(of: object(["owner": string, "task": string])),
         ])
     }
 }
