@@ -56,6 +56,16 @@ public struct MeetingStore: Sendable {
         try FileManager.default.removeItem(at: folder(for: id))
     }
 
+    public func rename(_ meeting: Meeting, to title: String) throws {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return }
+        if let note = try note(for: meeting.id) {
+            try saveNote(MeetingNote(title: title, tldr: note.tldr, sections: note.sections,
+                                     decisions: note.decisions, actionItems: note.actionItems), for: meeting.id)
+        }
+        try save(meeting.with(title: title, errorMessage: meeting.errorMessage))
+    }
+
     /// Meetings left mid-flight by a crash or quit can never finish; mark them so the UI offers a retry.
     public func recoverInterrupted() throws {
         for meeting in try list() where meeting.status != .done && meeting.status != .failed {

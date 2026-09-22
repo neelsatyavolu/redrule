@@ -9,11 +9,15 @@ enum AudioFormat {
 enum CaptureError: LocalizedError {
     case noDisplay
     case noMicrophone
+    case microphoneUnavailable
+    case microphoneSelectionFailed
 
     var errorDescription: String? {
         switch self {
         case .noDisplay: "No display was found to capture system audio from."
         case .noMicrophone: "No microphone is available."
+        case .microphoneUnavailable: "The selected microphone is disconnected. Connect it or choose another microphone in Settings."
+        case .microphoneSelectionFailed: "The selected microphone could not be opened. Choose another microphone in Settings."
         }
     }
 }
@@ -56,19 +60,34 @@ final class MicCapture {
     private let resampler = Resampler()
     private var observer: NSObjectProtocol?
 
-    func start(onSamples: @escaping ([Float]) -> Void) throws {
-        try installTapAndRun(onSamples)
+    func start(deviceUID: String, onSamples: @escaping ([Float]) -> Void, onError: @escaping (Error) -> Void) throws {
+        try installTapAndRun(deviceUID: deviceUID, onSamples)
         // Plugging in headphones or AirPods changes the input format; the tap has to be rebuilt.
         observer = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
             guard let self else { return }
             self.engine.inputNode.removeTap(onBus: 0)
-            try? self.installTapAndRun(onSamples)
+            do { try self.installTapAndRun(deviceUID: deviceUID, onSamples) }
+            catch { onError(error) }
         }
     }
 
-    private func installTapAndRun(_ onSamples: @escaping ([Float]) -> Void) throws {
+    private func installTapAndRun(deviceUID: String, _ onSamples: @escaping ([Float]) -> Void) throws {
         let input = engine.inputNode
-        let format = input.outputFormat(forBus: 0)
+        if var device = try MicrophoneDevice.resolve(deviceUID, in: MicrophoneDevice.available()) {
+            guard let unit = input.audioUnit else { throw CaptureError.microphoneSelectionFailed }
+            var current: AudioDeviceID = 0
+            var size = UInt32(MemoryLayout.size(ofValue: current))
+            let status = AudioUnitGetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &current, &size)
+            if status != noErr || current != device {
+                guard AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global,
+                                           0, &device, UInt32(MemoryLayout.size(ofValue: device))) == noErr else {
+                    throw CaptureError.microphoneSelectionFailed
+                }
+            }
+        }
+        // After selecting a device, the output bus can still hold the previous device's
+        // format (e.g. Bluetooth at 24 kHz). The tap must match the current hardware.
+        let format = input.inputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else { throw CaptureError.noMicrophone }
         input.installTap(onBus: 0, bufferSize: 4096, format: format) { [resampler] buffer, _ in
             let samples = resampler.convert(buffer)

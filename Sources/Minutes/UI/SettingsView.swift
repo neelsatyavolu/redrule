@@ -9,6 +9,7 @@ struct SettingsView: View {
             pane { PermissionRows() }.tabItem { Label("Permissions", systemImage: "hand.raised") }
         }
         .frame(width: 520)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private func pane<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
@@ -20,10 +21,23 @@ struct SettingsView: View {
 
 private struct GeneralSettings: View {
     @Environment(AppModel.self) private var model
+    @State private var microphones: [MicrophoneDevice] = []
 
     var body: some View {
         @Bindable var model = model
         Form {
+            Picker("Microphone", selection: $model.microphoneUID) {
+                Text("System Default").tag("")
+                ForEach(microphones) { microphone in
+                    Text(microphone.name).tag(microphone.id)
+                }
+                if !model.microphoneUID.isEmpty, !microphones.contains(where: { $0.id == model.microphoneUID }) {
+                    Text("Selected microphone (disconnected)").tag(model.microphoneUID)
+                }
+            }
+            Text("Microphone changes apply to the next recording.")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
             Picker("Write notes with", selection: $model.modelChoiceID) {
                 ForEach(ProviderID.allCases) { provider in
                     Section(provider.displayName) {
@@ -50,6 +64,12 @@ private struct GeneralSettings: View {
             }
         }
         .formStyle(.grouped)
+        .task {
+            while !Task.isCancelled {
+                microphones = MicrophoneDevice.available()
+                do { try await Task.sleep(for: .seconds(2)) } catch { break }
+            }
+        }
     }
 }
 

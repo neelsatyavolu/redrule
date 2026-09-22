@@ -11,15 +11,17 @@ final class RecordingPipeline {
 
     private let transcriber: any Transcriber
     private let audioFolder: URL?
+    private let microphoneUID: String
     private let mic = MicCapture()
     private let system = SystemAudioCapture()
     private var input: AsyncStream<Chunk>.Continuation?
     private var worker: Task<[TranscriptSegment], Never>?
 
     /// - Parameter audioFolder: where to keep `me.wav` and `them.wav`, or nil to keep no audio.
-    init(transcriber: any Transcriber, audioFolder: URL?) {
+    init(transcriber: any Transcriber, audioFolder: URL?, microphoneUID: String) {
         self.transcriber = transcriber
         self.audioFolder = audioFolder
+        self.microphoneUID = microphoneUID
     }
 
     func start(
@@ -36,7 +38,9 @@ final class RecordingPipeline {
                 onSamples: { continuation.yield(Chunk(speaker: .them, samples: $0, time: elapsed())) },
                 onStopped: onError
             )
-            try mic.start { continuation.yield(Chunk(speaker: .me, samples: $0, time: elapsed())) }
+            try mic.start(deviceUID: microphoneUID,
+                          onSamples: { continuation.yield(Chunk(speaker: .me, samples: $0, time: elapsed())) },
+                          onError: onError)
         } catch {
             await system.stop()
             continuation.finish()
@@ -44,6 +48,7 @@ final class RecordingPipeline {
         }
 
         let transcriber = transcriber
+        let recognizer = SpeakerRecognizer()
         let writers = audioFolder.map { folder in
             [Speaker.me: WavWriter(url: folder.appendingPathComponent("me.wav")), .them: WavWriter(url: folder.appendingPathComponent("them.wav"))]
         } ?? [:]
@@ -55,11 +60,22 @@ final class RecordingPipeline {
 
             func transcribe(_ window: AudioWindow, speaker: Speaker) async {
                 do {
-                    let text = try await transcriber.transcribe(window)
-                    guard !text.isEmpty else { return }
-                    let segment = TranscriptSegment(speaker: speaker, start: window.start, end: window.end, text: text)
-                    segments.append(segment)
-                    onSegment(segment)
+                    let result = try await transcriber.transcribe(window)
+                    guard !result.text.isEmpty else { return }
+                    var identified = [TranscriptSegment(speaker: speaker, start: window.start, end: window.end, text: result.text)]
+                    if speaker == .them, !result.words.isEmpty {
+                        do {
+                            let turns = try await recognizer.turns(in: window)
+                            if !turns.isEmpty {
+                                identified = SpeakerAlignment.segments(words: result.words, turns: turns, offset: window.start)
+                            }
+                        } catch {
+                            onError(NSError(domain: "Minutes", code: 1, userInfo: [NSLocalizedDescriptionKey:
+                                "Speaker detection is unavailable for this recording; the transcript is still being saved. \(error.localizedDescription)"]))
+                        }
+                    }
+                    segments.append(contentsOf: identified)
+                    for segment in identified { onSegment(segment) }
                 } catch {
                     if !reportedError { onError(error) }
                     reportedError = true

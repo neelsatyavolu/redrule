@@ -19,6 +19,7 @@ final class AppModel {
     private enum Key {
         static let modelChoice = "modelChoice"
         static let keepAudio = "keepAudio"
+        static let microphoneUID = "microphoneUID"
         static let onboarded = "onboarded"
     }
 
@@ -28,6 +29,8 @@ final class AppModel {
     var selectedTranscript: [TranscriptSegment] = []
     var selectedNote: MeetingNote?
     var errorMessage: String?
+    var sharingBusy = false
+    var showsArchived = false
 
     // Recording
     var recording: Meeting?
@@ -51,6 +54,7 @@ final class AppModel {
     // Settings
     var modelChoiceID: String { didSet { UserDefaults.standard.set(modelChoiceID, forKey: Key.modelChoice) } }
     var keepAudio: Bool { didSet { UserDefaults.standard.set(keepAudio, forKey: Key.keepAudio) } }
+    var microphoneUID: String { didSet { UserDefaults.standard.set(microphoneUID, forKey: Key.microphoneUID) } }
     var hasOnboarded: Bool { didSet { UserDefaults.standard.set(hasOnboarded, forKey: Key.onboarded) } }
 
     @ObservationIgnored let store: MeetingStore?
@@ -62,6 +66,7 @@ final class AppModel {
         let defaults = UserDefaults.standard
         modelChoiceID = ModelChoice.resolve(defaults.string(forKey: Key.modelChoice)).id
         keepAudio = defaults.bool(forKey: Key.keepAudio)
+        microphoneUID = defaults.string(forKey: Key.microphoneUID) ?? ""
         hasOnboarded = defaults.bool(forKey: Key.onboarded)
 
         do {
@@ -73,7 +78,7 @@ final class AppModel {
             errorMessage = "Minutes cannot open its storage folder. \(error.localizedDescription)"
         }
         reloadMeetings()
-        selection = meetings.first?.id
+        selection = meetings.first { !$0.isArchived }?.id
         loadSelection() // property observers do not run inside init
     }
 
@@ -116,10 +121,54 @@ final class AppModel {
     }
 
     func delete(_ meeting: Meeting) {
-        guard meeting.id != recording?.id else { return }
-        perform("The meeting could not be deleted.") { try $0.delete(meeting.id) }
+        guard meeting.id != recording?.id, !sharingBusy else { return }
+        Task {
+            guard await revokeShare(for: meeting) else { return }
+            perform("The meeting could not be deleted.") { try $0.delete(meeting.id) }
+            reloadMeetings()
+            if selection == meeting.id { selection = visibleMeetings.first?.id }
+        }
+    }
+
+    var visibleMeetings: [Meeting] { meetings.filter { $0.isArchived == showsArchived } }
+
+    func canEdit(_ meeting: Meeting) -> Bool {
+        meeting.id != recording?.id && (meeting.status == .done || meeting.status == .failed)
+    }
+
+    func rename(_ meeting: Meeting, to title: String) {
+        guard let current = meetings.first(where: { $0.id == meeting.id }), canEdit(current) else { return }
+        perform("The meeting could not be renamed.") { try $0.rename(current, to: title) }
         reloadMeetings()
-        if selection == meeting.id { selection = meetings.first?.id }
+        if selection == meeting.id { loadSelection() }
+    }
+
+    func toggleArchive(_ meeting: Meeting) {
+        guard let current = meetings.first(where: { $0.id == meeting.id }), canEdit(current) else { return }
+        persist(current.with(errorMessage: current.errorMessage, isArchived: !current.isArchived))
+        if selection == meeting.id { selection = visibleMeetings.first?.id }
+    }
+
+    func saveEditedNote(_ note: MeetingNote, for meeting: Meeting) -> Bool {
+        guard let store, let current = meetings.first(where: { $0.id == meeting.id }), canEdit(current) else { return false }
+        do {
+            try store.saveNote(note, for: meeting.id)
+            try store.save(current.with(title: note.title, errorMessage: current.errorMessage))
+            reloadMeetings()
+            if selection == meeting.id { loadSelection() }
+            return true
+        } catch {
+            errorMessage = "The notes could not be saved. \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    func copyMarkdown(for meeting: Meeting) {
+        perform("The notes could not be copied.") { store in
+            guard let note = try store.note(for: meeting.id) else { return }
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(note.markdown, forType: .string)
+        }
     }
 
     func copyMarkdown() {

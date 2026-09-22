@@ -59,7 +59,7 @@ if pgrep -x Minutes >/dev/null; then
     fi
 fi
 
-echo "Installing to $DEST…"
+echo "Installing to ${DEST}…"
 if [ -d "$DEST" ]; then
     # Only ever removes the previous install of this app.
     rm -rf "$DEST"

@@ -2,10 +2,15 @@ import FluidAudio
 import Foundation
 import MinutesCore
 
+struct Transcription: Sendable {
+    let text: String
+    let words: [TranscriptWord]
+}
+
 protocol Transcriber: Sendable {
     /// Downloads (first run) and loads the model. Safe to call repeatedly.
     func prepare() async throws
-    func transcribe(_ window: AudioWindow) async throws -> String
+    func transcribe(_ window: AudioWindow) async throws -> Transcription
 }
 
 /// Parakeet TDT v3 running on the Neural Engine through FluidAudio.
@@ -16,12 +21,15 @@ actor ParakeetTranscriber: Transcriber {
         _ = try await manager()
     }
 
-    func transcribe(_ window: AudioWindow) async throws -> String {
+    func transcribe(_ window: AudioWindow) async throws -> Transcription {
         let manager = try await manager()
         // Each window is independent speech, so it gets a fresh decoder state.
         var state = TdtDecoderState.make()
         let result = try await manager.transcribe(window.samples, decoderState: &state)
-        return result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return Transcription(text: result.text.trimmingCharacters(in: .whitespacesAndNewlines),
+                             words: buildWordTimings(from: result.tokenTimings ?? []).map {
+                                 TranscriptWord(text: $0.word, start: $0.startTime, end: $0.endTime)
+                             })
     }
 
     private func manager() async throws -> AsrManager {

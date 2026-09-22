@@ -19,7 +19,8 @@ extension AppModel {
         liveSegments = []
         selection = meeting.id
 
-        let pipeline = RecordingPipeline(transcriber: transcriber, audioFolder: keepAudio ? store.folder(for: meeting.id) : nil)
+        let pipeline = RecordingPipeline(transcriber: transcriber, audioFolder: keepAudio ? store.folder(for: meeting.id) : nil,
+                                         microphoneUID: microphoneUID)
         self.pipeline = pipeline
         rawSegments = []
         startTask = Task {

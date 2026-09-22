@@ -24,6 +24,7 @@ struct MinutesApp: App {
         Settings {
             SettingsView().environment(delegate.model)
         }
+        .windowResizability(.contentSize)
 
         MenuBarExtra {
             MenuBarContent().environment(delegate.model)
@@ -69,16 +70,10 @@ private struct MenuBarLabel: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        if let meeting = model.recording {
-            TimelineView(.periodic(from: meeting.startedAt, by: 1)) { context in
-                HStack(spacing: 4) {
-                    Image(systemName: "record.circle.fill")
-                    Text(Format.clock(context.date.timeIntervalSince(meeting.startedAt))).monospacedDigit()
-                }
-            }
-        } else {
-            Image(systemName: "text.quote")
-        }
+        // TimelineView in a MenuBarExtra label can continuously invalidate the status
+        // item on macOS, starving the main run loop. Keep the clock in LiveView.
+        Image(systemName: model.isRecording ? "record.circle.fill" : "text.quote")
+            .accessibilityLabel(model.isRecording ? "Minutes recording" : "Minutes")
     }
 }
 

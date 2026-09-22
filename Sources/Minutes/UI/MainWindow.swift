@@ -4,12 +4,19 @@ import SwiftUI
 struct MainWindow: View {
     @Environment(AppModel.self) private var model
     @State private var showsTranscript = false
+    @State private var sharingMeeting: Meeting?
     @State private var pendingDelete: Meeting?
+    @State private var renamingMeeting: Meeting?
+    @State private var meetingTitle = ""
+    @State private var editingMeeting: Meeting?
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     var body: some View {
         @Bindable var model = model
-        NavigationSplitView {
-            Sidebar()
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            Sidebar { meeting in
+                meetingMenu(for: meeting)
+            }
                 .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 320)
         } detail: {
             detail
@@ -17,8 +24,20 @@ struct MainWindow: View {
                     PadPage { TranscriptRows(segments: model.selectedTranscript) }
                         .inspectorColumnWidth(min: 300, ideal: 380, max: 520)
                 }
+                .environment(\.showsPadRule, columnVisibility == .detailOnly)
         }
         .toolbar { toolbar }
+        .sheet(item: $sharingMeeting) { meeting in ShareView(meeting: meeting) }
+        .sheet(item: $editingMeeting) { meeting in NoteEditor(meeting: meeting) }
+        .alert("Rename meeting", isPresented: .init(get: { renamingMeeting != nil }, set: { if !$0 { renamingMeeting = nil } })) {
+            TextField("Title", text: $meetingTitle)
+            Button("Cancel", role: .cancel) { renamingMeeting = nil }
+            Button("Save") {
+                if let renamingMeeting { model.rename(renamingMeeting, to: meetingTitle) }
+                renamingMeeting = nil
+            }
+            .disabled(meetingTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
         .background(Theme.sheet)
         .sheet(isPresented: .init(get: { !model.hasOnboarded }, set: { if !$0 { model.hasOnboarded = true } })) {
             OnboardingView()
@@ -34,8 +53,30 @@ struct MainWindow: View {
                 pendingDelete = nil
             }
         } message: {
-            Text("The notes and transcript are removed from this Mac. This cannot be undone.")
+            Text("Any shared link will be revoked, then the notes and transcript will be removed from this Mac. This cannot be undone.")
         }
+    }
+
+    @ViewBuilder private func meetingMenu(for meeting: Meeting) -> some View {
+        Button("Rename…", systemImage: "pencil") {
+            meetingTitle = meeting.title
+            renamingMeeting = meeting
+        }
+        .disabled(!model.canEdit(meeting))
+        Button("Edit Notes…", systemImage: "square.and.pencil") { editingMeeting = meeting }
+            .disabled(!model.canEdit(meeting) || meeting.status != .done)
+        Divider()
+        Button("Share…", systemImage: "square.and.arrow.up") { sharingMeeting = meeting }
+            .disabled(meeting.status != .done || model.sharingBusy)
+        Button("Copy as Markdown", systemImage: "doc.on.doc") { model.copyMarkdown(for: meeting) }
+            .disabled(meeting.status != .done)
+        Divider()
+        Button(meeting.isArchived ? "Restore from Archive" : "Archive", systemImage: "archivebox") {
+            model.toggleArchive(meeting)
+        }
+        .disabled(!model.canEdit(meeting))
+        Button("Delete…", systemImage: "trash", role: .destructive) { pendingDelete = meeting }
+            .disabled(!model.canEdit(meeting) || model.sharingBusy)
     }
 
     @ViewBuilder private var detail: some View {
@@ -43,7 +84,7 @@ struct MainWindow: View {
             if meeting.id == model.recording?.id {
                 LiveView(meeting: meeting)
             } else if meeting.status == .done, let note = model.selectedNote {
-                NoteView(meeting: meeting, note: note)
+                MeetingContentView(meeting: meeting, note: note).id(meeting.id)
             } else {
                 ProcessingView(meeting: meeting)
             }
@@ -65,6 +106,9 @@ struct MainWindow: View {
         if let meeting = model.selectedMeeting, meeting.id != model.recording?.id {
             ToolbarItemGroup(placement: .primaryAction) {
                 if model.selectedNote != nil {
+                    Button { sharingMeeting = meeting } label: { Label("Share", systemImage: "square.and.arrow.up") }
+                        .help("Share a copyable link")
+                        .disabled(model.sharingBusy)
                     Button { model.copyMarkdown() } label: { Label("Copy as Markdown", systemImage: "doc.on.doc") }
                         .help("Copy the notes as Markdown")
                     Button { Task { await model.generateNotes(for: meeting) } } label: { Label("Rewrite notes", systemImage: "arrow.clockwise") }
@@ -76,13 +120,15 @@ struct MainWindow: View {
                     .disabled(model.selectedTranscript.isEmpty)
                 Button { pendingDelete = meeting } label: { Label("Delete", systemImage: "trash") }
                     .help("Delete this meeting")
+                    .disabled(model.sharingBusy)
             }
         }
     }
 }
 
-private struct Sidebar: View {
+private struct Sidebar<MenuContent: View>: View {
     @Environment(AppModel.self) private var model
+    @ViewBuilder let menu: (Meeting) -> MenuContent
 
     var body: some View {
         @Bindable var model = model
@@ -91,17 +137,35 @@ private struct Sidebar: View {
                 Section(group.label) {
                     ForEach(group.meetings) { meeting in
                         SidebarRow(meeting: meeting, isLive: meeting.id == model.recording?.id).tag(meeting.id)
+                            .contextMenu { menu(meeting) }
                     }
                 }
             }
         }
         .listStyle(.sidebar)
+        .safeAreaInset(edge: .top) {
+            Picker("Library", selection: $model.showsArchived) {
+                Text("Meetings").tag(false)
+                Text("Archive").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .padding(10)
+        }
+        .onChange(of: model.showsArchived) { _, _ in
+            model.selection = model.visibleMeetings.first?.id
+        }
+        .onChange(of: model.recording?.id) { _, id in
+            if let id {
+                model.showsArchived = false
+                model.selection = id
+            }
+        }
         .safeAreaInset(edge: .bottom) { speechModelNotice }
     }
 
     private var groups: [(day: Date, label: String, meetings: [Meeting])] {
         let calendar = Calendar.current
-        return Dictionary(grouping: model.meetings) { calendar.startOfDay(for: $0.startedAt) }
+        return Dictionary(grouping: model.visibleMeetings) { calendar.startOfDay(for: $0.startedAt) }
             .sorted { $0.key > $1.key }
             .map { day, meetings in
                 let label = calendar.isDateInToday(day) ? "Today"

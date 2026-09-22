@@ -8,7 +8,7 @@ struct TranscriptRows: View {
     var body: some View {
         ForEach(segments) { segment in
             PadRow(spacing: 16) {
-                Text("\(segment.speaker.label)\n\(TranscriptMerger.timestamp(segment.start))")
+                Text("\(segment.speakerLabel)\n\(TranscriptMerger.timestamp(segment.start))")
             } content: {
                 Text(segment.text)
                     .font(Theme.serif(15))

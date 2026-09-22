@@ -38,3 +38,13 @@ The design spec is in `docs/superpowers/specs/`.
 
 - The Codex and Grok sign-ins reuse the OAuth clients of their official command-line tools, the same approach as apexline. Suitable for personal use only.
 - Recording other people can require their consent. Tell them.
+
+## Notes, transcripts, and sharing
+
+Completed meetings have **Notes** and **Transcript** tabs. The transcript includes timestamps and editable speaker labels. New recordings use FluidAudio's local diarizer to distinguish voices in the call audio; the microphone remains **Me**. Models download on first use. Speaker labels are estimates, particularly for short turns, similar voices and overlapping speech. Unknown or overlapping speakers retain **Them**. Detection failures preserve the transcript. Existing transcripts retain their original labels; there is no automatic reprocessing of old audio.
+
+Choose **Share** to create or update a copyable link. The summary is shared by default; the transcript and speaker names are optional. Audio is never uploaded. Shared pages require no recipient login. Edits remain local until **Update & copy link**. **Stop sharing** removes the hosted copy; deleting a shared meeting first revokes its link and requires connectivity. Copies already saved by recipients cannot be recalled.
+
+The service lives in `sharing/` and uses private Vercel Blob storage. The app uses `https://minutes-sharing.vercel.app`. Uploads and revocation require a dedicated `MINUTES_SHARE_KEY` environment secret and the same credential in this Mac's Keychain (`Minutes` / `sharing`); no service credential is embedded in the app. After linking the dedicated Vercel project and connecting a private Blob store, run `swift scripts/setup-sharing.swift` from the repository root to provision this Mac, then redeploy. This setup is for a personal installation; other Macs must be provisioned with the same service credential rather than independently rotating it.
+
+Web checks: `cd sharing && npm ci && npm test && npm run build`. After provisioning, `python3 scripts/test-sharing.py` (from the repository root) checks the live service with synthetic content and deletes the test share afterward.

@@ -8,7 +8,7 @@ public enum TranscriptMerger {
     /// and joins neighbouring segments from the same speaker.
     public static func merge(_ segments: [TranscriptSegment]) -> [TranscriptSegment] {
         let cleaned = segments
-            .map { TranscriptSegment(speaker: $0.speaker, start: $0.start, end: $0.end, text: $0.text.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            .map { TranscriptSegment(speaker: $0.speaker, start: $0.start, end: $0.end, text: $0.text.trimmingCharacters(in: .whitespacesAndNewlines), speakerID: $0.speakerID, speakerName: $0.speakerName) }
             .filter { !$0.text.isEmpty }
         let remote = cleaned.filter { $0.speaker == .them }
         let ordered = cleaned
@@ -16,9 +16,9 @@ public enum TranscriptMerger {
             .sorted { ($0.start, $0.speaker.rawValue) < ($1.start, $1.speaker.rawValue) }
 
         return ordered.reduce(into: [TranscriptSegment]()) { result, segment in
-            if let last = result.last, last.speaker == segment.speaker, segment.start - last.end <= joinGap {
+            if let last = result.last, last.speakerKey == segment.speakerKey, segment.start - last.end <= joinGap {
                 result[result.count - 1] = TranscriptSegment(
-                    speaker: last.speaker, start: last.start, end: max(last.end, segment.end), text: last.text + " " + segment.text
+                    speaker: last.speaker, start: last.start, end: max(last.end, segment.end), text: last.text + " " + segment.text, speakerID: last.speakerID, speakerName: last.speakerName
                 )
             } else {
                 result.append(segment)
@@ -27,7 +27,7 @@ public enum TranscriptMerger {
     }
 
     public static func render(_ segments: [TranscriptSegment]) -> String {
-        segments.map { "[\(timestamp($0.start))] \($0.speaker.label): \($0.text)" }.joined(separator: "\n")
+        segments.map { "[\(timestamp($0.start))] \($0.speakerLabel): \($0.text)" }.joined(separator: "\n")
     }
 
     public static func timestamp(_ seconds: TimeInterval) -> String {

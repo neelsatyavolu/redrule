@@ -1,0 +1,12 @@
+{
+  "name": "minutes-sharing",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-test-module-mocks --test",
+    "build": "node --check api/share.js && node --check api/note.js"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.0.0"
+  }
+}

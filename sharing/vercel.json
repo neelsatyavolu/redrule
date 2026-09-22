@@ -1,0 +1,1 @@
+{"outputDirectory":"public","rewrites":[{"source":"/s/:id","destination":"/api/note?id=:id"}],"headers":[{"source":"/(.*)","headers":[{"key":"X-Robots-Tag","value":"noindex, nofollow"},{"key":"Referrer-Policy","value":"no-referrer"}]}]}

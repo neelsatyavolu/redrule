@@ -71,4 +71,33 @@ import Testing
         try store.recoverInterrupted()
         #expect(try store.list().first?.status == .failed)
     }
+    @Test func speakerRenamePersistsWithoutChangingOtherSpeakers() throws {
+        let store = try makeStore()
+        defer { try? FileManager.default.removeItem(at: store.root) }
+        let m = meeting("speakers", started: 1)
+        try store.save(m)
+        let a = TranscriptSegment(speaker: .them, start: 0, end: 1, text: "Hello", speakerID: "1")
+        let b = TranscriptSegment(speaker: .them, start: 2, end: 3, text: "Hi", speakerID: "2")
+        try store.saveTranscript([a, b], for: m.id)
+        try store.renameSpeaker(a.speakerKey, to: " Alice ", for: m.id)
+        #expect(try store.transcript(for: m.id).map(\.speakerLabel) == ["Alice", "Speaker 2"])
+        try store.renameSpeaker(a.speakerKey, to: "", for: m.id)
+        #expect(try store.transcript(for: m.id) == [a, b])
+    }
+
+    @Test func shareHandleSurvivesReloadAndCanBeRemoved() throws {
+        let store = try makeStore()
+        defer { try? FileManager.default.removeItem(at: store.root) }
+        let m = meeting("shared", started: 1)
+        try store.save(m)
+        #expect(try store.share(for: m.id) == nil)
+        let share = MeetingShare(id: "opaque", includesTranscript: false, url: URL(string: "https://example.com/s/opaque")!)
+        try store.saveShare(share, for: m.id)
+        let reopened = try MeetingStore(root: store.root)
+        #expect(try reopened.share(for: m.id) == share)
+        try reopened.removeShare(for: m.id)
+        try reopened.removeShare(for: m.id)
+        #expect(try store.share(for: m.id) == nil)
+    }
+
 }

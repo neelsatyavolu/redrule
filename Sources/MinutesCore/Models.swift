@@ -12,13 +12,20 @@ public struct TranscriptSegment: Codable, Equatable, Sendable, Identifiable {
     public let end: TimeInterval
     public let text: String
 
-    public var id: String { "\(speaker.rawValue)-\(start)" }
+    public let speakerID: String?
+    public let speakerName: String?
 
-    public init(speaker: Speaker, start: TimeInterval, end: TimeInterval, text: String) {
+    public var speakerKey: String { "\(speaker.rawValue):\(speakerID ?? "source")" }
+    public var speakerLabel: String { speakerName ?? speakerID.map { "Speaker \($0)" } ?? speaker.label }
+    public var id: String { "\(speakerKey)-\(start)" }
+
+    public init(speaker: Speaker, start: TimeInterval, end: TimeInterval, text: String, speakerID: String? = nil, speakerName: String? = nil) {
         self.speaker = speaker
         self.start = start
         self.end = end
         self.text = text
+        self.speakerID = speakerID
+        self.speakerName = speakerName
     }
 }
 
@@ -46,8 +53,11 @@ public struct Meeting: Codable, Equatable, Sendable, Identifiable {
     public let endedAt: Date?
     public let status: MeetingStatus
     public let errorMessage: String?
+    public let archivedAt: Date?
 
-    public init(id: UUID, title: String, app: MeetingApp, startedAt: Date, endedAt: Date?, status: MeetingStatus, errorMessage: String?) {
+    public var isArchived: Bool { archivedAt != nil }
+
+    public init(id: UUID, title: String, app: MeetingApp, startedAt: Date, endedAt: Date?, status: MeetingStatus, errorMessage: String?, archivedAt: Date? = nil) {
         self.id = id
         self.title = title
         self.app = app
@@ -55,13 +65,15 @@ public struct Meeting: Codable, Equatable, Sendable, Identifiable {
         self.endedAt = endedAt
         self.status = status
         self.errorMessage = errorMessage
+        self.archivedAt = archivedAt
     }
 
     /// Returns a copy with the given fields replaced. `errorMessage` is cleared unless passed.
-    public func with(title: String? = nil, endedAt: Date? = nil, status: MeetingStatus? = nil, errorMessage: String? = nil) -> Meeting {
+    public func with(title: String? = nil, endedAt: Date? = nil, status: MeetingStatus? = nil, errorMessage: String? = nil, isArchived: Bool? = nil) -> Meeting {
         Meeting(
             id: id, title: title ?? self.title, app: app, startedAt: startedAt,
-            endedAt: endedAt ?? self.endedAt, status: status ?? self.status, errorMessage: errorMessage
+            endedAt: endedAt ?? self.endedAt, status: status ?? self.status, errorMessage: errorMessage,
+            archivedAt: isArchived == false ? nil : (isArchived == true ? (archivedAt ?? Date()) : archivedAt)
         )
     }
 

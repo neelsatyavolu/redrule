@@ -23,10 +23,10 @@ struct NoteView: View {
                     .foregroundStyle(Theme.pencil)
             }
 
-            PadRow(spacing: 26) { prose(note.tldr, size: 17) }
+            PadRow(spacing: 28) { prose(note.tldr, size: 16) }
 
             ForEach(Array(note.sections.enumerated()), id: \.offset) { _, section in
-                PadRow(spacing: 34) { heading(section.heading) }
+                PadRow(spacing: 36) { heading(section.heading) }
                 ForEach(Array(section.bullets.enumerated()), id: \.offset) { _, bullet in
                     PadRow(spacing: 10) {
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -70,8 +70,8 @@ struct NoteView: View {
 
     private func prose(_ text: String, size: CGFloat = 15) -> some View {
         Text(text)
-            .font(Theme.serif(size))
-            .lineSpacing(size * 0.42)
+            .font(.system(size: size))
+            .lineSpacing(6)
             .foregroundStyle(Theme.ink)
             .textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)

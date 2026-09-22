@@ -11,9 +11,10 @@ enum Theme {
     static let rule = Color(light: 0xD5DFD2, dark: 0x2B342E)
     static let margin = Color(light: 0xC8372D, dark: 0xEF6A5E)
 
-    static let gutter: CGFloat = 92
-    static let gutterGap: CGFloat = 22
-    static let measure: CGFloat = 610
+    static let gutter: CGFloat = 72
+    static let gutterGap: CGFloat = 64
+    static let measure: CGFloat = 600
+    static let pageInset: CGFloat = 32
 
     static func serif(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight, design: .serif)
@@ -39,19 +40,37 @@ private extension NSColor {
 }
 
 /// A scrolling page with the pad's red margin rule. Rows inside use `PadRow` to hang labels in the margin.
+private extension EnvironmentValues {
+    @Entry var compactPad = false
+}
+
+extension EnvironmentValues {
+    @Entry var showsPadRule = true
+}
+
 struct PadPage<Content: View>: View {
+    @Environment(\.showsPadRule) private var showsRule
     @ViewBuilder var content: Content
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) { content }
-                .padding(.vertical, 44)
-                .padding(.trailing, 40)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .defaultScrollAnchor(.top)
-        .background(alignment: .leading) {
-            Rectangle().fill(Theme.margin.opacity(0.55)).frame(width: 1).padding(.leading, Theme.gutter + Theme.gutterGap / 2)
+        GeometryReader { geometry in
+            let compact = geometry.size.width < 540
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) { content }
+                    .padding(.vertical, 48)
+                    .padding(.horizontal, Theme.pageInset)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .environment(\.compactPad, compact)
+            }
+            .defaultScrollAnchor(.top)
+            .frame(maxWidth: Theme.pageInset * 2 + Theme.gutter + Theme.gutterGap + Theme.measure)
+            .background(alignment: .leading) {
+                if !compact && showsRule {
+                    Rectangle().fill(Theme.margin.opacity(0.35)).frame(width: 1)
+                        .padding(.leading, Theme.pageInset + Theme.gutter + Theme.gutterGap / 2)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Theme.sheet)
     }
@@ -59,19 +78,22 @@ struct PadPage<Content: View>: View {
 
 /// One line of the pad: a right-aligned label in the margin and content on the text side of the rule.
 struct PadRow<Label: View, Content: View>: View {
+    @Environment(\.compactPad) private var compact
     var spacing: CGFloat = 0
     @ViewBuilder var label: Label
     @ViewBuilder var content: Content
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Theme.gutterGap) {
+        let layout = compact ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+                             : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: Theme.gutterGap))
+        layout {
             label
                 .font(.system(size: 11.5))
                 .foregroundStyle(Theme.pencil)
                 .monospacedDigit()
                 .lineLimit(2)
-                .multilineTextAlignment(.trailing)
-                .frame(width: Theme.gutter, alignment: .trailing)
+                .multilineTextAlignment(compact ? .leading : .trailing)
+                .frame(width: compact ? nil : Theme.gutter, alignment: compact ? .leading : .trailing)
             content.frame(maxWidth: Theme.measure, alignment: .leading)
         }
         .padding(.top, spacing)
@@ -94,10 +116,13 @@ struct RecordingDot: View {
         Circle()
             .fill(Theme.margin)
             .frame(width: size, height: size)
-            .opacity(dimmed ? 0.35 : 1)
+            // Scope the pulse to opacity so it cannot animate the surrounding page's layout.
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { dot in
+                dot.opacity(dimmed ? 0.35 : 1)
+            }
             .onAppear {
                 guard !reduceMotion else { return }
-                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { dimmed = true }
+                dimmed = true
             }
             .accessibilityLabel("Recording")
     }
