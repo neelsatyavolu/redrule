@@ -4,3 +4,9 @@ build/
 *.xcodeproj
 .swiftpm/
 .grok/
+
+# Tauri
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/

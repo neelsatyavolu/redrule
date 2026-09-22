@@ -1,0 +1,22 @@
+[package]
+name = "minutes-core"
+version.workspace = true
+edition.workspace = true
+description = "Pure Minutes logic: models, store, transcript merging, windowing, detection rules, OAuth and summary parsing."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+url.workspace = true
+dirs.workspace = true
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.9"
+percent-encoding = "2"
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { workspace = true, features = ["macros", "rt"] }

@@ -1,0 +1,77 @@
+[workspace]
+members = ["crates/core", "crates/engine"]
+resolver = "3"
+
+[workspace.package]
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.88"
+
+[workspace.dependencies]
+minutes-core = { path = "crates/core" }
+minutes-engine = { path = "crates/engine" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+thiserror = "2"
+url = "2"
+dirs = "6"
+log = "0.4"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "net", "io-util"] }
+reqwest = { version = "0.13", default-features = false, features = ["json", "form", "query", "stream", "rustls"] }
+
+[package]
+name = "minutes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Records Zoom and Google Meet calls, transcribes them on this Mac, and writes the notes."
+
+[lib]
+name = "minutes_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6", features = [] }
+
+[dependencies]
+minutes-core.workspace = true
+minutes-engine.workspace = true
+tauri = { version = "2.11", features = ["tray-icon", "macos-private-api", "image-png"] }
+tauri-plugin-opener = "2.5"
+tauri-plugin-clipboard-manager = "2.3"
+tauri-plugin-single-instance = "2.4"
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+log.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+security-framework = "3.7"
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSUserDefaults", "NSString"] }
+block2 = "0.6"
+libproc = "0.14"
+objc2-av-foundation = { version = "0.3", features = ["AVCaptureDevice", "AVMediaFormat", "block2"] }
+objc2-core-audio = { version = "0.3", features = ["AudioHardware"] }
+objc2-core-graphics = { version = "0.3", features = ["CGWindow"] }
+objc2-core-foundation = "0.3"
+tauri-nspanel = "2.1"
+tauri-plugin-dialog = "2"
+dirs = "6"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+# Apple's `strip` on this toolchain leaves Mach-O files that dyld rejects
+# ("mis-aligned LINKEDIT string pool"), which breaks proc-macros and could break the app.
+strip = "none"
+
+[profile.release.build-override]
+strip = "none"

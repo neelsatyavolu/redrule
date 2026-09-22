@@ -1,0 +1,24 @@
+[package]
+name = "minutes-engine"
+version.workspace = true
+edition.workspace = true
+description = "Audio capture, on-device transcription and speaker recognition for Minutes."
+
+[dependencies]
+minutes-core.workspace = true
+serde.workspace = true
+log.workspace = true
+tokio = { workspace = true, features = ["fs"] }
+reqwest.workspace = true
+futures-util = "0.3"
+cpal = "0.18.2"
+screencapturekit = "10.0.3"
+rubato = "5.0"
+sherpa-onnx = "1.13.8"
+hound = "3.5"
+bzip2 = "0.6"
+tar = "0.4"
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time", "signal"] }

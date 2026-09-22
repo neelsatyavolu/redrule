@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+/* A stenographer's pad: cool green paper, green-black ink, and the pad's red margin rule,
+   which doubles as the recording light. */
+:root {
+  --paper: #f7f8f4;
+  --pad: #eceee8;
+  --raised: #ffffff;
+  --ink: #18201b;
+  --graphite: #5e6a62;
+  --faint: #8c978f;
+  --rule: #dce2d8;
+  --wash: #e3e8df;
+  --margin: #c8372d;
+  --margin-soft: rgb(200 55 45 / 0.28);
+  --focus: #2f6a4f;
+  --shadow: 0 1px 2px rgb(24 32 27 / 0.06), 0 12px 32px -12px rgb(24 32 27 / 0.22);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #171c19;
+    --pad: #111512;
+    --raised: #1f2521;
+    --ink: #e4eae3;
+    --graphite: #97a399;
+    --faint: #6d786f;
+    --rule: #2b332e;
+    --wash: #262e29;
+    --margin: #ef6a5e;
+    --margin-soft: rgb(239 106 94 / 0.3);
+    --focus: #7cc3a0;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -12px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-pad: var(--pad);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-graphite: var(--graphite);
+  --color-faint: var(--faint);
+  --color-rule: var(--rule);
+  --color-wash: var(--wash);
+  --color-margin: var(--margin);
+  --color-focus: var(--focus);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --shadow-float: var(--shadow);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  /* A desktop app: text is selectable only where it is content. */
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+  overflow: hidden;
+}
+
+.selectable {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+button {
+  cursor: default;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--focus) 24%, transparent);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The recording light. Only its opacity moves, so nothing around it reflows. */
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.recording-dot {
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+}
+.rise {
+  animation: rise 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+  }
+}
+.arrive {
+  animation: arrive 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recording-dot,
+  .rise,
+  .arrive {
+    animation: none;
+  }
+}
+
+/* The banner window is transparent; its card draws its own edge. */
+html.banner,
+html.banner body {
+  background: transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--graphite) 35%, transparent);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 10px;
+}

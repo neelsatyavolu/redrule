@@ -1,0 +1,125 @@
+//! Recording a meeting, finishing its transcript, and writing the notes.
+use std::sync::Arc;
+
+use chrono::Utc;
+use minutes_engine::RecordingPipeline;
+
+use super::state::{ActiveRecording, App};
+use crate::core::models::{Meeting, MeetingApp, MeetingStatus, TranscriptSegment};
+use crate::core::summary::{CHUNK_BUDGET, summarize};
+use crate::core::{Error, Result};
+use crate::providers::clients::{ModelChoice, SummaryClient};
+
+impl App {
+    pub async fn start_recording(self: &Arc<Self>, app: MeetingApp) {
+        if self.read(|state| state.recording_id.is_some()) || self.store.is_none() {
+            return;
+        }
+        self.set_banner(None);
+        self.refresh_permissions();
+        if !self.read(|state| state.permissions.all_granted()) {
+            self.report("Minutes needs Microphone and Screen & System Audio Recording access before it can record. Grant them in Settings, under Permissions.");
+            return;
+        }
+
+        // Hold the slot while capture starts, so a quick stop waits for it instead of leaving capture running.
+        let mut slot = self.recording.lock().await;
+        let title = if app == MeetingApp::Manual { "New meeting".to_string() } else { format!("{} meeting", app.display_name()) };
+        let meeting = Meeting {
+            id: uuid::Uuid::new_v4().to_string().to_uppercase(),
+            title,
+            app,
+            started_at: Utc::now(),
+            ended_at: None,
+            status: MeetingStatus::Recording,
+            error_message: None,
+            archived_at: None,
+        };
+        self.persist(&meeting);
+        self.update(|state| state.recording_id = Some(meeting.id.clone()));
+        self.set_live(Vec::new());
+
+        let settings = self.read(|state| state.settings.clone());
+        let audio_folder = if settings.keep_audio { self.store().and_then(|s| s.folder(&meeting.id)).ok() } else { None };
+        let on_segment = {
+            let (app, id) = (Arc::clone(self), meeting.id.clone());
+            Arc::new(move |segment: TranscriptSegment| app.append_live(segment, &id))
+        };
+        let on_error = {
+            let app = Arc::clone(self);
+            Arc::new(move |message: String| app.report(format!("Part of the audio could not be processed. {message}")))
+        };
+        match RecordingPipeline::start(Arc::clone(&self.transcriber), audio_folder, settings.microphone_id, on_segment, on_error).await {
+            Ok(pipeline) => *slot = Some(ActiveRecording { meeting, pipeline }),
+            Err(error) => {
+                self.update(|state| state.recording_id = None);
+                self.persist(&Meeting { ended_at: Some(Utc::now()), ..meeting }.failed(format!("Recording could not start. {error}")));
+            }
+        }
+    }
+
+    pub async fn stop_recording(self: &Arc<Self>) {
+        if self.read(|state| state.recording_id.is_none()) {
+            return;
+        }
+        self.set_banner(None);
+        self.update(|state| state.recording_id = None);
+        let Some(active) = self.recording.lock().await.take() else { return };
+        let ended = active.meeting.ended(Utc::now(), MeetingStatus::Transcribing);
+        self.persist(&ended);
+        // The pipeline's own list is authoritative: live updates can arrive after this point.
+        let segments = active.pipeline.stop().await;
+        if let Err(error) = self.store().and_then(|store| store.save_transcript(&segments, &ended.id)) {
+            self.report(format!("The transcript could not be saved. {error}"));
+        }
+        self.set_live(Vec::new());
+        self.generate_notes(&ended).await;
+    }
+
+    /// Writes notes from the stored transcript. Also used to retry after a failure.
+    pub async fn generate_notes(self: &Arc<Self>, meeting: &Meeting) {
+        let working = meeting.with_status(MeetingStatus::Summarizing);
+        self.persist(&working);
+        match self.write_notes(&working).await {
+            Ok(title) => self.persist(&working.titled(title).with_status(MeetingStatus::Done)),
+            Err(error) => self.persist(&working.failed(error.to_string())),
+        }
+    }
+
+    async fn write_notes(&self, meeting: &Meeting) -> Result<String> {
+        let store = self.store()?;
+        let segments = store.transcript(&meeting.id)?;
+        let client = self.summary_client()?;
+        let note = summarize(&client, meeting, &segments, CHUNK_BUDGET).await?;
+        store.save_note(&note, &meeting.id)?;
+        Ok(note.title)
+    }
+
+    fn summary_client(&self) -> Result<SummaryClient> {
+        self.refresh_connections();
+        let (preferred, connected) = self.read(|state| (state.settings.model_choice(), state.connected.clone()));
+        let choice = if connected.contains(&preferred.provider) {
+            preferred
+        } else {
+            let provider = connected.iter().min().copied().ok_or(Error::NoProviderConnected)?;
+            ModelChoice::default_for(provider)
+        };
+        Ok(SummaryClient { http: self.http.clone(), oauth: Arc::clone(&self.oauth), choice })
+    }
+
+    fn append_live(&self, segment: TranscriptSegment, id: &str) {
+        // After stop, the pipeline's returned list is saved instead; a late update must not overwrite it.
+        let raw = self.read(|state| {
+            (state.recording_id.as_deref() == Some(id)).then(|| {
+                let mut raw = state.live_raw.clone();
+                raw.push(segment);
+                raw
+            })
+        });
+        let Some(raw) = raw else { return };
+        if let Err(error) = self.store().and_then(|store| store.save_transcript(&raw, id)) {
+            self.report(format!("The transcript could not be saved. {error}"));
+        }
+        self.set_live(raw);
+    }
+}

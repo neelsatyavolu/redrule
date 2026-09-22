@@ -2,6 +2,30 @@
 
 A macOS app that notices when you are in a Zoom or Google Meet call, records the call and your microphone, transcribes both on your Mac, and writes the meeting up using your ChatGPT (Codex) or Grok account.
 
+## Desktop app (Tauri)
+
+The Tauri version (React UI, Rust backend) reads and writes the same meeting folders, Keychain items and preferences as the Swift app, under the same bundle identifier.
+
+```bash
+pnpm install
+pnpm tauri dev                    # run with hot reload
+scripts/install-desktop.sh --open # build, sign with the shared Developer ID, install to /Applications
+cd src-tauri && cargo test --workspace && cd .. && pnpm test
+```
+
+| Piece | Where |
+|---|---|
+| Pure logic: models, store, transcript merging, windowing, detection rules, OAuth, summary prompt and parsing | `src-tauri/crates/core` |
+| Audio capture (ScreenCaptureKit, cpal), Parakeet v3 transcription and speaker recognition (sherpa-onnx) | `src-tauri/crates/engine` |
+| App state, commands, tray, menus, the call banner | `src-tauri/src` |
+| macOS detection signals and permissions | `src-tauri/src/platform` |
+| Accounts, Keychain, summary and sharing clients | `src-tauri/src/providers` |
+| Interface | `src` (React, Tailwind) |
+
+`preview.html` renders the interface in a browser with sample data (`pnpm dev`, then open `/preview.html?view=notes`), for design work without the backend.
+
+## Swift app (original)
+
 ## Build and run
 
 ```bash
