@@ -19,7 +19,7 @@ struct ModelChoice: Hashable, Identifiable {
     var id: String { "\(provider.rawValue):\(model)" }
 
     /// Newest first within each provider; the first entry is that provider's default.
-    static let all: [ModelChoice] = [
+    static var all: [ModelChoice] = [
         ModelChoice(provider: .codex, model: "gpt-6-astra", label: "GPT-6 Astra"),
         ModelChoice(provider: .codex, model: "gpt-5.6-sol", label: "GPT-5.6 Sol"),
         ModelChoice(provider: .codex, model: "gpt-5.6-terra", label: "GPT-5.6 Terra"),
@@ -28,6 +28,39 @@ struct ModelChoice: Hashable, Identifiable {
         ModelChoice(provider: .grok, model: "grok-4.6", label: "Grok 4.6"),
         ModelChoice(provider: .grok, model: "grok-4.5", label: "Grok 4.5"),
     ]
+
+    // Add IDs here only when Minutes should hide a model from the shared catalog.
+    private static let hidden: Set<String> = []
+
+    static func refreshCatalog() async {
+        guard let url = URL(string: "https://raw.githubusercontent.com/neelsatyavolu/shared-ai-auth/main/models.json") else { return }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 5
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let catalog = try? JSONDecoder().decode(Catalog.self, from: data),
+              catalog.version == 1,
+              !catalog.codex.isEmpty, !catalog.grok.isEmpty
+        else { return }
+        let choices = catalog.codex.map { ModelChoice(provider: .codex, model: $0.id, label: $0.label, effort: $0.effort ?? "low") }
+            + catalog.grok.map { ModelChoice(provider: .grok, model: $0.id, label: $0.label, effort: $0.effort ?? "low") }
+        guard choices.allSatisfy({ !$0.model.isEmpty && !$0.label.isEmpty }) else { return }
+        let visible = choices.filter { !hidden.contains($0.id) }
+        guard ProviderID.allCases.allSatisfy({ provider in visible.contains { $0.provider == provider } }) else { return }
+        all = visible
+    }
+
+    private struct Catalog: Decodable {
+        let version: Int
+        let codex: [Entry]
+        let grok: [Entry]
+    }
+
+    private struct Entry: Decodable {
+        let id: String
+        let label: String
+        let effort: String?
+    }
 
     /// A saved choice that is no longer offered (a retired model) falls back to the same provider's default.
     static func resolve(_ id: String?) -> ModelChoice {

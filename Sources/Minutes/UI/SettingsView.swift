@@ -39,6 +39,7 @@ private struct GeneralSettings: View {
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
             Picker("Write notes with", selection: $model.modelChoiceID) {
+                let _ = model.modelCatalogRevision
                 ForEach(ProviderID.allCases) { provider in
                     Section(provider.displayName) {
                         ForEach(ModelChoice.all.filter { $0.provider == provider }) { choice in

@@ -53,6 +53,7 @@ final class AppModel {
 
     // Settings
     var modelChoiceID: String { didSet { UserDefaults.standard.set(modelChoiceID, forKey: Key.modelChoice) } }
+    var modelCatalogRevision = 0
     var keepAudio: Bool { didSet { UserDefaults.standard.set(keepAudio, forKey: Key.keepAudio) } }
     var microphoneUID: String { didSet { UserDefaults.standard.set(microphoneUID, forKey: Key.microphoneUID) } }
     var hasOnboarded: Bool { didSet { UserDefaults.standard.set(hasOnboarded, forKey: Key.onboarded) } }
@@ -64,7 +65,7 @@ final class AppModel {
 
     init() {
         let defaults = UserDefaults.standard
-        modelChoiceID = ModelChoice.resolve(defaults.string(forKey: Key.modelChoice)).id
+        modelChoiceID = defaults.string(forKey: Key.modelChoice) ?? ModelChoice.defaultChoice(for: .codex).id
         keepAudio = defaults.bool(forKey: Key.keepAudio)
         microphoneUID = defaults.string(forKey: Key.microphoneUID) ?? ""
         hasOnboarded = defaults.bool(forKey: Key.onboarded)
@@ -86,6 +87,11 @@ final class AppModel {
     func start() {
         detector.start { [weak self] event in self?.handle(event) }
         Task { await refreshConnections() }
+        Task {
+            await ModelChoice.refreshCatalog()
+            modelCatalogRevision += 1
+            modelChoiceID = ModelChoice.resolve(modelChoiceID).id
+        }
         prepareSpeechModel()
     }
 
