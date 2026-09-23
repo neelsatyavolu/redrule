@@ -1,0 +1,32 @@
+{
+  "installCommand": "npm ci --prefix sharing",
+  "buildCommand": "node scripts/assemble-vercel-site.mjs",
+  "outputDirectory": "public",
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/download",
+      "destination": "https://github.com/neelsatyavolu/redrule-releases/releases/latest/download/Redrule.dmg",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    { "source": "/s/:id", "destination": "/api/note?id=:id" }
+  ],
+  "headers": [
+    {
+      "source": "/s/(.*)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "Referrer-Policy", "value": "no-referrer" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "Referrer-Policy", "value": "no-referrer" }
+      ]
+    }
+  ]
+}

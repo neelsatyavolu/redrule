@@ -1,0 +1,14 @@
+node_modules
+.git
+.vercel
+src-tauri/target
+src-tauri/gen
+.build
+build
+dist
+public
+.DS_Store
+*.xcodeproj
+.swiftpm
+.grok
+.agmux

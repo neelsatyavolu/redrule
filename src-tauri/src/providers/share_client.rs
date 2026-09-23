@@ -1,4 +1,4 @@
-//! Publishes and revokes read-only links on the Minutes sharing service.
+//! Publishes and revokes read-only links on the Redrule sharing service.
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use crate::core::models::{MeetingNote, MeetingShare, TranscriptSegment};
 use crate::core::transcript::timestamp;
 use crate::core::{Error, Result};
 
-pub const BASE_URL: &str = "https://minutes-sharing.vercel.app";
+pub const BASE_URL: &str = "https://redrule.vercel.app";
 const MAX_PAYLOAD: usize = 2_000_000;
 const TIMEOUT: Duration = Duration::from_secs(45);
 

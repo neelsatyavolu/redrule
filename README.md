@@ -1,10 +1,10 @@
 # Redrule
 
-Redrule (formerly Minutes) is a macOS app that notices when you are in a Zoom or Google Meet call, records the call and your microphone, transcribes both on your Mac, and writes the meeting up using your ChatGPT (Codex) or Grok account.
+Redrule is a macOS app that notices when you are in a Zoom or Google Meet call, records the call and your microphone, transcribes both on your Mac, and writes the meeting up using your ChatGPT (Codex) or Grok account.
 
 ## Desktop app (Tauri)
 
-The Tauri app (React UI, Rust backend), bundle id `co.neel.redrule`. On first launch it adopts the Minutes app's data: `~/Library/Application Support/Minutes` is renamed to `Redrule`, Keychain items under the service `Minutes` are copied to `Redrule`, and preferences are copied from the `co.nenu.minutes` domain. macOS asks for Microphone and Screen & System Audio Recording again, because the bundle id is new.
+The Tauri app (React UI, Rust backend), bundle id `co.neel.redrule`. On first launch it adopts data from the previous copy: `~/Library/Application Support/Minutes` is renamed to `Redrule`, Keychain items under the service `Minutes` are copied to `Redrule`, and preferences are copied from the `co.nenu.minutes` domain. macOS asks for Microphone and Screen & System Audio Recording again, because the bundle id is new.
 
 ```bash
 pnpm install
@@ -31,11 +31,11 @@ git commit -am "chore: release 0.2.2"
 
 The script publishes `Redrule.dmg`, the signed update archive and `latest.json` to the public repo [neelsatyavolu/redrule-releases](https://github.com/neelsatyavolu/redrule-releases). Installed copies check `latest.json` a minute after launch and every six hours, install the update in the background and offer to restart (never during a recording). **Check for Updates…** is in the Redrule menu and the menu bar. The key that signs updates is the 1Password item "Redrule Updater Signing Key" (Private vault). If it is lost, installed copies can't be updated, so never rotate it casually.
 
-The landing page is `website/`, a static site on the Vercel project `redrule` (`cd website && vercel --prod`). `/download` redirects to the newest `Redrule.dmg`.
+The landing page is `website/`, served with the sharing API by the Vercel project `redrule` (Git-connected to this repo). `/download` redirects to the newest `Redrule.dmg`.
 
 `preview.html` renders the interface in a browser with sample data (`pnpm dev`, then open `/preview.html?view=notes`), for design work without the backend.
 
-## Swift app (original, named Minutes)
+## Swift app
 
 ## Build and run
 
@@ -47,10 +47,10 @@ swift test                 # unit tests for MinutesCore
 
 Requires macOS 15 or later on Apple Silicon, and Xcode's Swift 6 toolchain.
 
-On first launch Minutes asks for two permissions and downloads the speech model (Parakeet TDT v3, several hundred MB, once).
+On first launch the app asks for two permissions and downloads the speech model (Parakeet TDT v3, several hundred MB, once).
 
 - **Microphone**: your side of the conversation.
-- **Screen & System Audio Recording**: macOS files call audio under this permission. Minutes captures sound only. Quit and reopen the app after granting it.
+- **Screen & System Audio Recording**: macOS files call audio under this permission. The app captures sound only. Quit and reopen it after granting it.
 
 `install.sh` signs with the shared Developer ID certificate from 1Password (see `~/Documents/GitHub/APPLE_SIGNING.md`; `scripts/load-apple-creds.sh` mirrors the Strix loader). That gives the app a stable identity, so the Keychain's "Always Allow" and both permissions survive rebuilds. `./install.sh --adhoc` and plain `scripts/bundle.sh` sign ad hoc instead, and macOS then asks again after every build.
 
@@ -80,6 +80,6 @@ Completed meetings have **Notes** and **Transcript** tabs. The transcript includ
 
 Choose **Share** to create or update a copyable link. The summary is shared by default; the transcript and speaker names are optional. Audio is never uploaded. Shared pages require no recipient login. Edits remain local until **Update & copy link**. **Stop sharing** removes the hosted copy; deleting a shared meeting first revokes its link and requires connectivity. Copies already saved by recipients cannot be recalled.
 
-The service lives in `sharing/` and uses private Vercel Blob storage. The app uses `https://minutes-sharing.vercel.app`. Uploads and revocation require a dedicated `MINUTES_SHARE_KEY` environment secret and the same credential in this Mac's Keychain (`Minutes` / `sharing`); no service credential is embedded in the app. After linking the dedicated Vercel project and connecting a private Blob store, run `swift scripts/setup-sharing.swift` from the repository root to provision this Mac, then redeploy. This setup is for a personal installation; other Macs must be provisioned with the same service credential rather than independently rotating it.
+The service lives in `sharing/` and uses private Vercel Blob storage. The marketing site and the sharing API are one Vercel project, `redrule`, connected to this repo. The app uses `https://redrule.vercel.app`. Older links on `https://minutes-sharing.vercel.app` redirect there. Uploads and revocation require a dedicated `MINUTES_SHARE_KEY` environment secret and the same credential in this Mac's Keychain (service `Redrule`, account `sharing`); no service credential is embedded in the app. After connecting the private Blob store, run `swift scripts/setup-sharing.swift` from the repository root to provision this Mac, then redeploy. This setup is for a personal installation; other Macs must be provisioned with the same service credential rather than independently rotating it.
 
 Web checks: `cd sharing && npm ci && npm test && npm run build`. After provisioning, `python3 scripts/test-sharing.py` (from the repository root) checks the live service with synthetic content and deletes the test share afterward.

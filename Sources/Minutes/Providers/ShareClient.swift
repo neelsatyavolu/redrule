@@ -3,7 +3,7 @@ import MinutesCore
 import Security
 
 struct ShareClient {
-    static let baseURL = URL(string: "https://minutes-sharing.vercel.app")!
+    static let baseURL = URL(string: "https://redrule.vercel.app")!
 
     private struct Payload: Encodable {
         struct Segment: Encodable {
@@ -48,18 +48,19 @@ struct ShareClient {
     private struct ServiceError: Decodable { let error: String }
 
     private func credential() throws -> String {
-        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-                                   kSecAttrService as String: "Minutes", kSecAttrAccount as String: "sharing",
-                                   kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status != errSecItemNotFound else {
-            throw ShareError.message("Sharing is not configured on this Mac. Run the sharing setup script from the Minutes project.")
+        for service in ["Redrule", "Minutes"] {
+            let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                       kSecAttrService as String: service, kSecAttrAccount as String: "sharing",
+                                       kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
+            var result: CFTypeRef?
+            let status = SecItemCopyMatching(query as CFDictionary, &result)
+            if status == errSecItemNotFound { continue }
+            guard status == errSecSuccess, let data = result as? Data, let key = String(data: data, encoding: .utf8) else {
+                throw KeychainError.status(status)
+            }
+            return key
         }
-        guard status == errSecSuccess, let data = result as? Data, let key = String(data: data, encoding: .utf8) else {
-            throw KeychainError.status(status)
-        }
-        return key
+        throw ShareError.message("Sharing is not configured on this Mac. Run the sharing setup script from the Redrule project.")
     }
 }
 

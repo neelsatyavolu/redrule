@@ -6,11 +6,18 @@ import subprocess
 import urllib.error
 import urllib.request
 
-BASE = "https://minutes-sharing.vercel.app"
-key = subprocess.run(
-    ["security", "find-generic-password", "-s", "Minutes", "-a", "sharing", "-w"],
-    capture_output=True, check=True, text=True,
-).stdout.strip()
+BASE = "https://redrule.vercel.app"
+def sharing_key():
+    for service in ("Redrule", "Minutes"):
+        found = subprocess.run(
+            ["security", "find-generic-password", "-s", service, "-a", "sharing", "-w"],
+            capture_output=True, text=True,
+        )
+        if found.returncode == 0 and found.stdout.strip():
+            return found.stdout.strip()
+    raise SystemExit("No sharing key in the Keychain under Redrule or the previous service.")
+
+key = sharing_key()
 share_id = secrets.token_hex(32)
 api_path = "/api/share?id=" + share_id
 page_path = "/s/" + share_id
@@ -32,7 +39,7 @@ def request(path, method="GET", body=None, authenticate=False):
 
 
 payload = {"note": {
-    "title": "Minutes synthetic sharing check", "tldr": "Synthetic content only.",
+    "title": "Redrule synthetic sharing check", "tldr": "Synthetic content only.",
     "sections": [], "decisions": [], "actionItems": [],
 }}
 try:
