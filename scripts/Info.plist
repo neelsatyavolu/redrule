@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Minutes</string>
+    <string>Redrule</string>
     <key>CFBundleDisplayName</key>
-    <string>Minutes</string>
+    <string>Redrule</string>
     <key>CFBundleIdentifier</key>
     <string>co.nenu.minutes</string>
     <key>CFBundleExecutable</key>
@@ -25,8 +25,8 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Minutes records your microphone so your side of the meeting is included in the notes.</string>
+    <string>Redrule records your microphone so your side of the meeting is included in the notes.</string>
     <key>NSAudioCaptureUsageDescription</key>
-    <string>Minutes records the call's audio so it can transcribe the meeting on this Mac.</string>
+    <string>Redrule records the call's audio so it can transcribe the meeting on this Mac.</string>
 </dict>
 </plist>

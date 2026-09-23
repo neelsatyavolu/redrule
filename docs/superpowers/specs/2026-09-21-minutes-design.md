@@ -1,4 +1,4 @@
-# Minutes — design
+# Redrule — design
 
 A native macOS app that detects meetings, records system audio and the microphone, transcribes locally, and produces a Granola-style meeting note using the user's Codex (ChatGPT) or Grok account.
 

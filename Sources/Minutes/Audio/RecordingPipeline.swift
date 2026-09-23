@@ -70,7 +70,7 @@ final class RecordingPipeline {
                                 identified = SpeakerAlignment.segments(words: result.words, turns: turns, offset: window.start)
                             }
                         } catch {
-                            onError(NSError(domain: "Minutes", code: 1, userInfo: [NSLocalizedDescriptionKey:
+                            onError(NSError(domain: "Redrule", code: 1, userInfo: [NSLocalizedDescriptionKey:
                                 "Speaker detection is unavailable for this recording; the transcript is still being saved. \(error.localizedDescription)"]))
                         }
                     }

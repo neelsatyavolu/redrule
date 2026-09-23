@@ -113,7 +113,7 @@ private struct DetectionBannerView: View {
 
     private var detail: String {
         switch banner {
-        case .detected: "Minutes can record it and write up the notes."
+        case .detected: "Redrule can record it and write up the notes."
         case .ended: "Stop recording and write the notes now?"
         }
     }

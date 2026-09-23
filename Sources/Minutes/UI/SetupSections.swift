@@ -45,7 +45,7 @@ struct PermissionRows: View {
         Divider()
         SetupRow(
             title: "Screen & System Audio Recording",
-            detail: "macOS groups call audio under this permission. Minutes records sound only, never the screen. Quit and reopen Minutes after switching it on.",
+            detail: "macOS groups call audio under this permission. Redrule records sound only, never the screen. Quit and reopen Redrule after switching it on.",
             done: model.permissions.screenRecording
         ) {
             if !model.permissions.screenRecording {

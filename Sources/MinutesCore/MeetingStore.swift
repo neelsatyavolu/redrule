@@ -69,7 +69,7 @@ public struct MeetingStore: Sendable {
     /// Meetings left mid-flight by a crash or quit can never finish; mark them so the UI offers a retry.
     public func recoverInterrupted() throws {
         for meeting in try list() where meeting.status != .done && meeting.status != .failed {
-            try save(meeting.with(endedAt: meeting.endedAt ?? meeting.startedAt, status: .failed, errorMessage: "Minutes quit before this meeting was finished."))
+            try save(meeting.with(endedAt: meeting.endedAt ?? meeting.startedAt, status: .failed, errorMessage: "Redrule quit before this meeting was finished."))
         }
     }
 

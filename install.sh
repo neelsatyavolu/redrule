@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds Minutes and installs it to /Applications. Usage: ./install.sh [--open] [--adhoc]
+# Builds the Swift app and installs it to /Applications. Usage: ./install.sh [--open] [--adhoc]
 # Signs with the shared Developer ID certificate from 1Password (see ~/Documents/GitHub/APPLE_SIGNING.md).
 # --adhoc skips that; macOS then re-asks for Keychain and privacy permissions after every build.
 set -euo pipefail
@@ -38,7 +38,7 @@ if [ "$ADHOC" = 0 ]; then
     minutes_require_developer_id
 fi
 
-echo "Building Minutes (release)…"
+echo "Building the Swift app (release)…"
 scripts/bundle.sh release >/dev/null
 
 if [ ! -x "$SOURCE/Contents/MacOS/Minutes" ]; then
@@ -47,14 +47,14 @@ if [ ! -x "$SOURCE/Contents/MacOS/Minutes" ]; then
 fi
 
 if pgrep -x Minutes >/dev/null; then
-    echo "Quitting the running copy of Minutes…"
-    osascript -e 'tell application "Minutes" to quit' >/dev/null 2>&1 || true
+    echo "Quitting the running copy…"
+    osascript -e 'tell application "Redrule" to quit' >/dev/null 2>&1 || true
     for _ in 1 2 3 4 5 6 7 8 9 10; do
         pgrep -x Minutes >/dev/null || break
         sleep 0.5
     done
     if pgrep -x Minutes >/dev/null; then
-        echo "error: Minutes is still running (a recording may be in progress). Quit it and run this again." >&2
+        echo "error: the app is still running (a recording may be in progress). Quit it and run this again." >&2
         exit 1
     fi
 fi
@@ -69,7 +69,7 @@ ditto "$SOURCE" "$DEST"
 # Refresh the icon in Finder and the Dock after an update.
 touch "$DEST"
 
-echo "Installed Minutes $(defaults read "$DEST/Contents/Info" CFBundleShortVersionString)."
+echo "Installed $(defaults read "$DEST/Contents/Info" CFBundleShortVersionString)."
 codesign -dvv "$DEST" 2>&1 | sed -n '/^Authority=Developer ID Application/p;/^Signature=adhoc/p' | head -1
 
 if [ "$OPEN" = 1 ]; then

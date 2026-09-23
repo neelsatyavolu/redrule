@@ -1,5 +1,5 @@
 //! Generic passwords in the login keychain, under the service "Redrule".
-//! Items saved while the app was called Minutes are read from the old service and copied across.
+//! Items saved under the previous service name are read and copied across.
 use security_framework::passwords::{delete_generic_password, get_generic_password, set_generic_password};
 
 use crate::core::oauth::{ProviderId, TokenBundle};

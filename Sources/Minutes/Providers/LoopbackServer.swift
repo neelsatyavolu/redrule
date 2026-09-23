@@ -75,9 +75,9 @@ final class LoopbackServer: @unchecked Sendable {
     }
 
     private func respond(on connection: NWConnection, succeeded: Bool) {
-        let message = succeeded ? "Connected. You can close this tab and return to Minutes." : "Sign-in did not complete. Return to Minutes and try again."
+        let message = succeeded ? "Connected. You can close this tab and return to Redrule." : "Sign-in did not complete. Return to Redrule and try again."
         let html = """
-        <!doctype html><meta charset="utf-8"><title>Minutes</title>
+        <!doctype html><meta charset="utf-8"><title>Redrule</title>
         <body style="font: 17px/1.5 'New York', Georgia, serif; background:#EFF3EA; color:#16211B; display:grid; place-items:center; height:100vh; margin:0">
         <p>\(message)</p></body>
         """

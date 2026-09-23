@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Load the Apple Developer ID signing identity for Minutes.
+# Load the Apple Developer ID signing identity for Redrule.
 #
 # Usage (source, do not execute):
 #   source scripts/load-apple-creds.sh
@@ -74,7 +74,7 @@ minutes_prepare_signing_keychain() {
 
   # Prefer an already-valid Developer ID identity (with private key) in search list.
   if security find-identity -v -p codesigning 2>/dev/null | grep -Fq "$IDENTITY"; then
-    echo "  Minutes: using existing keychain identity: $IDENTITY"
+    echo "  Redrule: using existing keychain identity: $IDENTITY"
     unset APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD 2>/dev/null || true
     return 0
   fi
@@ -124,7 +124,7 @@ minutes_prepare_signing_keychain() {
     security find-identity -v -p codesigning 2>&1 || true
     return 1
   fi
-  echo "  Minutes: imported Developer ID + Apple CAs into temp keychain"
+  echo "  Redrule: imported Developer ID + Apple CAs into temp keychain"
   return 0
 }
 
@@ -176,4 +176,4 @@ minutes_cleanup_apple_creds() {
         AGMUX_APPLE_CREDS_DIR 2>/dev/null || true
 }
 
-echo "  Minutes: signing ready ($APPLE_SIGNING_IDENTITY)"
+echo "  Redrule: signing ready ($APPLE_SIGNING_IDENTITY)"

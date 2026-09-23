@@ -133,7 +133,7 @@ pub fn support_folder() -> Result<PathBuf> {
     adopt_legacy_folder(&support.join("Minutes"), &support.join("Redrule"))
 }
 
-/// The app was called Minutes. Its folder is renamed once, so meetings and downloaded models carry over.
+/// The previous app's folder is renamed once, so meetings and downloaded models carry over.
 fn adopt_legacy_folder(legacy: &Path, current: &Path) -> Result<PathBuf> {
     if !current.exists() && legacy.is_dir() {
         fs::rename(legacy, current)?;
@@ -212,7 +212,7 @@ mod tests {
         assert!(current.join("meetings").is_dir());
         assert!(!legacy.exists());
 
-        // A later Minutes folder never replaces the adopted one.
+        // A later copy of the old folder never replaces the adopted one.
         fs::create_dir_all(legacy.join("other")).unwrap();
         adopt_legacy_folder(&legacy, &current).unwrap();
         assert!(legacy.join("other").is_dir());

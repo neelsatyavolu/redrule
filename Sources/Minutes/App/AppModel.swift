@@ -76,7 +76,7 @@ final class AppModel {
             self.store = store
         } catch {
             store = nil
-            errorMessage = "Minutes cannot open its storage folder. \(error.localizedDescription)"
+            errorMessage = "Redrule cannot open its storage folder. \(error.localizedDescription)"
         }
         reloadMeetings()
         selection = meetings.first { !$0.isArchived }?.id

@@ -6,7 +6,7 @@ struct MinutesApp: App {
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
 
     var body: some Scene {
-        Window("Minutes", id: "main") {
+        Window("Redrule", id: "main") {
             MainWindow()
                 .environment(delegate.model)
                 .frame(minWidth: 860, minHeight: 560)
@@ -50,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.refreshPermissions()
     }
 
-    /// Minutes keeps watching for calls from the menu bar after its window is closed.
+    /// Redrule keeps watching for calls from the menu bar after its window is closed.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
@@ -73,7 +73,7 @@ private struct MenuBarLabel: View {
         // TimelineView in a MenuBarExtra label can continuously invalidate the status
         // item on macOS, starving the main run loop. Keep the clock in LiveView.
         Image(systemName: model.isRecording ? "record.circle.fill" : "text.quote")
-            .accessibilityLabel(model.isRecording ? "Minutes recording" : "Minutes")
+            .accessibilityLabel(model.isRecording ? "Redrule recording" : "Redrule")
     }
 }
 
@@ -88,12 +88,12 @@ private struct MenuBarContent: View {
             Button("Record meeting") { model.startRecording(app: .manual) }
         }
         Divider()
-        Button("Open Minutes") {
+        Button("Open Redrule") {
             openWindow(id: "main")
             NSApp.activate(ignoringOtherApps: true)
         }
         SettingsLink { Text("Settings…") }
         Divider()
-        Button("Quit Minutes") { NSApp.terminate(nil) }
+        Button("Quit Redrule") { NSApp.terminate(nil) }
     }
 }

@@ -31,7 +31,7 @@ struct ModelChoice: Hashable, Identifiable {
         ModelChoice(provider: .grok, model: "grok-4.5", label: "Grok 4.5"),
     ]
 
-    // Add IDs here only when Minutes should hide a model from the shared catalog.
+    // Add IDs here only when Redrule should hide a model from the shared catalog.
     private static let hidden: Set<String> = []
 
     static func refreshCatalog() async {

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds Minutes.app into ./build. Usage: scripts/bundle.sh [debug|release]
+# Builds the Swift app into ./build. Usage: scripts/bundle.sh [debug|release]
 # Signs with $APPLE_SIGNING_IDENTITY when it is set (see scripts/load-apple-creds.sh), otherwise ad hoc.
 set -euo pipefail
 

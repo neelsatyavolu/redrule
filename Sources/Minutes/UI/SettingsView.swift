@@ -80,8 +80,8 @@ struct OnboardingView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Set up Minutes").font(Theme.serif(28, .semibold)).foregroundStyle(Theme.ink)
-            Text("Minutes records your calls, transcribes them on this Mac, and writes the notes with your own AI account. Recording other people can require their consent, so tell them.")
+            Text("Set up Redrule").font(Theme.serif(28, .semibold)).foregroundStyle(Theme.ink)
+            Text("Redrule records your calls, transcribes them on this Mac, and writes the notes with your own AI account. Recording other people can require their consent, so tell them.")
                 .font(Theme.serif(15))
                 .lineSpacing(6)
                 .foregroundStyle(Theme.pencil)
@@ -95,7 +95,7 @@ struct OnboardingView: View {
 
             HStack {
                 Spacer()
-                Button(ready ? "Start using Minutes" : "Finish later") { model.hasOnboarded = true }
+                Button(ready ? "Start using Redrule" : "Finish later") { model.hasOnboarded = true }
                     .buttonStyle(PrimaryButtonStyle())
                     .keyboardShortcut(.defaultAction)
             }

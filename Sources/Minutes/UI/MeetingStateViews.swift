@@ -136,7 +136,7 @@ struct EmptyLibraryView: View {
                 Text("No meetings yet").font(Theme.serif(31, .semibold)).foregroundStyle(Theme.ink)
             }
             PadRow(spacing: 14) {
-                Text("Join a Zoom or Google Meet call and Minutes will offer to take notes. It listens to the call and your microphone, transcribes on this Mac, and writes up the meeting when it ends.")
+                Text("Join a Zoom or Google Meet call and Redrule offers to take notes. It listens to the call and your microphone, transcribes on this Mac, and writes up the meeting when it ends.")
                     .font(Theme.serif(16))
                     .lineSpacing(7)
                     .foregroundStyle(Theme.ink)

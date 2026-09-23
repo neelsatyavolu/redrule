@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds Redrule and installs it to /Applications, replacing its earlier version, Minutes.
+# Builds Redrule and installs it to /Applications, replacing the previous copy.
 # Usage: scripts/install-desktop.sh [--open] [--adhoc] [--build-only]
 # Signs with the shared Developer ID certificate from 1Password, like install.sh, so the Keychain's
 # "Always Allow" and both privacy permissions survive rebuilds. --adhoc skips that.
@@ -8,7 +8,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 SOURCE="src-tauri/target/release/bundle/macos/Redrule.app"
 DEST="/Applications/Redrule.app"
-# The app was called Minutes. Its old copy is removed only when the bundle id proves it is this app.
+# The previous copy is removed only when the bundle id proves it is this app.
 LEGACY="/Applications/Minutes.app"
 LEGACY_ID="co.nenu.minutes"
 
@@ -79,7 +79,7 @@ quit_app Redrule
 if [ -d "$LEGACY" ] && [ "$(defaults read "$LEGACY/Contents/Info" CFBundleIdentifier 2>/dev/null)" = "$LEGACY_ID" ]; then
     quit_app Minutes
     quit_app minutes
-    echo "Removing the old Minutes app…"
+    echo "Removing the previous app…"
     rm -rf "$LEGACY"
 fi
 

@@ -9,7 +9,7 @@ extension AppModel {
         banner = nil
         refreshPermissions()
         guard permissions.allGranted else {
-            errorMessage = "Minutes needs Microphone and Screen & System Audio Recording access before it can record. Grant them in Settings, under Permissions."
+            errorMessage = "Redrule needs Microphone and Screen & System Audio Recording access before it can record. Grant them in Settings, under Permissions."
             return
         }
 

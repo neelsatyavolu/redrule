@@ -4,23 +4,34 @@
 import Foundation
 import Security
 
-let base: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-                          kSecAttrService as String: "Minutes", kSecAttrAccount as String: "sharing"]
-var query = base
-query[kSecReturnData as String] = true
-var result: CFTypeRef?
-let status = SecItemCopyMatching(query as CFDictionary, &result)
+func keychainQuery(_ service: String) -> [String: Any] {
+    [kSecClass as String: kSecClassGenericPassword,
+     kSecAttrService as String: service, kSecAttrAccount as String: "sharing"]
+}
+func readKey(_ service: String) -> Data? {
+    var query = keychainQuery(service)
+    query[kSecReturnData as String] = true
+    var result: CFTypeRef?
+    guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess else { return nil }
+    return result as? Data
+}
+let base = keychainQuery("Redrule")
 let key: Data
-if status == errSecSuccess, let data = result as? Data {
+if let data = readKey("Redrule") ?? readKey("Minutes") {
     key = data
-} else if status == errSecItemNotFound {
+    if readKey("Redrule") == nil {
+        var attributes = base
+        attributes[kSecValueData as String] = key
+        guard SecItemAdd(attributes as CFDictionary, nil) == errSecSuccess else { fatalError("Keychain save failed") }
+    }
+} else {
     var random = [UInt8](repeating: 0, count: 32)
     guard SecRandomCopyBytes(kSecRandomDefault, random.count, &random) == errSecSuccess else { fatalError("Random generation failed") }
     key = Data(random.map { String(format: "%02x", $0) }.joined().utf8)
     var attributes = base
     attributes[kSecValueData as String] = key
     guard SecItemAdd(attributes as CFDictionary, nil) == errSecSuccess else { fatalError("Keychain save failed") }
-} else { fatalError("Keychain access failed: \(status)") }
+}
 
 for environment in ["preview", "production"] {
     let process = Process()
