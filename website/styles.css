@@ -14,8 +14,9 @@
   --binding: #2a322d;
   --margin-on-ink: #ff8a7e;
   --shadow: 0 1px 2px rgb(24 32 27 / 0.06), 0 30px 60px -24px rgb(24 32 27 / 0.28);
-  --gutter: clamp(20px, 6vw, 96px);
-  --rule-x: calc(var(--gutter) - 22px);
+  --gutter: clamp(56px, 7vw, 112px);
+  /* The margin rule sits this far left of the text. */
+  --rule-x: calc(var(--gutter) - 36px);
   --serif: "Instrument Serif", "New York", Georgia, serif;
   --sans: "Hanken Grotesk", -apple-system, system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
@@ -202,7 +203,7 @@ h1 em { display: block; }
 .notes input { accent-color: var(--margin); margin: 0; }
 .notes label b { font-weight: 600; min-width: 2.6em; }
 
-/* Bring your own AI: an inverted band straight after the hero */
+/* Note writing: an inverted band straight after the hero */
 .byo {
   margin: 0 calc(-1 * var(--gutter));
   padding: clamp(64px, 10vh, 112px) var(--gutter);
@@ -300,7 +301,7 @@ h3 { font: 600 19px/1.3 var(--sans); margin: 0 0 8px; }
 }
 
 @media (max-width: 560px) {
-  :root { --gutter: 16px; --rule-x: 6px; }
+  :root { --gutter: 32px; --rule-x: 10px; }
   body { font-size: 16px; }
   .lede { font-size: 17px; }
   .byo-points { grid-template-columns: 1fr; }

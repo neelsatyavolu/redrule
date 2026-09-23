@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Redrule — meeting notes, transcribed on your Mac</title>
-  <meta name="description" content="Redrule records your Zoom and Google Meet calls, transcribes them on your Mac, and writes up what was decided, on your Mac or with your ChatGPT or Grok plan. No bot joins the call, and your audio never leaves your Mac.">
-  <meta property="og:title" content="Redrule — meeting notes, transcribed on your Mac">
-  <meta property="og:description" content="Accurate notes from every call. Transcribed on your Mac, and written there too or by the ChatGPT or Grok plan you already have.">
+  <title>Redrule: meeting notes, transcribed on your Mac</title>
+  <meta name="description" content="Redrule transcribes Zoom and Google Meet calls on your Mac and writes a summary with decisions and action items. No bot joins the meeting, and audio never leaves your Mac.">
+  <meta property="og:title" content="Redrule: meeting notes, transcribed on your Mac">
+  <meta property="og:description" content="Meeting transcription and notes for Mac. Audio stays on your Mac; notes are written locally or with your ChatGPT or Grok account.">
   <meta property="og:image" content="/icon.png">
   <meta name="theme-color" content="#f7f8f4" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#171c19" media="(prefers-color-scheme: dark)">
@@ -34,16 +34,16 @@
         <p class="kicker reveal" style="--i:0">For Mac · Zoom &amp; Google Meet</p>
         <h1 class="reveal" style="--i:1">Accurate notes from every call. <em>Transcribed on your Mac.</em></h1>
         <p class="lede reveal" style="--i:2">
-          Redrule notices when a call starts, transcribes it on your Mac as people talk, and writes up
-          what was decided when you hang up, either on your Mac or with the ChatGPT or Grok plan you already
-          pay for. No bot joins the call, and the audio never leaves your Mac.
+          Redrule detects Zoom and Google Meet calls, transcribes them on your Mac as they happen, and writes
+          a summary with decisions and action items when the call ends. No bot joins the meeting, and audio
+          never leaves your Mac.
         </p>
         <div class="cta reveal" style="--i:3">
           <a class="button" href="/download">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Download for Mac
           </a>
-          <p class="fine"><strong>Free.</strong> No subscription, no account, no API keys.<br>macOS 15 or later · Apple Silicon<span id="version"></span></p>
+          <p class="fine"><strong>Free.</strong> No Redrule account or API key required.<br>macOS 15 or later · Apple Silicon<span id="version"></span></p>
         </div>
       </div>
 
@@ -60,7 +60,7 @@
           <li style="--i:3"><span class="mono">01:04</span><b class="me">Me</b><p>Then CSV in December, and I'll tell support. Dana, can you confirm the estimate by Friday?</p></li>
         </ol>
         <div class="notes">
-          <p class="written-by">When you hang up · written on this Mac</p>
+          <p class="written-by">After the call · written on this Mac</p>
           <h3>Decisions</h3>
           <p>CSV export ships in December, with PDF after it.</p>
           <h3>Action items</h3>
@@ -72,16 +72,16 @@
 
     <section class="byo" aria-labelledby="own-ai">
       <div class="byo-head">
-        <p class="kicker">Your AI, your choice</p>
-        <h2 id="own-ai">Write notes on your Mac, or with the plan you already have. <em>Pay nothing extra.</em></h2>
-        <p>Most note takers charge a monthly fee for AI. Redrule can write your notes entirely on your Mac with
-          an open model, or sign in to your own ChatGPT or Grok account and write them there.</p>
+        <p class="kicker">Note writing</p>
+        <h2 id="own-ai">Notes written on your Mac, or with your existing ChatGPT or Grok plan. <em>No subscription.</em></h2>
+        <p>Choose an open model that runs on your Mac, or sign in to the ChatGPT or Grok account you already
+          use. Redrule itself is free.</p>
       </div>
       <ul class="byo-points">
-        <li><h3>Entirely on your Mac</h3><p>Qwen3.5, an open model, writes the notes on your Mac. The transcript never leaves it, and it works offline. No account at all.</p></li>
-        <li><h3>Or the plan you already pay for</h3><p>Sign in to ChatGPT (through Codex) or Grok with your usual login for faster notes. No API keys, no second subscription.</p></li>
-        <li><h3>Transcription costs nothing</h3><p>Speech is turned into text on your Mac, so there are no per-minute fees and no minute caps.</p></li>
-        <li><h3>Pick your model</h3><p>Qwen3.5 4B or 9B on your Mac, or any ChatGPT or Grok model, for notes and for answers. Switch whenever you like.</p></li>
+        <li><h3>On your Mac</h3><p>Qwen3.5 writes the notes locally. The transcript stays on your Mac, no account is needed, and it works offline.</p></li>
+        <li><h3>With ChatGPT or Grok</h3><p>Sign in with your existing account (ChatGPT through Codex) for faster notes. No API key required.</p></li>
+        <li><h3>No transcription fees</h3><p>Transcription runs on your Mac, with no per-minute charges or monthly limits.</p></li>
+        <li><h3>Model choice</h3><p>Qwen3.5 4B or 9B locally, or any available ChatGPT or Grok model, for both notes and questions. Change it at any time in Settings.</p></li>
       </ul>
     </section>
 
@@ -90,38 +90,38 @@
       <ol>
         <li>
           <span class="num">1</span>
-          <h3>Take the call as usual</h3>
-          <p>Redrule sits in the menu bar and offers to record when a Zoom or Google Meet call starts. For any other call, record it from the menu bar.</p>
+          <h3>Join the call as usual</h3>
+          <p>Redrule runs in the menu bar and offers to record when a Zoom or Google Meet call starts. Other calls can be recorded from the menu bar.</p>
         </li>
         <li>
           <span class="num">2</span>
-          <h3>It writes as people talk</h3>
-          <p>Speech is transcribed live on your Mac by NVIDIA's Parakeet, one of the most accurate open speech models. Your microphone is always <em>Me</em>, and the other voices on the call are told apart.</p>
+          <h3>Live transcription</h3>
+          <p>NVIDIA Parakeet transcribes the call on your Mac as it happens. Your microphone is labelled <em>Me</em>, and other participants are distinguished by voice.</p>
         </li>
         <li>
           <span class="num">3</span>
-          <h3>Notes when you hang up</h3>
-          <p>A summary, the decisions and the action items, written on your Mac or by the ChatGPT or Grok account you connect. Then ask anything about the meeting, tick items off, and tag meetings to find them later.</p>
+          <h3>Notes after the call</h3>
+          <p>A summary, decisions and action items, written on your Mac or by your ChatGPT or Grok account. You can then ask questions about the meeting, check off action items and tag meetings.</p>
         </li>
       </ol>
     </section>
 
     <section class="ledger" aria-labelledby="privacy">
-      <h2 id="privacy">What stays on your Mac, and what can leave it</h2>
+      <h2 id="privacy">Privacy</h2>
       <div class="columns">
         <div>
           <h3>Stays on your Mac</h3>
           <ul>
-            <li>The call's audio and your microphone</li>
-            <li>Transcription and telling voices apart</li>
-            <li>Your library of meetings and notes</li>
-            <li>Writing notes and answering questions, if you choose the model on your Mac</li>
+            <li>Call audio and microphone recordings</li>
+            <li>Transcription and speaker identification</li>
+            <li>Your meetings, notes and tags</li>
+            <li>Notes and answers, when you use the model on your Mac</li>
           </ul>
         </div>
         <div>
-          <h3>Leaves it, only for what you ask</h3>
+          <h3>Sent only if you use ChatGPT or Grok</h3>
           <ul>
-            <li>If you use ChatGPT or Grok, the meeting's transcript goes to your own account to write notes or answer your questions</li>
+            <li>The meeting's transcript, to your own account, to write notes or answer your questions</li>
           </ul>
         </div>
       </div>
@@ -131,41 +131,41 @@
       <h2 id="questions">Questions</h2>
       <details>
         <summary>Does a bot join my meetings?</summary>
-        <p>No. Redrule records the call's sound on your Mac, the way you hear it. Nobody else sees anything join.</p>
+        <p>No. Redrule records the call's audio on your Mac. Other participants see no additional attendee.</p>
       </details>
       <details>
         <summary>Do I need a subscription or an API key?</summary>
-        <p>No. Redrule is free. Notes can be written on your Mac with no account at all, or you can sign in once to the ChatGPT or Grok plan you already have. Transcription always runs on your Mac.</p>
+        <p>No. Redrule is free. Notes can be written on your Mac without any account, or with your existing ChatGPT or Grok plan. Transcription always runs on your Mac.</p>
       </details>
       <details>
-        <summary>Should notes be written on my Mac or with ChatGPT or Grok?</summary>
-        <p>On your Mac, nothing leaves it and nothing needs a connection. Qwen3.5 4B writes a meeting's notes in a minute or two and stays light on memory and battery; the 9B model is sharper on long or technical meetings, about twice as slow, and needs 16 GB of memory. ChatGPT and Grok are faster, and the transcript goes to your account. You can switch at any time in Settings.</p>
+        <summary>Should I use the local model or ChatGPT or Grok?</summary>
+        <p>The local model keeps everything on your Mac and works offline. Qwen3.5 4B writes notes for a typical meeting in a minute or two with modest memory and battery use. The 9B model handles long or technical meetings better, takes about twice as long and needs 16 GB of memory. ChatGPT and Grok are faster, but the transcript is sent to your account. You can change this at any time in Settings.</p>
       </details>
       <details>
         <summary>Can I ask questions about a meeting?</summary>
-        <p>Yes. Once a meeting ends, ask anything about it and follow up. Answers come from its notes and transcript, from the model on your Mac or your ChatGPT or Grok account, whichever you choose in Settings.</p>
+        <p>Yes. After a meeting ends, you can ask questions about it and follow up. Answers are based on its notes and transcript and come from the local model or your ChatGPT or Grok account, as set in Settings.</p>
       </details>
       <details>
         <summary>How accurate is the transcript?</summary>
-        <p>Very good on clear audio. Parakeet ranks among the best open speech models on public benchmarks. Like any transcription it can mishear names, jargon, cross-talk and poor connections. You can rename speakers and edit the notes afterwards.</p>
+        <p>Accuracy is high on clear audio; Parakeet ranks among the most accurate open speech recognition models on public benchmarks. As with any transcription, names, jargon, overlapping speech and poor connections can cause errors. Speakers can be renamed and notes edited afterwards.</p>
       </details>
       <details>
         <summary>Does it work offline?</summary>
-        <p>Yes, when notes are written on your Mac: recording, transcription and notes all work without a connection. With ChatGPT or Grok, recording and transcription still work offline; choose <em>Write notes</em> once you're back online.</p>
+        <p>With the local model, recording, transcription and notes all work offline. With ChatGPT or Grok, recording and transcription work offline, and notes can be written once you are back online by choosing <em>Write notes</em>.</p>
       </details>
       <details>
         <summary>What do I need?</summary>
-        <p>A Mac with Apple Silicon running macOS 15 or later. On first launch Redrule asks for microphone and system audio access and downloads its speech model once. Writing notes on your Mac adds a one-time download of 2.7 GB, or 5.7 GB for the larger model.</p>
+        <p>A Mac with Apple Silicon running macOS 15 or later. On first launch, Redrule requests microphone and system audio access and downloads its speech model. The local notes model is a one-time download of 2.7 GB, or 5.7 GB for the larger version.</p>
       </details>
       <details>
         <summary>How do updates work?</summary>
-        <p>Redrule checks for new versions in the background and installs them itself. It never restarts during a recording. You can also choose <em>Check for Updates…</em> from the menu.</p>
+        <p>Redrule checks for updates in the background and installs them automatically, without interrupting a recording. You can also choose <em>Check for Updates…</em> from the menu.</p>
       </details>
     </section>
 
     <section class="closing">
-      <h2>Your next call, written down.</h2>
-      <p class="closing-sub">Free, with notes written on your Mac or by the plan you already have.</p>
+      <h2>Download Redrule</h2>
+      <p class="closing-sub">Free for Mac. Requires macOS 15 or later on Apple Silicon.</p>
       <a class="button" href="/download">Download for Mac</a>
     </section>
   </main>
