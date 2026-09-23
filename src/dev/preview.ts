@@ -58,6 +58,7 @@ const state: AppState = {
   liveSegments: view === "live" ? transcript.slice(0, 3) : [],
   banner: null,
   speechModel: view === "live" ? { state: "ready" } : { state: "loading", progress: { downloadedBytes: 214_000_000, totalBytes: 487_000_000, stage: "Downloading speech model" } },
+  noteModel: null,
   connected: view === "failed" ? [] : ["codex"],
   connecting: null,
   connectionError: null,
@@ -96,6 +97,10 @@ mockIPC((command) => {
         speaker: [
           { id: "standard", name: "Standard", description: "The smallest download. Fine for one-to-one calls; can merge similar voices in group calls.", languages: null, sizeMb: 32, installed: true, recommended: false },
           { id: "accurate", name: "Accurate", description: "Keeps similar voices apart in group calls, where Standard can merge them. Just as fast.", languages: null, sizeMb: 108, installed: false, recommended: true },
+        ],
+        notes: [
+          { id: "qwen3.5-4b", name: "Qwen3.5 4B", description: "Writes notes in a minute or two and stays light on memory and battery.", languages: null, sizeMb: 2741, installed: false, recommended: true },
+          { id: "qwen3.5-9b", name: "Qwen3.5 9B", description: "Sharper notes for long or technical meetings. About twice as slow and needs 16 GB of memory or more.", languages: null, sizeMb: 5681, installed: false, recommended: false },
         ],
         hardware: { memoryGb: 16, appleSilicon: true, cores: 10 },
       };

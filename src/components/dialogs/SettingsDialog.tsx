@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
-import type { Microphone, ModelOption, ProviderId } from "../../lib/types";
+import { LOCAL_NOTES, writesNotesLocally, type Microphone, type ModelOption, type ProviderId } from "../../lib/types";
 import { Dialog, Segmented, SettingRow, Switch } from "../ui";
 import type { SettingsTab } from "./dialogState";
 import { AccountRows, PermissionRows } from "./SetupSections";
-import { TranscriptionSettings } from "./TranscriptionSettings";
+import { ModelStatus, sizeLabel, TranscriptionSettings, useLocalModels } from "./TranscriptionSettings";
 
 const PROVIDER_NAMES: Record<ProviderId, string> = { codex: "ChatGPT", grok: "Grok" };
 
@@ -20,7 +20,7 @@ export function SettingsDialog({ initialTab = "general", onClose }: { initialTab
         onChange={setTab}
         options={[
           { value: "general", label: "General" },
-          { value: "transcription", label: "Transcription" },
+          { value: "transcription", label: "Models" },
           { value: "accounts", label: "Accounts" },
           { value: "permissions", label: "Permissions" },
         ]}
@@ -42,6 +42,7 @@ function GeneralSettings() {
   const app = useStore((s) => s.app);
   const microphones = useMicrophones();
   const [models, setModels] = useState<ModelOption[]>([]);
+  const [localModels] = useLocalModels();
   useEffect(() => void api.modelChoices().then(setModels), []);
   if (!app) return null;
   const { settings } = app;
@@ -67,7 +68,23 @@ function GeneralSettings() {
         </select>
       </SettingRow>
 
-      <SettingRow title="Write notes with" detail="Uses the account connected under Accounts.">
+      <SettingRow
+        title="Write notes with"
+        detail={
+          writesNotesLocally(settings) ? (
+            <>
+              Runs on this Mac, so the transcript never leaves it. Takes a minute or two after each meeting.
+              {app.noteModel && app.noteModel.state !== "ready" && (
+                <div className="mt-1.5">
+                  <ModelStatus model={app.noteModel} onRetry={api.retryNoteModel} />
+                </div>
+              )}
+            </>
+          ) : (
+            "Uses the account connected under Accounts."
+          )
+        }
+      >
         <select
           aria-label="Model"
           className={SELECT}
@@ -85,6 +102,13 @@ function GeneralSettings() {
                 ))}
             </optgroup>
           ))}
+          <optgroup label="On this Mac">
+            {localModels?.notes.map((model) => (
+              <option key={model.id} value={LOCAL_NOTES + model.id}>
+                {model.installed ? model.name : `${model.name} (${sizeLabel(model.sizeMb)} download)`}
+              </option>
+            ))}
+          </optgroup>
         </select>
       </SettingRow>
 

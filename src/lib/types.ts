@@ -83,9 +83,9 @@ export interface Settings {
   speakerModelId: string;
 }
 
-export type ModelKind = "speech" | "speaker";
+export type ModelKind = "speech" | "speaker" | "notes";
 
-/** An on-device speech or speaker model from src-tauri/crates/engine/src/catalog.rs. */
+/** An on-device speech, speaker or note model from src-tauri/crates/engine/src/catalog.rs. */
 export interface LocalModel {
   id: string;
   name: string;
@@ -99,6 +99,7 @@ export interface LocalModel {
 export interface LocalModels {
   speech: LocalModel[];
   speaker: LocalModel[];
+  notes: LocalModel[];
   hardware: { memoryGb: number; appleSilicon: boolean; cores: number };
 }
 
@@ -108,6 +109,8 @@ export interface AppState {
   liveSegments: TranscriptSegment[];
   banner: Banner | null;
   speechModel: SpeechModel;
+  /** The on-device note model's download; null while notes are written with an account. */
+  noteModel: SpeechModel | null;
   connected: ProviderId[];
   connecting: ProviderId | null;
   connectionError: string | null;
@@ -116,6 +119,18 @@ export interface AppState {
   sharingBusy: boolean;
   revision: number;
   storageError: string | null;
+}
+
+/** Model choices that write notes on this Mac, as stored in `Settings.modelChoiceId`. */
+export const LOCAL_NOTES = "local:";
+
+export function writesNotesLocally(settings: Settings): boolean {
+  return settings.modelChoiceId.startsWith(LOCAL_NOTES);
+}
+
+/** Notes can be written: an account is connected or an on-device model is chosen. */
+export function canWriteNotes(app: AppState): boolean {
+  return app.connected.length > 0 || writesNotesLocally(app.settings);
 }
 
 export interface Microphone {

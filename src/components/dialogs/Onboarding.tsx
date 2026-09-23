@@ -1,13 +1,14 @@
 import { api } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
+import { canWriteNotes } from "../../lib/types";
 import { Button, Dialog } from "../ui";
-import { AccountRows, PermissionRows } from "./SetupSections";
+import { AccountRows, LocalNotesRow, PermissionRows } from "./SetupSections";
 
-/** First launch: the two permissions and an account, in the order they are needed. */
+/** First launch: the two permissions and a way to write notes, in the order they are needed. */
 export function Onboarding() {
   const app = useStore((s) => s.app);
   if (!app || app.settings.onboarded) return null;
-  const ready = app.permissions.microphone && app.permissions.screenRecording && app.connected.length > 0;
+  const ready = app.permissions.microphone && app.permissions.screenRecording && canWriteNotes(app);
   const finish = () => void attempt(() => api.updateSettings({ onboarded: true }));
 
   return (
@@ -16,7 +17,7 @@ export function Onboarding() {
       onOpenChange={(open) => !open && finish()}
       title="Set up Redrule"
       width={560}
-      description="Redrule records your calls, transcribes them on this Mac, and writes the notes with your own AI account. Recording other people can require their consent, so let them know."
+      description="Redrule records your calls, transcribes them on this Mac, and writes the notes with your own AI account or on this Mac. Recording other people can require their consent, so let them know."
       footer={
         <>
           <div className="flex-1" />
@@ -29,8 +30,11 @@ export function Onboarding() {
       <Step number={1} title="Allow recording">
         <PermissionRows />
       </Step>
-      <Step number={2} title="Connect an account for notes">
+      <Step number={2} title="Choose how notes are written">
         <AccountRows />
+        <div className="border-t border-rule">
+          <LocalNotesRow />
+        </div>
       </Step>
     </Dialog>
   );

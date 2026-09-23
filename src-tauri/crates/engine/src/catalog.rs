@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use crate::model_download::Model;
+use crate::model_download::{Model, ModelProgress};
 
 const NEMO_TRANSDUCER_FILES: &[&str] = &["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt"];
 
@@ -47,6 +47,20 @@ pub(crate) const TITANET_LARGE: Model = Model {
     url_path: "speaker-recongition-models/nemo_en_titanet_large.onnx",
     files: &[],
     noun: "speaker model",
+};
+
+pub(crate) const QWEN35_4B: Model = Model {
+    name: "Qwen3.5-4B-Q4_K_M.gguf",
+    url_path: "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
+    files: &[],
+    noun: "notes model",
+};
+
+pub(crate) const QWEN35_9B: Model = Model {
+    name: "Qwen3.5-9B-Q4_K_M.gguf",
+    url_path: "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf",
+    files: &[],
+    noun: "notes model",
 };
 
 /// Similarity cut-offs, which differ per voice model because each spreads voices differently.
@@ -143,6 +157,44 @@ pub const SPEAKER_OPTIONS: &[SpeakerOption] = &[
     },
 ];
 
+/// A language model that writes the notes on this Mac instead of with a connected account.
+pub struct NoteOption {
+    pub id: &'static str,
+    pub name: &'static str,
+    pub description: &'static str,
+    pub size_mb: u32,
+    /// Most tokens (prompt and reply) one request may use. Sized so a long meeting fits whole.
+    pub context_tokens: u32,
+    /// Transcripts longer than this many characters are digested in parts first.
+    pub chunk_chars: usize,
+    pub(crate) model: &'static Model,
+}
+
+/// Both are Qwen3.5: only a quarter of their layers keep a full memory of the text, so a whole
+/// hour-long meeting fits in well under a gigabyte of working memory.
+pub const NOTE_OPTIONS: &[NoteOption] = &[
+    NoteOption {
+        id: "qwen3.5-4b",
+        name: "Qwen3.5 4B",
+        description: "Writes notes in a minute or two and stays light on memory and battery.",
+        size_mb: 2741,
+        context_tokens: 24_576,
+        chunk_chars: 64_000,
+        model: &QWEN35_4B,
+    },
+    NoteOption {
+        id: "qwen3.5-9b",
+        name: "Qwen3.5 9B",
+        description: "Sharper notes for long or technical meetings. About twice as slow and needs 16 GB of memory or more.",
+        size_mb: 5681,
+        context_tokens: 24_576,
+        chunk_chars: 64_000,
+        model: &QWEN35_9B,
+    },
+];
+
+pub const DEFAULT_NOTES: &str = "qwen3.5-4b";
+
 pub const DEFAULT_SPEECH: &str = "parakeet-v3";
 pub const DEFAULT_SPEAKER: &str = "accurate";
 
@@ -154,6 +206,27 @@ pub fn speech_option(id: &str) -> &'static SpeechOption {
 /// The option with `id`, or the default when it is unknown.
 pub fn speaker_option(id: &str) -> &'static SpeakerOption {
     SPEAKER_OPTIONS.iter().find(|option| option.id == id).unwrap_or_else(|| speaker_option(DEFAULT_SPEAKER))
+}
+
+/// The option with `id`, or the default when it is unknown.
+pub fn note_option(id: &str) -> &'static NoteOption {
+    NOTE_OPTIONS.iter().find(|option| option.id == id).unwrap_or_else(|| note_option(DEFAULT_NOTES))
+}
+
+impl NoteOption {
+    pub fn is_installed(&self, models_dir: &Path) -> bool {
+        self.model.is_present(models_dir)
+    }
+
+    /// Downloads the model unless it is already there.
+    pub async fn download(&self, models_dir: &Path, progress: impl Fn(ModelProgress) + Send + Sync + 'static) -> minutes_core::Result<()> {
+        crate::model_download::ensure(self.model, models_dir, &progress).await
+    }
+
+    /// Deletes the downloaded file. The caller makes sure the option is not in use.
+    pub fn remove(&self, models_dir: &Path) -> std::io::Result<()> {
+        remove(models_dir, &[self.model])
+    }
 }
 
 impl SpeechOption {
@@ -264,6 +337,8 @@ mod tests {
         assert_eq!(speech_option(DEFAULT_SPEECH).id, DEFAULT_SPEECH);
         assert_eq!(speaker_option(DEFAULT_SPEAKER).id, DEFAULT_SPEAKER);
         assert_eq!(speech_option("gone").id, DEFAULT_SPEECH);
+        assert_eq!(note_option(DEFAULT_NOTES).id, DEFAULT_NOTES);
+        assert_eq!(note_option("gone").id, DEFAULT_NOTES);
     }
 
     #[test]

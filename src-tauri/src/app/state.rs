@@ -45,6 +45,8 @@ pub struct State {
     pub live_segments: Vec<TranscriptSegment>,
     pub banner: Option<Banner>,
     pub speech_model: SpeechModel,
+    /// The on-device note model's download; absent while notes are written with an account.
+    pub note_model: Option<SpeechModel>,
     pub connected: Vec<ProviderId>,
     pub connecting: Option<ProviderId>,
     pub connection_error: Option<String>,
@@ -73,6 +75,10 @@ pub struct App {
     /// Held while capture starts, so stopping waits for a start that is still in progress.
     pub recording: tokio::sync::Mutex<Option<ActiveRecording>>,
     pub connect_task: Mutex<Option<JoinHandle<()>>>,
+    /// The on-device note model being downloaded, by id.
+    pub note_download: Mutex<Option<(&'static str, JoinHandle<()>)>>,
+    /// One on-device note model in memory at a time, however many meetings want notes.
+    pub local_notes: tokio::sync::Mutex<()>,
     /// Identifies the current banner, so a stale auto-dismiss timer does nothing.
     pub banner_generation: Mutex<u64>,
 }
@@ -96,6 +102,7 @@ impl App {
             live_segments: Vec::new(),
             banner: None,
             speech_model: SpeechModel::Loading { progress: None },
+            note_model: None,
             connected: Vec::new(),
             connecting: None,
             connection_error: None,
@@ -115,6 +122,8 @@ impl App {
             state: Mutex::new(state),
             recording: tokio::sync::Mutex::new(None),
             connect_task: Mutex::new(None),
+            note_download: Mutex::new(None),
+            local_notes: tokio::sync::Mutex::new(()),
             banner_generation: Mutex::new(0),
         }
     }

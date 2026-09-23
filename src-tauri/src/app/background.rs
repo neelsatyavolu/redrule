@@ -12,13 +12,14 @@ use crate::shell;
 const POLL_INTERVAL: Duration = Duration::from_secs(3);
 /// An unanswered "meeting detected" prompt should not sit on screen for the whole call.
 const BANNER_AUTO_DISMISS: Duration = Duration::from_secs(45);
-const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);
+pub(super) const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);
 
 impl App {
     /// Starts everything that should run once the app has launched.
     pub fn start(self: &Arc<Self>) {
         self.refresh_connections();
         self.prepare_speech_model();
+        self.prepare_note_model();
         let app = Arc::clone(self);
         tauri::async_runtime::spawn(async move { app.watch_for_calls().await });
     }

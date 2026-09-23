@@ -173,6 +173,11 @@ pub fn retry_speech_model(app: AppState) {
 }
 
 #[tauri::command]
+pub fn retry_note_model(app: AppState) {
+    app.prepare_note_model();
+}
+
+#[tauri::command]
 pub fn dismiss_banner(app: AppState) {
     app.set_banner(None);
 }

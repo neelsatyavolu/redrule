@@ -38,6 +38,7 @@ export const api = {
   microphones: () => invoke<Microphone[]>("microphones"),
   modelChoices: () => invoke<ModelOption[]>("model_choices"),
   retrySpeechModel: () => invoke<void>("retry_speech_model"),
+  retryNoteModel: () => invoke<void>("retry_note_model"),
   localModels: () => invoke<LocalModels>("local_models"),
   removeLocalModel: (kind: ModelKind, id: string) => invoke<void>("remove_local_model", { kind, id }),
   dismissBanner: () => invoke<void>("dismiss_banner"),

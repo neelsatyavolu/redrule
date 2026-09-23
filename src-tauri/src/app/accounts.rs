@@ -78,8 +78,10 @@ impl App {
         });
         self.refresh_connections();
         // Switch the note writer to the new account if the chosen model's account is not connected.
-        let (preferred, connected) = self.read(|state| (state.settings.model_choice(), state.connected.clone()));
-        if error.is_none() && !connected.contains(&preferred.provider) {
+        // Notes written on this Mac stay that way.
+        let (settings, connected) = self.read(|state| (state.settings.clone(), state.connected.clone()));
+        let local = settings.local_note_model().is_some();
+        if error.is_none() && !local && !connected.contains(&settings.model_choice().provider) {
             self.apply_settings(SettingsPatch { model_choice_id: Some(ModelChoice::default_for(provider).id()), ..Default::default() });
         }
     }

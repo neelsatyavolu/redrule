@@ -7,6 +7,8 @@ use crate::providers::clients::ModelChoice;
 use minutes_engine::catalog;
 
 const LEGACY_DOMAIN: &str = "co.nenu.minutes";
+/// Model choices that write notes on this Mac are stored as "local:<note model id>".
+pub const LOCAL_NOTES: &str = "local:";
 
 mod key {
     pub const MODEL_CHOICE: &str = "modelChoice";
@@ -48,7 +50,7 @@ impl Settings {
         if has_settings(&defaults) {
             return read(&defaults);
         }
-        // The app was called Minutes (co.nenu.minutes). Its preferences are copied over once.
+        // Preferences from the previous app (co.nenu.minutes) are copied over once.
         let legacy = NSUserDefaults::initWithSuiteName(NSUserDefaults::alloc(), Some(&NSString::from_str(LEGACY_DOMAIN)));
         match legacy.filter(|legacy| has_settings(legacy)) {
             Some(legacy) => {
@@ -65,7 +67,7 @@ impl Settings {
         let next = Self {
             model_choice_id: patch
                 .model_choice_id
-                .map(|id| ModelChoice::resolve(Some(&id)).id())
+                .map(|id| known_choice(&id))
                 .unwrap_or_else(|| self.model_choice_id.clone()),
             keep_audio: patch.keep_audio.unwrap_or(self.keep_audio),
             microphone_id: patch.microphone_id.unwrap_or_else(|| self.microphone_id.clone()),
@@ -101,6 +103,19 @@ impl Settings {
     pub fn model_choice(&self) -> ModelChoice {
         ModelChoice::resolve(Some(&self.model_choice_id))
     }
+
+    /// The on-device note model, when notes are written on this Mac instead of with an account.
+    pub fn local_note_model(&self) -> Option<&'static catalog::NoteOption> {
+        self.model_choice_id.strip_prefix(LOCAL_NOTES).map(catalog::note_option)
+    }
+}
+
+/// A choice that is still offered: retired account models and note models fall back to a default.
+fn known_choice(id: &str) -> String {
+    match id.strip_prefix(LOCAL_NOTES) {
+        Some(local) => format!("{LOCAL_NOTES}{}", catalog::note_option(local).id),
+        None => ModelChoice::resolve(Some(id)).id(),
+    }
 }
 
 fn has_settings(defaults: &NSUserDefaults) -> bool {
@@ -125,5 +140,17 @@ fn read(defaults: &NSUserDefaults) -> Settings {
         onboarded: flag(key::ONBOARDED),
         speech_model_id: catalog::speech_option(&text(key::SPEECH_MODEL).unwrap_or_else(|| speech.into())).id.into(),
         speaker_model_id: catalog::speaker_option(&text(key::SPEAKER_MODEL).unwrap_or_else(|| speaker.into())).id.into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn local_note_choices_survive_and_fall_back_to_the_default_note_model() {
+        assert_eq!(known_choice("local:qwen3.5-9b"), "local:qwen3.5-9b");
+        assert_eq!(known_choice("local:retired"), format!("local:{}", catalog::DEFAULT_NOTES));
+        assert_eq!(known_choice("grok:grok-4.6"), "grok:grok-4.6");
     }
 }

@@ -80,6 +80,7 @@ pub fn run() {
             commands::microphones,
             commands::model_choices,
             commands::retry_speech_model,
+            commands::retry_note_model,
             commands::local_models,
             commands::remove_local_model,
             commands::dismiss_banner,

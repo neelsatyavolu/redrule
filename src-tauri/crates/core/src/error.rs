@@ -1,6 +1,6 @@
 use serde::{Serialize, Serializer};
 
-/// Every failure the app reports. Display strings are written for the person using Minutes.
+/// Every failure the app reports. Display strings are written for the person using Redrule.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     // OAuth
@@ -20,7 +20,7 @@ pub enum Error {
     NotJson,
     #[error("Nothing was transcribed, so there is nothing to summarise.")]
     EmptyTranscript,
-    #[error("Connect ChatGPT or Grok in Settings to generate notes.")]
+    #[error("Connect ChatGPT or Grok, or choose to write notes on this Mac, in Settings.")]
     NoProviderConnected,
 
     /// A complete, user-facing message.

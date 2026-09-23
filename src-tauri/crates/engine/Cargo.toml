@@ -17,8 +17,12 @@ rubato = "5.0"
 sherpa-onnx = "1.13.8"
 hound = "3.5"
 bzip2 = "0.6"
+llama-cpp-2 = { version = "0.1.157", default-features = false, features = ["metal", "common"] }
+encoding_rs = "0.8"
+serde_json.workspace = true
 tar = "0.4"
 
 [dev-dependencies]
 tempfile = "3"
+chrono.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time", "signal"] }

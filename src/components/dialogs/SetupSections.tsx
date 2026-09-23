@@ -3,8 +3,9 @@ import { Check } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { api } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
-import type { ProviderId } from "../../lib/types";
+import { LOCAL_NOTES, writesNotesLocally, type ProviderId } from "../../lib/types";
 import { Button, TextInput } from "../ui";
+import { ModelStatus, sizeLabel, useLocalModels } from "./TranscriptionSettings";
 
 const PROVIDERS: { id: ProviderId; name: string; detail: string }[] = [
   { id: "codex", name: "ChatGPT", detail: "Writes notes with your ChatGPT plan, through Codex." },
@@ -127,5 +128,32 @@ export function AccountRows() {
       </div>
       {app.connectionError && <p className="mt-1 text-[12px] text-margin">{app.connectionError}</p>}
     </div>
+  );
+}
+
+/** Writing notes on this Mac instead of connecting an account. */
+export function LocalNotesRow() {
+  const app = useStore((s) => s.app);
+  const [models] = useLocalModels();
+  const model = models?.notes.find((m) => m.recommended);
+  if (!app || !model) return null;
+  const chosen = writesNotesLocally(app.settings);
+  const size = model.installed ? "" : ` It is a one-time ${sizeLabel(model.sizeMb)} download.`;
+
+  return (
+    <SetupRow
+      title="Or write notes on this Mac"
+      detail={`No account needed, and the transcript never leaves this Mac. Notes take a minute or two longer.${size}`}
+      done={chosen}
+      action={
+        !chosen && (
+          <Button size="sm" onClick={() => void attempt(() => api.updateSettings({ modelChoiceId: LOCAL_NOTES + model.id }))}>
+            Use
+          </Button>
+        )
+      }
+    >
+      {chosen && app.noteModel && <ModelStatus model={app.noteModel} onRetry={api.retryNoteModel} />}
+    </SetupRow>
   );
 }

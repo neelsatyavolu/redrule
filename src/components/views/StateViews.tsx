@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { APP_NAMES, clock } from "../../lib/format";
 import { attempt, useStore } from "../../lib/store";
-import type { Meeting, SpeechModel, TranscriptSegment } from "../../lib/types";
+import { canWriteNotes, type Meeting, type SpeechModel, type TranscriptSegment } from "../../lib/types";
 import { useDialogs } from "../dialogs/dialogState";
 import { PadPage, PadRow } from "../Pad";
 import { Button, RecordingDot, Spinner } from "../ui";
@@ -71,7 +71,7 @@ function waitingMessage(model?: SpeechModel): string {
 
 /** After recording, while the transcript is finished and notes are written, or when that failed. */
 export function ProcessingView({ meeting, segments }: { meeting: Meeting; segments: TranscriptSegment[] }) {
-  const connected = useStore((s) => s.app?.connected ?? []);
+  const canWrite = useStore((s) => (s.app ? canWriteNotes(s.app) : true));
   const openDialog = useDialogs((s) => s.open);
 
   return (
@@ -89,7 +89,7 @@ export function ProcessingView({ meeting, segments }: { meeting: Meeting; segmen
                   Write notes
                 </Button>
               )}
-              {connected.length === 0 && (
+              {!canWrite && (
                 <Button onClick={() => openDialog({ kind: "settings", tab: "accounts" })}>Connect an account</Button>
               )}
             </div>
@@ -113,7 +113,7 @@ export function ProcessingView({ meeting, segments }: { meeting: Meeting; segmen
 export function EmptyView() {
   const app = useStore((s) => s.app);
   const openDialog = useDialogs((s) => s.open);
-  const needsSetup = app && (!app.permissions.microphone || !app.permissions.screenRecording || app.connected.length === 0);
+  const needsSetup = app && (!app.permissions.microphone || !app.permissions.screenRecording || !canWriteNotes(app));
 
   return (
     <PadPage className="pt-[14vh]">

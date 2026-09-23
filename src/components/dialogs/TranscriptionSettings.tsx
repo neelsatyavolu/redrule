@@ -1,30 +1,42 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
-import type { LocalModel, LocalModels, ModelKind, SpeechModel } from "../../lib/types";
+import { LOCAL_NOTES, type LocalModel, type LocalModels, type ModelKind, type Settings, type SpeechModel } from "../../lib/types";
 import { Button, Spinner } from "../ui";
 
-/** Choosing the on-device speech and speaker models. */
-export function TranscriptionSettings() {
-  const app = useStore((s) => s.app);
+const SETTING: Record<ModelKind, (id: string) => Partial<Settings>> = {
+  speech: (id) => ({ speechModelId: id }),
+  speaker: (id) => ({ speakerModelId: id }),
+  notes: (id) => ({ modelChoiceId: LOCAL_NOTES + id }),
+};
+
+/** The on-device models, refreshed when a download finishes so "Downloaded" stays true. */
+export function useLocalModels(): [LocalModels | null, () => void] {
   const [models, setModels] = useState<LocalModels | null>(null);
   const reload = useCallback(() => void api.localModels().then(setModels), []);
-  const status = app?.speechModel.state;
-  // Downloads finish in the background; refresh what is installed when they do.
-  useEffect(reload, [reload, status]);
+  const speech = useStore((s) => s.app?.speechModel.state);
+  const notes = useStore((s) => s.app?.noteModel?.state);
+  useEffect(reload, [reload, speech, notes]);
+  return [models, reload];
+}
+
+/** Choosing the on-device speech, speaker and note models. */
+export function TranscriptionSettings() {
+  const app = useStore((s) => s.app);
+  const [models, reload] = useLocalModels();
   if (!app || !models) return null;
 
-  const { settings, speechModel } = app;
+  const { settings, speechModel, noteModel } = app;
   const recording = app.recordingId !== null;
-  const choose = (kind: ModelKind, id: string) =>
-    void attempt(() => api.updateSettings(kind === "speech" ? { speechModelId: id } : { speakerModelId: id }));
+  const localNotes = settings.modelChoiceId.startsWith(LOCAL_NOTES) ? settings.modelChoiceId.slice(LOCAL_NOTES.length) : "";
+  const choose = (kind: ModelKind, id: string) => void attempt(() => api.updateSettings(SETTING[kind](id)));
   const remove = (kind: ModelKind, model: LocalModel) =>
     void attempt(() => api.removeLocalModel(kind, model.id), `${model.name} removed.`).then(reload);
 
   return (
     <div className="space-y-5">
       <p className="text-[12px] leading-relaxed text-graphite">
-        Both run on this Mac, so nothing you say leaves it until notes are written. Recommendations suit this Mac (
+        These run on this Mac, so nothing you say leaves it until notes are written. Recommendations suit this Mac (
         {describeHardware(models.hardware)}) and stay light enough to run alongside a call.
         {recording && " Changes apply to the next recording."}
       </p>
@@ -46,7 +58,17 @@ export function TranscriptionSettings() {
         onChoose={choose}
         onRemove={remove}
       />
-      <ModelStatus model={speechModel} />
+      <ModelStatus model={speechModel} onRetry={api.retrySpeechModel} />
+      <ModelGroup
+        title="Notes"
+        detail="Writes the notes on this Mac instead of with ChatGPT or Grok, so the transcript never leaves it. Slower than an account, and free."
+        kind="notes"
+        models={models.notes}
+        selected={localNotes}
+        onChoose={choose}
+        onRemove={remove}
+      />
+      {noteModel && <ModelStatus model={noteModel} onRetry={api.retryNoteModel} />}
     </div>
   );
 }
@@ -127,13 +149,13 @@ function ModelRow({ model, name, selected, onChoose, onRemove }: RowProps) {
   );
 }
 
-function ModelStatus({ model }: { model: SpeechModel }) {
+export function ModelStatus({ model, onRetry }: { model: SpeechModel; onRetry: () => Promise<void> }) {
   if (model.state === "ready") return <p className="text-[12px] text-graphite">Ready.</p>;
   if (model.state === "failed") {
     return (
       <div className="flex items-center gap-3">
         <p className="flex-1 text-[12px] text-margin">{model.message}</p>
-        <Button size="sm" onClick={() => void attempt(api.retrySpeechModel)}>
+        <Button size="sm" onClick={() => void attempt(onRetry)}>
           Retry
         </Button>
       </div>
@@ -154,6 +176,6 @@ function describeHardware({ memoryGb, appleSilicon }: LocalModels["hardware"]): 
   return `${appleSilicon ? "Apple silicon" : "Intel"}, ${memoryGb} GB memory`;
 }
 
-function sizeLabel(mb: number): string {
+export function sizeLabel(mb: number): string {
   return mb >= 1000 ? `${(mb / 1000).toFixed(1)} GB` : `${mb} MB`;
 }

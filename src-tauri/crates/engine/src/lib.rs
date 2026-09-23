@@ -6,6 +6,9 @@ mod diarization;
 mod mic_capture;
 mod microphones;
 mod model_download;
+#[cfg(test)]
+mod note_eval;
+mod note_writer;
 mod pipeline;
 mod resampler;
 mod speakers;
@@ -23,5 +26,6 @@ pub use asr::Transcription;
 pub use diarization::SpeakerRecognizer;
 pub use microphones::{Microphone, microphones};
 pub use model_download::ModelProgress;
+pub use note_writer::LocalNoteWriter;
 pub use pipeline::RecordingPipeline;
 pub use transcriber::Transcriber;

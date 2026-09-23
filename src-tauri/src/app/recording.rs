@@ -2,7 +2,7 @@
 use std::sync::Arc;
 
 use chrono::Utc;
-use minutes_engine::RecordingPipeline;
+use minutes_engine::{LocalNoteWriter, RecordingPipeline};
 
 use super::state::{ActiveRecording, App};
 use crate::core::models::{Meeting, MeetingApp, MeetingStatus, TranscriptSegment};
@@ -89,8 +89,17 @@ impl App {
     async fn write_notes(&self, meeting: &Meeting) -> Result<String> {
         let store = self.store()?;
         let segments = store.transcript(&meeting.id)?;
-        let client = self.summary_client()?;
-        let note = summarize(&client, meeting, &segments, CHUNK_BUDGET).await?;
+        let note = match self.read(|state| state.settings.local_note_model()) {
+            Some(option) => {
+                let _one_at_a_time = self.local_notes.lock().await;
+                let dir = self.models_dir.clone();
+                let writer = tauri::async_runtime::spawn_blocking(move || LocalNoteWriter::load(option, &dir))
+                    .await
+                    .map_err(|error| Error::message(error.to_string()))??;
+                summarize(&writer, meeting, &segments, option.chunk_chars).await?
+            }
+            None => summarize(&self.summary_client()?, meeting, &segments, CHUNK_BUDGET).await?,
+        };
         store.save_note(&note, &meeting.id)?;
         Ok(note.title)
     }

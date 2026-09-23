@@ -25,6 +25,7 @@ pub(crate) type Progress = dyn Fn(ModelProgress) + Send + Sync;
 pub(crate) struct Model {
     /// Directory or file name under the models folder.
     pub name: &'static str,
+    /// Under the sherpa-onnx releases, or a full `https://` URL.
     pub url_path: &'static str,
     /// Files that must exist (relative to `name` for archives) for the model to count as present.
     pub files: &'static [&'static str],
@@ -35,6 +36,10 @@ pub(crate) struct Model {
 impl Model {
     pub(crate) fn path(&self, models_dir: &Path) -> PathBuf {
         models_dir.join(self.name)
+    }
+
+    fn url(&self) -> String {
+        if self.url_path.starts_with("https://") { self.url_path.to_string() } else { format!("{RELEASES}/{}", self.url_path) }
     }
 
     fn is_archive(&self) -> bool {
@@ -66,8 +71,7 @@ pub(crate) async fn ensure(model: &Model, models_dir: &Path, progress: &Progress
 }
 
 async fn fetch(model: &Model, destination: &Path, progress: &Progress) -> Result<()> {
-    let url = format!("{RELEASES}/{}", model.url_path);
-    let response = reqwest::get(&url)
+    let response = reqwest::get(model.url())
         .await
         .and_then(reqwest::Response::error_for_status)
         .map_err(|error| Error::message(format!("Check your internet connection and try again. ({error})")))?;
