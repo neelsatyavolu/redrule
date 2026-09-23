@@ -1,5 +1,6 @@
 //! App state and behavior, ported from the Swift `AppModel`.
 mod accounts;
+mod api_keys;
 mod ask;
 mod background;
 mod calendar;

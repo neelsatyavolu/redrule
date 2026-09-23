@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  ApiProvider,
   AppState,
   Exchange,
   MeetingApp,
@@ -50,6 +51,10 @@ export const api = {
   submitPastedCode: (text: string) => invoke<void>("submit_pasted_code", { text }),
   cancelConnecting: () => invoke<void>("cancel_connecting"),
   disconnect: (provider: ProviderId) => invoke<void>("disconnect", { provider }),
+  /** Checks the key with the provider, then saves it. `baseUrl` and `model` are for a custom server. */
+  saveApiKey: (provider: ApiProvider, key: string, baseUrl = "", model = "") =>
+    invoke<void>("save_api_key", { provider, key, baseUrl, model }),
+  removeApiKey: (provider: ApiProvider) => invoke<void>("remove_api_key", { provider }),
   requestMicrophone: () => invoke<void>("request_microphone"),
   requestScreenRecording: () => invoke<void>("request_screen_recording"),
   requestCalendar: () => invoke<void>("request_calendar"),

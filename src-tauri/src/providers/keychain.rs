@@ -2,6 +2,7 @@
 //! Items saved under the previous service name are read and copied across.
 use security_framework::passwords::{delete_generic_password, get_generic_password, set_generic_password};
 
+use crate::core::api_providers::ApiProvider;
 use crate::core::oauth::{ProviderId, TokenBundle};
 use crate::core::{Error, Result};
 
@@ -53,6 +54,19 @@ pub fn save_tokens(bundle: &TokenBundle, provider: ProviderId) -> Result<()> {
 pub fn delete_tokens(provider: ProviderId) -> Result<()> {
     remove(SERVICE, provider.raw())?;
     remove(LEGACY_SERVICE, provider.raw())
+}
+
+/// A provider's API key. These items are new, so there is no older copy to look for.
+pub fn load_api_key(provider: ApiProvider) -> Result<Option<String>> {
+    Ok(read(SERVICE, &provider.key_account())?.and_then(|bytes| String::from_utf8(bytes).ok()))
+}
+
+pub fn save_api_key(provider: ApiProvider, key: &str) -> Result<()> {
+    set_generic_password(SERVICE, &provider.key_account(), key.as_bytes()).map_err(describe)
+}
+
+pub fn delete_api_key(provider: ApiProvider) -> Result<()> {
+    remove(SERVICE, &provider.key_account())
 }
 
 fn text(bytes: Option<Vec<u8>>) -> Result<Option<String>> {

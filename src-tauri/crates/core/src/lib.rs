@@ -1,4 +1,6 @@
 //! Pure, unit-tested logic: the Rust port of the Swift core module. No I/O beyond the meeting store.
+pub mod api_providers;
+pub mod api_requests;
 pub mod ask;
 pub mod calendar;
 pub mod detector_logic;

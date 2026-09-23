@@ -26,7 +26,7 @@ function StatusMark({ done }: { done: boolean }) {
   );
 }
 
-function SetupRow({ title, detail, done, action, children }: { title: string; detail: string; done: boolean; action?: ReactNode; children?: ReactNode }) {
+export function SetupRow({ title, detail, done, action, children }: { title: string; detail: string; done: boolean; action?: ReactNode; children?: ReactNode }) {
   return (
     <div className="py-3.5">
       <div className="flex items-start gap-3">

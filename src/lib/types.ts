@@ -3,7 +3,11 @@
 export type Speaker = "me" | "them";
 export type MeetingApp = "zoom" | "googleMeet" | "teams" | "slack" | "webex" | "faceTime" | "manual";
 export type MeetingStatus = "recording" | "transcribing" | "summarizing" | "done" | "failed";
+/** Accounts signed in through the browser. */
 export type ProviderId = "codex" | "grok";
+/** Providers reached with the person's own API key; "compatible" is any OpenAI-compatible server. */
+export type ApiProvider = "openai" | "anthropic" | "gemini" | "compatible";
+export type NoteProvider = ProviderId | ApiProvider;
 
 export interface TranscriptSegment {
   speaker: Speaker;
@@ -111,6 +115,9 @@ export interface Settings {
   crashReports: boolean;
   /** Takes titles and attendees from the calendar, once access is allowed. */
   useCalendar: boolean;
+  /** The OpenAI-compatible server's base URL and model name; empty when none is set up. */
+  compatibleUrl: string;
+  compatibleModel: string;
 }
 
 /** A meeting whose title, tags, notes or transcript hold every word searched for. */
@@ -160,7 +167,8 @@ export interface AppState {
   /** The on-device model that answers questions; null while an account answers them. */
   askModel: SpeechModel | null;
   notesProgress: NotesProgress | null;
-  connected: ProviderId[];
+  /** Signed-in accounts, then API providers with a saved key (or a custom server that is set up). */
+  connected: NoteProvider[];
   connecting: ProviderId | null;
   connectionError: string | null;
   permissions: Permissions;
@@ -182,7 +190,7 @@ export function writesNotesLocally(settings: Settings): boolean {
   return settings.modelChoiceId.startsWith(LOCAL_NOTES);
 }
 
-/** Notes can be written: an account is connected or an on-device model is chosen. */
+/** Notes can be written: an account or API key is set up, or an on-device model is chosen. */
 export function canWriteNotes(app: AppState): boolean {
   return app.connected.length > 0 || writesNotesLocally(app.settings);
 }
@@ -200,7 +208,7 @@ export interface Microphone {
 
 export interface ModelOption {
   id: string;
-  provider: ProviderId;
+  provider: NoteProvider;
   model: string;
   label: string;
   effort: string;

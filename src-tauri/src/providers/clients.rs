@@ -1,4 +1,4 @@
-//! Model choices and the ChatGPT (Codex) and Grok summary clients.
+//! Model choices and the summary client for accounts (ChatGPT, Grok) and API keys.
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::Duration;
 
@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use super::NetResult;
+use super::api_keys::{self, ApiAccess};
 use super::oauth_service::OAuthService;
+use crate::core::api_providers::{ApiProvider, Provider, api_models, split_choice};
+use crate::core::api_requests::Target;
 use crate::core::oauth::ProviderId;
 use crate::core::summary::{SummaryProvider, codex_output_text};
 use crate::core::{Error, Result};
@@ -15,11 +18,11 @@ const CODEX_ENDPOINT: &str = "https://chatgpt.com/backend-api/codex/responses";
 const GROK_ENDPOINT: &str = "https://api.x.ai/v1/chat/completions";
 const TIMEOUT: Duration = Duration::from_secs(240);
 
-/// A provider and model, stored as "codex:gpt-6-astra".
+/// A provider and model, stored as "codex:gpt-6-astra" or "anthropic:claude-opus-5".
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelChoice {
-    pub provider: ProviderId,
+    pub provider: Provider,
     pub model: String,
     pub label: String,
     /// Reasoning effort sent with every request for this model.
@@ -27,7 +30,7 @@ pub struct ModelChoice {
 }
 
 fn choice(provider: ProviderId, model: &str, label: &str, effort: &str) -> ModelChoice {
-    ModelChoice { provider, model: model.into(), label: label.into(), effort: effort.into() }
+    ModelChoice { provider: Provider::Account(provider), model: model.into(), label: label.into(), effort: effort.into() }
 }
 
 /// Newest first within each provider; the first entry is that provider's default.
@@ -48,8 +51,18 @@ fn choices() -> &'static RwLock<Vec<ModelChoice>> {
     MODEL_CHOICES.get_or_init(|| RwLock::new(fallback_choices()))
 }
 
+/// Account models from the catalog, then the listed models of each API provider.
 pub fn model_choices() -> Vec<ModelChoice> {
-    choices().read().expect("model catalog lock").clone()
+    let mut all = choices().read().expect("model catalog lock").clone();
+    all.extend(ApiProvider::ALL.into_iter().flat_map(|provider| {
+        api_models(provider).iter().map(move |m| ModelChoice {
+            provider: Provider::Api(provider),
+            model: m.id.into(),
+            label: m.label.into(),
+            effort: m.effort.into(),
+        })
+    }));
+    all
 }
 
 #[derive(Deserialize)]
@@ -75,7 +88,7 @@ pub async fn refresh_model_choices() {
     }).collect::<Vec<_>>();
     let mut updated = map(ProviderId::Codex, catalog.codex);
     updated.extend(map(ProviderId::Grok, catalog.grok));
-    if ProviderId::ALL.iter().any(|provider| !updated.iter().any(|entry| entry.provider == *provider)) { return; }
+    if ProviderId::ALL.iter().any(|provider| !updated.iter().any(|entry| entry.provider == Provider::Account(*provider))) { return; }
     *choices().write().expect("model catalog lock") = updated;
 }
 
@@ -84,17 +97,31 @@ impl ModelChoice {
         format!("{}:{}", self.provider.raw(), self.model)
     }
 
-    pub fn default_for(provider: ProviderId) -> ModelChoice {
-        model_choices().into_iter().find(|c| c.provider == provider).expect("every provider has a model")
+    /// The provider's first listed model. A custom server has none: its model is whatever was typed.
+    pub fn default_for(provider: Provider) -> Option<ModelChoice> {
+        model_choices().into_iter().find(|c| c.provider == provider)
     }
 
-    /// A saved choice that is no longer offered (a retired model) falls back to the same provider's default.
+    fn fallback() -> ModelChoice {
+        Self::default_for(Provider::Account(ProviderId::Codex)).expect("the catalog lists Codex models")
+    }
+
+    /// A model typed in for an API provider, kept as typed.
+    pub fn custom(provider: ApiProvider, model: &str) -> ModelChoice {
+        ModelChoice { provider: Provider::Api(provider), model: model.into(), label: model.into(), effort: String::new() }
+    }
+
+    /// A saved choice that is no longer offered (a retired account model) falls back to the same provider's
+    /// default. API providers keep any model name, since people can type their own.
     pub fn resolve(id: Option<&str>) -> ModelChoice {
         if let Some(found) = model_choices().into_iter().find(|c| Some(c.id().as_str()) == id) {
             return found;
         }
-        let provider = id.and_then(|id| ProviderId::parse(id.split(':').next().unwrap_or_default()));
-        Self::default_for(provider.unwrap_or(ProviderId::Codex))
+        match id.map(split_choice).unwrap_or((None, "")) {
+            (Some(Provider::Api(provider)), model) if !model.is_empty() => Self::custom(provider, model),
+            (Some(provider), _) => Self::default_for(provider).unwrap_or_else(Self::fallback),
+            (None, _) => Self::fallback(),
+        }
     }
 }
 
@@ -113,6 +140,8 @@ pub struct SummaryClient {
     pub http: reqwest::Client,
     pub oauth: Arc<OAuthService>,
     pub choice: ModelChoice,
+    /// The key and address for an API provider; unused by accounts.
+    pub api: ApiAccess,
 }
 
 impl SummaryClient {
@@ -164,8 +193,12 @@ impl SummaryClient {
 impl SummaryProvider for SummaryClient {
     async fn complete(&self, system: &str, user: &str, schema: Option<&Value>) -> Result<String> {
         match self.choice.provider {
-            ProviderId::Codex => self.codex(system, user, schema).await,
-            ProviderId::Grok => self.grok(system, user).await,
+            Provider::Account(ProviderId::Codex) => self.codex(system, user, schema).await,
+            Provider::Account(ProviderId::Grok) => self.grok(system, user).await,
+            Provider::Api(provider) => {
+                let target = Target { provider, base_url: &self.api.base_url, key: self.api.key.as_deref() };
+                api_keys::complete(&self.http, target, &self.choice.model, system, user, schema, TIMEOUT).await
+            }
         }
     }
 }
@@ -179,6 +212,19 @@ mod tests {
         assert_eq!(ModelChoice::resolve(Some("grok:grok-4.6")).model, "grok-4.6");
         assert_eq!(ModelChoice::resolve(Some("grok:grok-2")).model, "grok-4.7");
         assert_eq!(ModelChoice::resolve(None).model, "gpt-6-astra");
-        assert_eq!(ModelChoice::resolve(Some("nonsense")).provider, ProviderId::Codex);
+        assert_eq!(ModelChoice::resolve(Some("nonsense")).provider, Provider::Account(ProviderId::Codex));
+    }
+
+    #[test]
+    fn api_choices_keep_listed_and_typed_models() {
+        let listed = ModelChoice::resolve(Some("anthropic:claude-sonnet-5"));
+        assert_eq!((listed.label.as_str(), listed.effort.as_str()), ("Claude Sonnet 5", "low"));
+        let typed = ModelChoice::resolve(Some("openai:my-fine-tune"));
+        assert_eq!((typed.provider, typed.model.as_str(), typed.effort.as_str()), (Provider::Api(ApiProvider::OpenAI), "my-fine-tune", ""));
+        assert_eq!(ModelChoice::resolve(Some("compatible:org/model:free")).id(), "compatible:org/model:free");
+        assert_eq!(ModelChoice::resolve(Some("gemini:")).model, "gemini-3.8-flash");
+        // A custom server with no model name has no default, so notes fall back to an account model.
+        assert_eq!(ModelChoice::resolve(Some("compatible:")).provider, Provider::Account(ProviderId::Codex));
+        assert_eq!(ModelChoice::default_for(Provider::Api(ApiProvider::Compatible)), None);
     }
 }

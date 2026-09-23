@@ -20,7 +20,7 @@ pub enum Error {
     NotJson,
     #[error("Nothing was transcribed, so there is nothing to summarise.")]
     EmptyTranscript,
-    #[error("Connect ChatGPT or Grok, or choose to write notes on this Mac, in Settings.")]
+    #[error("Connect ChatGPT or Grok, add an API key, or choose to write notes on this Mac, in Settings.")]
     NoProviderConnected,
 
     /// A complete, user-facing message.
