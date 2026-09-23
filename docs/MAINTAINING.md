@@ -19,7 +19,7 @@ scripts/release.sh <version> "What changed"   # bump, build, sign, notarize, pub
 git commit -am "chore: release <version>"
 ```
 
-The script publishes `Redrule.dmg`, the signed update archive and `latest.json` to this repo's [GitHub Releases](https://github.com/neelsatyavolu/redrule/releases). Versions up to 0.3.0 were published to the separate `neelsatyavolu/redrule-releases` repo, which 0.3.0 and earlier still check for updates; 0.3.1 was published to both so those copies move over. Installed copies check `latest.json` a minute after launch and every six hours, install the update in the background and offer to restart (never during a recording). **Check for Updates…** is in the Redrule menu and the menu bar.
+The script publishes `Redrule.dmg`, the signed update archive and `latest.json` to this repo's [GitHub Releases](https://github.com/neelsatyavolu/redrule/releases). Versions up to 0.3.0 checked a separate `redrule-releases` repo for updates; it was retired after 0.3.1, so copies older than 0.3.1 must be updated by hand from the website. Installed copies check `latest.json` a minute after launch and every six hours, install the update in the background and offer to restart (never during a recording). **Check for Updates…** is in the Redrule menu and the menu bar.
 
 `release.sh` reads the Developer ID, the notary API key and the updater signing key from 1Password (`REDRULE_UPDATER_KEY` in `scripts/maintainer.local`). The updater key's public half is in `src-tauri/tauri.conf.json`. If the private key is lost, installed copies can't be updated, so never rotate it casually.
 
