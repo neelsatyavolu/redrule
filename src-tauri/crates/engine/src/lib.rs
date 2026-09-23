@@ -1,6 +1,7 @@
 //! Audio capture, on-device transcription and speaker recognition.
 
 mod asr;
+pub mod catalog;
 mod diarization;
 mod mic_capture;
 mod microphones;
@@ -8,6 +9,10 @@ mod model_download;
 mod pipeline;
 mod resampler;
 mod speakers;
+#[cfg(test)]
+mod asr_eval;
+#[cfg(test)]
+mod speaker_eval;
 mod system_capture;
 mod transcriber;
 mod wav;

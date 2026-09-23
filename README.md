@@ -1,10 +1,10 @@
-# Minutes
+# Redrule
 
-A macOS app that notices when you are in a Zoom or Google Meet call, records the call and your microphone, transcribes both on your Mac, and writes the meeting up using your ChatGPT (Codex) or Grok account.
+Redrule (formerly Minutes) is a macOS app that notices when you are in a Zoom or Google Meet call, records the call and your microphone, transcribes both on your Mac, and writes the meeting up using your ChatGPT (Codex) or Grok account.
 
 ## Desktop app (Tauri)
 
-The Tauri version (React UI, Rust backend) reads and writes the same meeting folders, Keychain items and preferences as the Swift app, under the same bundle identifier.
+The Tauri app (React UI, Rust backend), bundle id `co.neel.redrule`. On first launch it adopts the Minutes app's data: `~/Library/Application Support/Minutes` is renamed to `Redrule`, Keychain items under the service `Minutes` are copied to `Redrule`, and preferences are copied from the `co.nenu.minutes` domain. macOS asks for Microphone and Screen & System Audio Recording again, because the bundle id is new.
 
 ```bash
 pnpm install
@@ -24,7 +24,7 @@ cd src-tauri && cargo test --workspace && cd .. && pnpm test
 
 `preview.html` renders the interface in a browser with sample data (`pnpm dev`, then open `/preview.html?view=notes`), for design work without the backend.
 
-## Swift app (original)
+## Swift app (original, named Minutes)
 
 ## Build and run
 

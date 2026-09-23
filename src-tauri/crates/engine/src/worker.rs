@@ -13,6 +13,7 @@ use minutes_core::windower::{AudioWindow, AudioWindower};
 use tokio::sync::mpsc::UnboundedReceiver;
 
 use crate::asr::Transcription;
+use crate::speakers::SpeakerMap;
 use crate::wav::WavWriter;
 
 pub(crate) type SegmentSink = Arc<dyn Fn(TranscriptSegment) + Send + Sync>;
@@ -28,6 +29,8 @@ pub(crate) trait Transcribe: Send + Sync + 'static {
 /// Finds who spoke when in a window of call audio. Turn times are relative to the window start.
 pub(crate) trait Diarize: Send + 'static {
     fn turns(&mut self, window: &AudioWindow) -> impl Future<Output = Result<Vec<SpeakerTurn>>> + Send;
+    /// The final speaker ids, decided once the whole recording has been heard.
+    fn finish(&self) -> SpeakerMap;
 }
 
 /// Captured 16 kHz mono audio whose last sample was heard `time` seconds into the recording.
@@ -55,7 +58,8 @@ struct Session {
 
 impl<T: Transcribe, D: Diarize> Worker<T, D> {
     /// Runs until `input` closes, then transcribes what is left (call audio first, as the Swift app did)
-    /// and returns every segment in the order produced. With `audio_folder`, keeps `me.wav` and `them.wav`.
+    /// and returns every segment in the order produced, with the final speaker ids. Segments sent
+    /// live carry provisional ids. With `audio_folder`, keeps `me.wav` and `them.wav`.
     pub(crate) async fn run(
         mut self,
         mut input: UnboundedReceiver<Chunk>,
@@ -91,7 +95,8 @@ impl<T: Transcribe, D: Diarize> Worker<T, D> {
                 self.transcribe(&mut session, &window, speaker).await;
             }
         }
-        session.segments
+        let speakers = self.diarizer.finish();
+        session.segments.into_iter().map(|segment| speakers.apply(segment)).collect()
     }
 
     async fn transcribe(&mut self, session: &mut Session, window: &AudioWindow, speaker: Speaker) {

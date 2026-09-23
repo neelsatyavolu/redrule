@@ -104,7 +104,7 @@ fn clean_note(note: MeetingNote) -> Result<MeetingNote> {
             .filter_map(|item| {
                 let task = item.task.trim().to_string();
                 let owner = item.owner.map(|o| o.trim().to_string()).filter(|o| !o.is_empty());
-                (!task.is_empty()).then_some(ActionItem { owner, task })
+                (!task.is_empty()).then_some(ActionItem { owner, task, done: item.done })
             })
             .collect(),
     })
@@ -125,15 +125,15 @@ mod tests {
             ],
             decisions: vec!["".into(), "Ship".into()],
             action_items: vec![
-                ActionItem { owner: Some(" ".into()), task: " Do it ".into() },
-                ActionItem { owner: Some("Ada".into()), task: " ".into() },
+                ActionItem { owner: Some(" ".into()), task: " Do it ".into(), done: true },
+                ActionItem { owner: Some("Ada".into()), task: " ".into(), done: false },
             ],
         };
         let cleaned = clean_note(note).unwrap();
         assert_eq!(cleaned.title, "Plan");
         assert_eq!(cleaned.sections, vec![NoteSection { heading: "A".into(), bullets: vec!["one".into()] }]);
         assert_eq!(cleaned.decisions, vec!["Ship".to_string()]);
-        assert_eq!(cleaned.action_items, vec![ActionItem { owner: None, task: "Do it".into() }]);
+        assert_eq!(cleaned.action_items, vec![ActionItem { owner: None, task: "Do it".into(), done: true }]);
     }
 
     #[test]

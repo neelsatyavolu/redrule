@@ -1,12 +1,16 @@
 #!/bin/bash
-# Builds the Tauri version of Minutes and installs it to /Applications. Usage: scripts/install-desktop.sh [--open] [--adhoc] [--build-only]
+# Builds Redrule and installs it to /Applications, replacing its earlier version, Minutes.
+# Usage: scripts/install-desktop.sh [--open] [--adhoc] [--build-only]
 # Signs with the shared Developer ID certificate from 1Password, like install.sh, so the Keychain's
 # "Always Allow" and both privacy permissions survive rebuilds. --adhoc skips that.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-SOURCE="src-tauri/target/release/bundle/macos/Minutes.app"
-DEST="/Applications/Minutes.app"
+SOURCE="src-tauri/target/release/bundle/macos/Redrule.app"
+DEST="/Applications/Redrule.app"
+# The app was called Minutes. Its old copy is removed only when the bundle id proves it is this app.
+LEGACY="/Applications/Minutes.app"
+LEGACY_ID="co.nenu.minutes"
 
 OPEN=0
 ADHOC=0
@@ -39,7 +43,7 @@ if [ "$ADHOC" = 0 ]; then
     minutes_require_developer_id
 fi
 
-echo "Building Minutes (release)…"
+echo "Building Redrule (release)…"
 pnpm install --frozen-lockfile >/dev/null
 # Sign below instead, so the identity's temporary keychain can be named explicitly.
 env -u APPLE_SIGNING_IDENTITY pnpm tauri build --bundles app
@@ -57,17 +61,25 @@ if [ "$INSTALL" = 0 ]; then
     exit 0
 fi
 
-if pgrep -x Minutes >/dev/null || pgrep -x minutes >/dev/null; then
-    echo "Quitting the running copy of Minutes…"
-    osascript -e 'tell application "Minutes" to quit' >/dev/null 2>&1 || true
+quit_app() {
+    local name="$1"
+    pgrep -x "$name" >/dev/null || return 0
+    echo "Quitting the running copy of ${name}…"
+    osascript -e "tell application \"${name}\" to quit" >/dev/null 2>&1 || true
     for _ in 1 2 3 4 5 6 7 8 9 10; do
-        pgrep -x Minutes >/dev/null || pgrep -x minutes >/dev/null || break
+        pgrep -x "$name" >/dev/null || return 0
         sleep 0.5
     done
-    if pgrep -x Minutes >/dev/null || pgrep -x minutes >/dev/null; then
-        echo "error: Minutes is still running (a recording may be in progress). Quit it and run this again." >&2
-        exit 1
-    fi
+    echo "error: ${name} is still running (a recording may be in progress). Quit it and run this again." >&2
+    exit 1
+}
+
+quit_app Redrule
+if [ -d "$LEGACY" ] && [ "$(defaults read "$LEGACY/Contents/Info" CFBundleIdentifier 2>/dev/null)" = "$LEGACY_ID" ]; then
+    quit_app Minutes
+    quit_app minutes
+    echo "Removing the old Minutes app…"
+    rm -rf "$LEGACY"
 fi
 
 echo "Installing to ${DEST}…"
@@ -78,7 +90,7 @@ fi
 ditto "$SOURCE" "$DEST"
 touch "$DEST"
 
-echo "Installed Minutes $(defaults read "$DEST/Contents/Info" CFBundleShortVersionString)."
+echo "Installed Redrule $(defaults read "$DEST/Contents/Info" CFBundleShortVersionString)."
 codesign -dvv "$DEST" 2>&1 | sed -n '/^Authority=Developer ID Application/p;/^Signature=adhoc/p' | head -1
 
 if [ "$OPEN" = 1 ]; then

@@ -22,7 +22,8 @@ pub fn run() {
         .plugin(tauri_nspanel::init())
         .setup(|tauri_app| {
             let handle = tauri_app.handle().clone();
-            let models = dirs::data_dir().unwrap_or_default().join("Minutes").join("models");
+            let support = core::store::support_folder().unwrap_or_else(|_| dirs::data_dir().unwrap_or_default().join("Redrule"));
+            let models = support.join("models");
             let app = Arc::new(App::new(handle.clone(), models));
             tauri_app.manage(Arc::clone(&app));
             tauri_app.manage(shell::install(&handle)?);
@@ -42,7 +43,7 @@ pub fn run() {
                 return;
             }
             match event {
-                // Minutes keeps watching for calls from the menu bar after its window is closed.
+                // Redrule keeps watching for calls from the menu bar after its window is closed.
                 WindowEvent::CloseRequested { api, .. } => {
                     api.prevent_close();
                     shell::hide_to_menu_bar(window.app_handle());
@@ -76,12 +77,14 @@ pub fn run() {
             commands::microphones,
             commands::model_choices,
             commands::retry_speech_model,
+            commands::local_models,
+            commands::remove_local_model,
             commands::dismiss_banner,
             commands::show_main_window,
             commands::reveal_meeting,
         ])
         .build(tauri::generate_context!())
-        .expect("Minutes could not start");
+        .expect("Redrule could not start");
 
     app.run(|handle, event| match event {
         // Clicking the Dock icon brings the window back.

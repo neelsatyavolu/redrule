@@ -5,7 +5,7 @@ use minutes_engine::Microphone;
 use serde::Serialize;
 use tauri::State;
 
-use crate::app::{App, MeetingDetail, Settings, SettingsPatch, State as Snapshot};
+use crate::app::{App, LocalModels, MeetingDetail, ModelKind, Settings, SettingsPatch, State as Snapshot};
 use crate::core::Result;
 use crate::core::models::{MeetingApp, MeetingNote};
 use crate::core::oauth::ProviderId;
@@ -138,7 +138,21 @@ pub fn request_screen_recording(app: AppState) {
 #[tauri::command]
 pub fn update_settings(app: AppState, patch: SettingsPatch) -> Settings {
     app.apply_settings(patch);
+    app.use_chosen_models();
     app.read(|state| state.settings.clone())
+}
+
+#[tauri::command]
+pub async fn local_models(app: AppState<'_>) -> Result<LocalModels> {
+    let app = Arc::clone(app.inner());
+    tauri::async_runtime::spawn_blocking(move || app.local_models())
+        .await
+        .map_err(|error| crate::core::Error::message(error.to_string()))
+}
+
+#[tauri::command]
+pub fn remove_local_model(app: AppState, kind: ModelKind, id: String) -> Result<()> {
+    app.remove_local_model(kind, &id)
 }
 
 #[tauri::command]

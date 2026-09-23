@@ -20,10 +20,9 @@ impl MeetingStore {
         Ok(Self { root })
     }
 
-    /// `~/Library/Application Support/Minutes/meetings`
+    /// `~/Library/Application Support/Redrule/meetings`
     pub fn default_root() -> Result<PathBuf> {
-        let support = dirs::data_dir().ok_or_else(|| Error::message("The Application Support folder was not found."))?;
-        Ok(support.join("Minutes").join("meetings"))
+        Ok(support_folder()?.join("meetings"))
     }
 
     /// Meeting ids come from the webview, so only UUIDs may name a folder.
@@ -89,7 +88,7 @@ impl MeetingStore {
         for meeting in self.list()? {
             if meeting.status != MeetingStatus::Done && meeting.status != MeetingStatus::Failed {
                 let ended = Meeting { ended_at: meeting.ended_at.or(Some(meeting.started_at)), ..meeting };
-                self.save(&ended.failed("Minutes quit before this meeting was finished."))?;
+                self.save(&ended.failed("Redrule quit before this meeting was finished."))?;
             }
         }
         Ok(())
@@ -126,6 +125,20 @@ impl MeetingStore {
             .collect();
         self.save_transcript(&segments, id)
     }
+}
+
+/// `~/Library/Application Support/Redrule`, holding meetings and the speech models.
+pub fn support_folder() -> Result<PathBuf> {
+    let support = dirs::data_dir().ok_or_else(|| Error::message("The Application Support folder was not found."))?;
+    adopt_legacy_folder(&support.join("Minutes"), &support.join("Redrule"))
+}
+
+/// The app was called Minutes. Its folder is renamed once, so meetings and downloaded models carry over.
+fn adopt_legacy_folder(legacy: &Path, current: &Path) -> Result<PathBuf> {
+    if !current.exists() && legacy.is_dir() {
+        fs::rename(legacy, current)?;
+    }
+    Ok(current.to_path_buf())
 }
 
 fn read<T: DeserializeOwned>(path: &Path) -> Result<T> {
@@ -188,6 +201,22 @@ mod tests {
         store.save(&newer).unwrap();
         let ids: Vec<_> = store.list().unwrap().into_iter().map(|m| m.id).collect();
         assert_eq!(ids, [newer.id, older.id]);
+    }
+
+    #[test]
+    fn adopts_the_minutes_folder_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let (legacy, current) = (dir.path().join("Minutes"), dir.path().join("Redrule"));
+        fs::create_dir_all(legacy.join("meetings")).unwrap();
+        assert_eq!(adopt_legacy_folder(&legacy, &current).unwrap(), current);
+        assert!(current.join("meetings").is_dir());
+        assert!(!legacy.exists());
+
+        // A later Minutes folder never replaces the adopted one.
+        fs::create_dir_all(legacy.join("other")).unwrap();
+        adopt_legacy_folder(&legacy, &current).unwrap();
+        assert!(legacy.join("other").is_dir());
+        assert!(!current.join("other").exists());
     }
 
     #[test]

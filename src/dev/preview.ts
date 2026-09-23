@@ -1,5 +1,5 @@
 // Dev-only: runs the UI in a plain browser against sample data, for design review.
-// Open http://localhost:1420/preview.html?view=notes (notes | transcript | live | failed | empty | settings | onboarding | share)
+// Open http://localhost:1420/preview.html?view=notes (notes | transcript | live | failed | empty | settings | transcription | onboarding | share)
 import { mockIPC } from "@tauri-apps/api/mocks";
 import type { AppState, Meeting, MeetingDetail } from "../lib/types";
 
@@ -62,7 +62,14 @@ const state: AppState = {
   connecting: null,
   connectionError: null,
   permissions: { microphone: view !== "onboarding", screenRecording: true },
-  settings: { modelChoiceId: "codex:gpt-6-astra", keepAudio: false, microphoneId: "", onboarded: view !== "onboarding" },
+  settings: {
+    modelChoiceId: "codex:gpt-6-astra",
+    keepAudio: false,
+    microphoneId: "",
+    onboarded: view !== "onboarding",
+    speechModelId: "parakeet-v3",
+    speakerModelId: "accurate",
+  },
   sharingBusy: false,
   revision: 1,
   storageError: null,
@@ -79,6 +86,19 @@ mockIPC((command) => {
         { id: "codex:gpt-6-astra", provider: "codex", model: "gpt-6-astra", label: "GPT-6 Astra", effort: "low" },
         { id: "grok:grok-4.7", provider: "grok", model: "grok-4.7", label: "Grok 4.7", effort: "low" },
       ];
+    case "local_models":
+      return {
+        speech: [
+          { id: "parakeet-v3", name: "Parakeet v3", description: "Accurate in English and 24 other European languages, and detects the language by itself.", languages: "25 European languages", sizeMb: 464, installed: true, recommended: true },
+          { id: "parakeet-v2", name: "Parakeet v2 English", description: "English only. Slightly ahead of v3 on English benchmarks, about the same in meetings. Same speed.", languages: "English", sizeMb: 460, installed: false, recommended: false },
+          { id: "parakeet-lite", name: "Parakeet Lite English", description: "English only. A quarter of the processing and a fifth of the download, with a few more mistakes.", languages: "English", sizeMb: 103, installed: true, recommended: false },
+        ],
+        speaker: [
+          { id: "standard", name: "Standard", description: "The smallest download. Fine for one-to-one calls; can merge similar voices in group calls.", languages: null, sizeMb: 32, installed: true, recommended: false },
+          { id: "accurate", name: "Accurate", description: "Keeps similar voices apart in group calls, where Standard can merge them. Just as fast.", languages: null, sizeMb: 108, installed: false, recommended: true },
+        ],
+        hardware: { memoryGb: 16, appleSilicon: true, cores: 10 },
+      };
     case "microphones":
       return [{ id: "a", name: "MacBook Pro Microphone" }, { id: "b", name: "AirPods Pro" }];
     default:

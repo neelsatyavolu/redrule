@@ -1,6 +1,6 @@
 //! Transcribes a 16 kHz mono WAV with real models and prints words and speakers.
 //! Usage: cargo run -p minutes-engine --release --example transcribe -- <file.wav>
-//! Models go to ~/Library/Application Support/Minutes/models (downloaded on first run).
+//! SPEECH_MODEL / SPEAKER_MODEL pick catalog ids (defaults otherwise), MODELS_DIR overrides the folder. Models go to ~/Library/Application Support/Redrule/models (downloaded on first run).
 
 use std::error::Error;
 use std::path::PathBuf;
@@ -18,8 +18,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let seconds = samples.len() as f64 / SAMPLE_RATE;
     println!("{path}: {seconds:.1} s");
 
-    let models_dir = PathBuf::from(std::env::var("HOME")?).join("Library/Application Support/Minutes/models");
-    let transcriber = Arc::new(Transcriber::new(models_dir));
+    let models_dir = match std::env::var("MODELS_DIR") {
+        Ok(dir) => PathBuf::from(dir),
+        Err(_) => PathBuf::from(std::env::var("HOME")?).join("Library/Application Support/Redrule/models"),
+    };
+    let transcriber = Arc::new(Transcriber::new(
+        models_dir,
+        &std::env::var("SPEECH_MODEL").unwrap_or_default(),
+        &std::env::var("SPEAKER_MODEL").unwrap_or_default(),
+    ));
     let started = Instant::now();
     transcriber
         .prepare(|p| {

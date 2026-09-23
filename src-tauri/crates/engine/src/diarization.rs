@@ -12,44 +12,47 @@ use sherpa_onnx::{
     SpeakerEmbeddingExtractor, SpeakerEmbeddingExtractorConfig,
 };
 
-use crate::model_download::{EMBEDDING, SEGMENTATION};
-use crate::speakers::{LocalSpeaker, SpeakerRegistry};
+use crate::catalog::{SpeakerSetup, SpeakerTuning};
+use crate::speakers::{LocalSpeaker, SpeakerMap, SpeakerRegistry};
 use crate::transcriber::Transcriber;
 use crate::worker::Diarize;
 
 /// Below this much speech an embedding is too noisy to define a new voice.
 const RELIABLE_SECONDS: f64 = 1.0;
-/// Cosine distance below which segments in one window merge into one speaker. Sherpa's default
-/// (0.5) merged two distinct voices (similarity 0.59) in testing; same-voice similarity was ~0.94.
-const CLUSTER_THRESHOLD: f32 = 0.4;
 const THREADS: i32 = 2;
 
 pub(crate) struct SpeakerModels {
     diarization: OfflineSpeakerDiarization,
     embedder: SpeakerEmbeddingExtractor,
+    pub tuning: SpeakerTuning,
 }
 
 impl SpeakerModels {
-    pub(crate) fn load(models_dir: &Path) -> Result<Self> {
+    pub(crate) fn load(models_dir: &Path, setup: &SpeakerSetup) -> Result<Self> {
         let embedding = SpeakerEmbeddingExtractorConfig {
-            model: Some(EMBEDDING.path(models_dir).to_string_lossy().into_owned()),
+            model: Some(setup.embedding.path(models_dir).to_string_lossy().into_owned()),
             num_threads: THREADS,
             provider: Some("cpu".into()),
             ..Default::default()
         };
         let mut config = OfflineSpeakerDiarizationConfig {
             embedding: embedding.clone(),
-            clustering: FastClusteringConfig { num_clusters: -1, threshold: CLUSTER_THRESHOLD, ..Default::default() },
+            clustering: FastClusteringConfig {
+                num_clusters: -1,
+                threshold: setup.tuning.cluster_threshold,
+                ..Default::default()
+            },
             ..Default::default()
         };
         config.segmentation.pyannote.model =
-            Some(SEGMENTATION.path(models_dir).join("model.onnx").to_string_lossy().into_owned());
+            Some(setup.segmentation.path(models_dir).join("model.onnx").to_string_lossy().into_owned());
         config.segmentation.num_threads = THREADS;
 
         let failed = || Error::message("The speaker model could not be loaded.");
         Ok(Self {
             diarization: OfflineSpeakerDiarization::create(&config).ok_or_else(failed)?,
             embedder: SpeakerEmbeddingExtractor::create(&embedding).ok_or_else(failed)?,
+            tuning: setup.tuning,
         })
     }
 
@@ -104,27 +107,38 @@ fn slice(samples: &[f32], start: f64, end: f64) -> &[f32] {
 /// Use one per recording, so voice identities never leak between meetings.
 pub struct SpeakerRecognizer {
     transcriber: Arc<Transcriber>,
-    registry: SpeakerRegistry,
+    /// Created with the first window, once the models (and so their tuning) are known.
+    registry: Option<SpeakerRegistry>,
 }
 
 impl SpeakerRecognizer {
     pub fn new(transcriber: Arc<Transcriber>) -> Self {
-        Self { transcriber, registry: SpeakerRegistry::default() }
+        Self { transcriber, registry: None }
     }
 
     /// Speaker turns in `window`, relative to its start. Waits for the models like `Transcriber::transcribe`.
     pub async fn turns(&mut self, window: &AudioWindow) -> Result<Vec<SpeakerTurn>> {
         let models = self.transcriber.models().await?;
+        let tuning = models.speakers.tuning;
         let samples = window.samples.clone();
         let speakers = tokio::task::spawn_blocking(move || models.speakers.analyze(&samples))
             .await
             .map_err(|error| Error::message(error.to_string()))??;
-        Ok(self.registry.turns(&speakers))
+        Ok(self.registry.get_or_insert_with(|| SpeakerRegistry::new(tuning)).turns(&speakers))
+    }
+
+    /// The final speaker ids for the recording, judged over all of it. See `SpeakerRegistry::finish`.
+    pub(crate) fn finish(&self) -> SpeakerMap {
+        self.registry.as_ref().map(SpeakerRegistry::finish).unwrap_or_default()
     }
 }
 
 impl Diarize for SpeakerRecognizer {
     async fn turns(&mut self, window: &AudioWindow) -> Result<Vec<SpeakerTurn>> {
         SpeakerRecognizer::turns(self, window).await
+    }
+
+    fn finish(&self) -> SpeakerMap {
+        SpeakerRecognizer::finish(self)
     }
 }

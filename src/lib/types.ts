@@ -28,6 +28,7 @@ export interface Meeting {
 export interface ActionItem {
   owner?: string | null;
   task: string;
+  done?: boolean;
 }
 
 export interface NoteSection {
@@ -78,6 +79,27 @@ export interface Settings {
   keepAudio: boolean;
   microphoneId: string;
   onboarded: boolean;
+  speechModelId: string;
+  speakerModelId: string;
+}
+
+export type ModelKind = "speech" | "speaker";
+
+/** An on-device speech or speaker model from src-tauri/crates/engine/src/catalog.rs. */
+export interface LocalModel {
+  id: string;
+  name: string;
+  description: string;
+  languages: string | null;
+  sizeMb: number;
+  installed: boolean;
+  recommended: boolean;
+}
+
+export interface LocalModels {
+  speech: LocalModel[];
+  speaker: LocalModel[];
+  hardware: { memoryGb: number; appleSilicon: boolean; cores: number };
 }
 
 export interface AppState {

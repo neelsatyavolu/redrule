@@ -21,6 +21,8 @@ struct ModelChoice: Hashable, Identifiable {
     /// Newest first within each provider; the first entry is that provider's default.
     static var all: [ModelChoice] = [
         ModelChoice(provider: .codex, model: "gpt-6-astra", label: "GPT-6 Astra"),
+        ModelChoice(provider: .codex, model: "gpt-6-sol", label: "GPT-6 Sol"),
+        ModelChoice(provider: .codex, model: "gpt-6-luna", label: "GPT-6 Luna", effort: "medium"),
         ModelChoice(provider: .codex, model: "gpt-5.6-sol", label: "GPT-5.6 Sol"),
         ModelChoice(provider: .codex, model: "gpt-5.6-terra", label: "GPT-5.6 Terra"),
         ModelChoice(provider: .codex, model: "gpt-5.6-luna", label: "GPT-5.6 Luna", effort: "medium"),

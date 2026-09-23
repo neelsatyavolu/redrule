@@ -2,7 +2,7 @@
 name = "minutes-core"
 version.workspace = true
 edition.workspace = true
-description = "Pure Minutes logic: models, store, transcript merging, windowing, detection rules, OAuth and summary parsing."
+description = "Pure Redrule logic: models, store, transcript merging, windowing, detection rules, OAuth and summary parsing."
 
 [dependencies]
 serde.workspace = true

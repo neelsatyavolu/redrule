@@ -29,7 +29,7 @@ function CallBanner() {
             {detected ? `You're in a ${APP_NAMES[banner.app]} call` : "The call looks finished"}
           </p>
           <p className="mt-0.5 text-[12px] text-graphite">
-            {detected ? "Minutes can record it and write up the notes." : "Stop recording and write the notes now?"}
+            {detected ? "Redrule can record it and write up the notes." : "Stop recording and write the notes now?"}
           </p>
           <div className="mt-3 flex gap-2">
             <Button

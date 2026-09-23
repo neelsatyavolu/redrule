@@ -66,7 +66,9 @@ pub struct App {
     pub store: Option<MeetingStore>,
     pub http: reqwest::Client,
     pub oauth: Arc<OAuthService>,
-    pub transcriber: Arc<Transcriber>,
+    pub models_dir: std::path::PathBuf,
+    /// Replaced when the user picks other models; a running recording keeps the one it started with.
+    pub transcriber: Mutex<Arc<Transcriber>>,
     state: Mutex<State>,
     /// Held while capture starts, so stopping waits for a start that is still in progress.
     pub recording: tokio::sync::Mutex<Option<ActiveRecording>>,
@@ -82,9 +84,11 @@ impl App {
                 Ok(()) => (Some(store), None),
                 Err(error) => (Some(store), Some(format!("Some meetings could not be checked. {error}"))),
             },
-            Err(error) => (None, Some(format!("Minutes cannot open its storage folder. {error}"))),
+            Err(error) => (None, Some(format!("Redrule cannot open its storage folder. {error}"))),
         };
         let http = reqwest::Client::new();
+        let settings = Settings::load();
+        let transcriber = Transcriber::new(models_dir.clone(), &settings.speech_model_id, &settings.speaker_model_id);
         let state = State {
             meetings: store.as_ref().and_then(|s| s.list().ok()).unwrap_or_default(),
             recording_id: None,
@@ -96,7 +100,7 @@ impl App {
             connecting: None,
             connection_error: None,
             permissions: Permissions::current(),
-            settings: Settings::load(),
+            settings,
             sharing_busy: false,
             revision: 0,
             storage_error,
@@ -106,7 +110,8 @@ impl App {
             store,
             oauth: Arc::new(OAuthService::new(http.clone())),
             http,
-            transcriber: Arc::new(Transcriber::new(models_dir)),
+            models_dir,
+            transcriber: Mutex::new(Arc::new(transcriber)),
             state: Mutex::new(state),
             recording: tokio::sync::Mutex::new(None),
             connect_task: Mutex::new(None),
@@ -117,6 +122,10 @@ impl App {
     fn lock(&self) -> MutexGuard<'_, State> {
         // A panic while holding the lock leaves plain data behind; keep serving it.
         self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    pub fn transcriber(&self) -> Arc<Transcriber> {
+        Arc::clone(&self.transcriber.lock().unwrap_or_else(|poisoned| poisoned.into_inner()))
     }
 
     pub fn snapshot(&self) -> State {
@@ -149,7 +158,7 @@ impl App {
     }
 
     pub fn store(&self) -> crate::core::Result<&MeetingStore> {
-        self.store.as_ref().ok_or_else(|| crate::core::Error::message("Minutes cannot open its storage folder."))
+        self.store.as_ref().ok_or_else(|| crate::core::Error::message("Redrule cannot open its storage folder."))
     }
 
     /// Saves a meeting and refreshes the list. Failures are reported, not returned.

@@ -4,6 +4,8 @@ use super::models::{Speaker, TranscriptSegment};
 
 const JOIN_GAP: f64 = 2.0;
 const ECHO_SIMILARITY: f64 = 0.6;
+/// How far outside a speaker turn a word may fall and still be given to it.
+const NEAREST_TURN: f64 = 1.0;
 
 /// Orders segments by time, drops mic segments that merely echo the system audio,
 /// and joins neighbouring segments from the same speaker.
@@ -101,21 +103,44 @@ pub struct SpeakerTurn {
     pub end: f64,
 }
 
-/// Assigns each word to a speaker by its midpoint. Overlapping and uncovered speech stays unassigned.
+/// Assigns each word to a speaker (see `speaker_of`). Words no speaker can claim stay unassigned.
 pub fn align_speakers(words: &[TranscriptWord], turns: &[SpeakerTurn], offset: f64) -> Vec<TranscriptSegment> {
     let segments: Vec<TranscriptSegment> = words
         .iter()
-        .map(|word| {
-            let midpoint = (word.start + word.end) / 2.0;
-            let speakers: HashSet<&str> =
-                turns.iter().filter(|t| t.start <= midpoint && midpoint < t.end).map(|t| t.id.as_str()).collect();
-            TranscriptSegment {
-                speaker_id: if speakers.len() == 1 { speakers.into_iter().next().map(str::to_string) } else { None },
-                ..TranscriptSegment::new(Speaker::Them, offset + word.start, offset + word.end, word.text.clone())
-            }
+        .map(|word| TranscriptSegment {
+            speaker_id: speaker_of(word, turns).map(str::to_string),
+            ..TranscriptSegment::new(Speaker::Them, offset + word.start, offset + word.end, word.text.clone())
         })
         .collect();
     merge(&segments)
+}
+
+/// The speaker whose turns cover most of the word. Speech detection trims turns tightly, so a word
+/// in a short gap between turns goes to the nearest one. None when two speakers cover it equally.
+fn speaker_of<'a>(word: &TranscriptWord, turns: &'a [SpeakerTurn]) -> Option<&'a str> {
+    let mut coverage: Vec<(&str, f64)> = Vec::new();
+    for turn in turns {
+        let covered = turn.end.min(word.end) - turn.start.max(word.start);
+        if covered > 0.0 {
+            match coverage.iter_mut().find(|(id, _)| *id == turn.id) {
+                Some((_, total)) => *total += covered,
+                None => coverage.push((turn.id.as_str(), covered)),
+            }
+        }
+    }
+    coverage.sort_by(|a, b| b.1.total_cmp(&a.1));
+    match coverage.as_slice() {
+        [(id, _)] => return Some(id),
+        [(id, first), (_, second), ..] => return (first - second > f64::EPSILON).then_some(*id),
+        [] => {}
+    }
+    let distance = |turn: &SpeakerTurn| (turn.start - word.end).max(word.start - turn.end).max(0.0);
+    turns
+        .iter()
+        .map(|turn| (turn.id.as_str(), distance(turn)))
+        .filter(|&(_, gap)| gap <= NEAREST_TURN)
+        .min_by(|a, b| a.1.total_cmp(&b.1))
+        .map(|(id, _)| id)
 }
 
 #[cfg(test)]
@@ -205,5 +230,30 @@ mod tests {
             SpeakerTurn { id: "2".into(), start: 0.0, end: 2.0 },
         ];
         assert_eq!(align_speakers(&words, &turns, 0.0)[0].speaker_id, None);
+    }
+
+    #[test]
+    fn gives_words_between_turns_to_the_nearest_speaker() {
+        let words = [
+            TranscriptWord { text: "so".into(), start: 1.1, end: 1.3 },
+            TranscriptWord { text: "well".into(), start: 3.6, end: 3.9 },
+            TranscriptWord { text: "far".into(), start: 8.0, end: 8.2 },
+        ];
+        let turns = vec![
+            SpeakerTurn { id: "1".into(), start: 0.0, end: 1.0 },
+            SpeakerTurn { id: "2".into(), start: 4.0, end: 6.0 },
+        ];
+        let ids: Vec<_> = words.iter().map(|word| speaker_of(word, &turns)).collect();
+        assert_eq!(ids, [Some("1"), Some("2"), None]);
+    }
+
+    #[test]
+    fn gives_partly_overlapping_words_to_the_speaker_covering_more() {
+        let word = TranscriptWord { text: "yes".into(), start: 1.0, end: 2.0 };
+        let turns = vec![
+            SpeakerTurn { id: "1".into(), start: 0.0, end: 1.2 },
+            SpeakerTurn { id: "2".into(), start: 1.1, end: 3.0 },
+        ];
+        assert_eq!(speaker_of(&word, &turns), Some("2"));
     }
 }

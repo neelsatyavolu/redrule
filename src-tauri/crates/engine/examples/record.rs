@@ -22,8 +22,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("  {} ({})", mic.name, mic.id);
     }
 
-    let models_dir = PathBuf::from(std::env::var("HOME")?).join("Library/Application Support/Minutes/models");
-    let transcriber = Arc::new(Transcriber::new(models_dir));
+    let models_dir = PathBuf::from(std::env::var("HOME")?).join("Library/Application Support/Redrule/models");
+    let transcriber = Arc::new(Transcriber::new(
+        models_dir,
+        &std::env::var("SPEECH_MODEL").unwrap_or_default(),
+        &std::env::var("SPEAKER_MODEL").unwrap_or_default(),
+    ));
     transcriber.prepare(|p| eprintln!("{}: {} bytes", p.stage, p.downloaded_bytes)).await?;
 
     let pipeline = RecordingPipeline::start(

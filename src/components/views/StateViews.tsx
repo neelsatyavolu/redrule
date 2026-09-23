@@ -122,7 +122,7 @@ export function EmptyView() {
       </PadRow>
       <PadRow className="mt-4">
         <p className="max-w-[54ch] font-serif text-[16px] leading-[1.65] text-ink">
-          Join a Zoom or Google Meet call and Minutes offers to take notes. It listens to the call and your microphone,
+          Join a Zoom or Google Meet call and Redrule offers to take notes. It listens to the call and your microphone,
           transcribes on this Mac, and writes up the meeting when it ends.
         </p>
       </PadRow>

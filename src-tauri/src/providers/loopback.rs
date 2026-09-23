@@ -74,12 +74,12 @@ async fn read_request_line(stream: &mut TcpStream) -> Option<String> {
 
 async fn respond(stream: &mut TcpStream, succeeded: bool) {
     let message = if succeeded {
-        "Connected. You can close this tab and return to Minutes."
+        "Connected. You can close this tab and return to Redrule."
     } else {
-        "Sign-in did not complete. Return to Minutes and try again."
+        "Sign-in did not complete. Return to Redrule and try again."
     };
     let html = format!(
-        "<!doctype html><meta charset=\"utf-8\"><title>Minutes</title>\
+        "<!doctype html><meta charset=\"utf-8\"><title>Redrule</title>\
          <body style=\"font:16px/1.5 -apple-system,system-ui,sans-serif;background:#f6f7f4;color:#1b1f1c;display:grid;place-items:center;height:100vh;margin:0\">\
          <p>{message}</p></body>"
     );

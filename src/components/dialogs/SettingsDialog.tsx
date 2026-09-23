@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
 import type { Microphone, ModelOption, ProviderId } from "../../lib/types";
-import { Button, Dialog, Segmented, SettingRow, Switch } from "../ui";
+import { Dialog, Segmented, SettingRow, Switch } from "../ui";
 import type { SettingsTab } from "./dialogState";
 import { AccountRows, PermissionRows } from "./SetupSections";
+import { TranscriptionSettings } from "./TranscriptionSettings";
 
 const PROVIDER_NAMES: Record<ProviderId, string> = { codex: "ChatGPT", grok: "Grok" };
 
@@ -19,12 +20,14 @@ export function SettingsDialog({ initialTab = "general", onClose }: { initialTab
         onChange={setTab}
         options={[
           { value: "general", label: "General" },
+          { value: "transcription", label: "Transcription" },
           { value: "accounts", label: "Accounts" },
           { value: "permissions", label: "Permissions" },
         ]}
       />
       <div className="min-h-[300px]">
         {tab === "general" && <GeneralSettings />}
+        {tab === "transcription" && <TranscriptionSettings />}
         {tab === "accounts" && <AccountRows />}
         {tab === "permissions" && <PermissionRows />}
       </div>
@@ -41,7 +44,7 @@ function GeneralSettings() {
   const [models, setModels] = useState<ModelOption[]>([]);
   useEffect(() => void api.modelChoices().then(setModels), []);
   if (!app) return null;
-  const { settings, speechModel } = app;
+  const { settings } = app;
   const update = (patch: Parameters<typeof api.updateSettings>[0]) => void attempt(() => api.updateSettings(patch));
   const missingMicrophone = settings.microphoneId !== "" && !microphones.some((m) => m.id === settings.microphoneId);
 
@@ -90,25 +93,6 @@ function GeneralSettings() {
         detail="Off by default: audio is transcribed as the meeting runs and never written to disk. Turn this on to keep a WAV file of each side next to the notes."
       >
         <Switch label="Keep audio recordings" checked={settings.keepAudio} onChange={(keepAudio) => update({ keepAudio })} />
-      </SettingRow>
-
-      <SettingRow
-        title="Speech model"
-        detail={
-          speechModel.state === "ready"
-            ? "Parakeet v3 runs on this Mac. Nothing you say leaves it until notes are written."
-            : speechModel.state === "failed"
-              ? speechModel.message
-              : "Downloading and preparing Parakeet v3."
-        }
-      >
-        {speechModel.state === "failed" ? (
-          <Button size="sm" onClick={() => void attempt(api.retrySpeechModel)}>
-            Retry
-          </Button>
-        ) : (
-          <span className="text-[12.5px] text-graphite">{speechModel.state === "ready" ? "Ready" : "Preparing"}</span>
-        )}
       </SettingRow>
     </div>
   );

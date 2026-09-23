@@ -10,8 +10,9 @@ use sherpa_onnx::OfflineRecognizer;
 use tokio::sync::OnceCell;
 
 use crate::asr::{self, Transcription};
+use crate::catalog::{SpeakerOption, SpeechOption};
 use crate::diarization::SpeakerModels;
-use crate::model_download::{self, EMBEDDING, ModelProgress, Progress, SEGMENTATION, SPEECH};
+use crate::model_download::{self, ModelProgress, Progress};
 use crate::worker::Transcribe;
 
 pub(crate) struct Models {
@@ -21,13 +22,26 @@ pub(crate) struct Models {
 
 pub struct Transcriber {
     models_dir: PathBuf,
+    speech: &'static SpeechOption,
+    speaker: &'static SpeakerOption,
     /// Concurrent callers share one load; a failed load leaves it empty so the next call retries.
     models: OnceCell<Arc<Models>>,
 }
 
 impl Transcriber {
-    pub fn new(models_dir: PathBuf) -> Self {
-        Self { models_dir, models: OnceCell::new() }
+    /// Uses the models chosen by id (see `catalog`); unknown ids fall back to the defaults.
+    pub fn new(models_dir: PathBuf, speech_id: &str, speaker_id: &str) -> Self {
+        Self {
+            models_dir,
+            speech: crate::catalog::speech_option(speech_id),
+            speaker: crate::catalog::speaker_option(speaker_id),
+            models: OnceCell::new(),
+        }
+    }
+
+    /// The models this transcriber uses, as (speech id, speaker id).
+    pub fn choice(&self) -> (&'static str, &'static str) {
+        (self.speech.id, self.speaker.id)
     }
 
     /// Downloads (first run) and loads the ASR and diarization models. Safe to call repeatedly and
@@ -57,13 +71,16 @@ impl Transcriber {
         let models = self
             .models
             .get_or_try_init(|| async {
-                for model in [&SPEECH, &SEGMENTATION, &EMBEDDING] {
+                for model in self.speech.models().into_iter().chain(self.speaker.models()) {
                     model_download::ensure(model, &self.models_dir, progress).await?;
                 }
                 progress(ModelProgress { downloaded_bytes: 0, total_bytes: None, stage: "Loading".into() });
-                let dir = self.models_dir.clone();
+                let (dir, speech, speaker) = (self.models_dir.clone(), self.speech, self.speaker);
                 let loaded = tokio::task::spawn_blocking(move || -> Result<Models> {
-                    Ok(Models { recognizer: asr::load(&dir)?, speakers: SpeakerModels::load(&dir)? })
+                    Ok(Models {
+                        recognizer: asr::load(&dir, speech.model)?,
+                        speakers: SpeakerModels::load(&dir, &speaker.setup)?,
+                    })
                 })
                 .await
                 .map_err(|error| Error::message(error.to_string()))??;

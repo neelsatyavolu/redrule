@@ -93,6 +93,7 @@ pub fn parse_note(reply: &str) -> Result<MeetingNote> {
         .map(|item| ActionItem {
             owner: item.owner.map(|o| o.trim().to_string()).filter(|o| !o.is_empty()),
             task: item.task,
+            done: false,
         })
         .collect();
     Ok(MeetingNote {

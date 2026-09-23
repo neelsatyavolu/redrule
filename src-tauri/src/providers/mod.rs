@@ -1,4 +1,4 @@
-//! Accounts, the Keychain, and the network services Minutes talks to.
+//! Accounts, the Keychain, and the network services Redrule talks to.
 pub mod clients;
 pub mod keychain;
 pub mod loopback;
@@ -16,7 +16,7 @@ impl<T> NetResult<T> for std::result::Result<T, reqwest::Error> {
     fn net(self) -> Result<T> {
         self.map_err(|error| {
             let reason = if error.is_timeout() { "The request timed out." } else { "Check your internet connection." };
-            Error::message(format!("Minutes could not reach the service. {reason} ({error})"))
+            Error::message(format!("Redrule could not reach the service. {reason} ({error})"))
         })
     }
 }

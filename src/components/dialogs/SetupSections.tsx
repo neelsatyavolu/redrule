@@ -54,7 +54,7 @@ export function PermissionRows() {
       />
       <SetupRow
         title="Screen & System Audio Recording"
-        detail="macOS files call audio under this permission. Minutes records sound only, never the screen. Quit and reopen Minutes after switching it on."
+        detail="macOS files call audio under this permission. Redrule records sound only, never the screen. Quit and reopen Redrule after switching it on."
         done={permissions.screenRecording}
         action={
           !permissions.screenRecording && <Button size="sm" onClick={() => void attempt(api.requestScreenRecording)}>Allow</Button>

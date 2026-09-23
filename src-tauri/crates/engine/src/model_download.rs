@@ -25,33 +25,12 @@ pub(crate) type Progress = dyn Fn(ModelProgress) + Send + Sync;
 pub(crate) struct Model {
     /// Directory or file name under the models folder.
     pub name: &'static str,
-    url_path: &'static str,
+    pub url_path: &'static str,
     /// Files that must exist (relative to `name` for archives) for the model to count as present.
-    files: &'static [&'static str],
-    stage: &'static str,
+    pub files: &'static [&'static str],
+    /// What the model is called in progress and error messages.
+    pub noun: &'static str,
 }
-
-pub(crate) const SPEECH: Model = Model {
-    name: "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8",
-    url_path: "asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2",
-    files: &["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt"],
-    stage: "Downloading speech model",
-};
-
-pub(crate) const SEGMENTATION: Model = Model {
-    name: "sherpa-onnx-pyannote-segmentation-3-0",
-    url_path: "speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2",
-    files: &["model.onnx"],
-    stage: "Downloading speaker model",
-};
-
-/// The release tag really is spelled "recongition".
-pub(crate) const EMBEDDING: Model = Model {
-    name: "wespeaker_en_voxceleb_resnet34_LM.onnx",
-    url_path: "speaker-recongition-models/wespeaker_en_voxceleb_resnet34_LM.onnx",
-    files: &[],
-    stage: "Downloading speaker model",
-};
 
 impl Model {
     pub(crate) fn path(&self, models_dir: &Path) -> PathBuf {
@@ -62,7 +41,7 @@ impl Model {
         self.url_path.ends_with(".tar.bz2")
     }
 
-    fn is_present(&self, models_dir: &Path) -> bool {
+    pub(crate) fn is_present(&self, models_dir: &Path) -> bool {
         let path = self.path(models_dir);
         if self.is_archive() { self.files.iter().all(|file| path.join(file).is_file()) } else { path.is_file() }
     }
@@ -83,11 +62,7 @@ pub(crate) async fn ensure(model: &Model, models_dir: &Path, progress: &Progress
     };
     // A leftover partial file is useless; a failure to delete it is not worth reporting.
     let _ = tokio::fs::remove_file(&download).await;
-    result.map_err(|error| Error::message(format!("The {} could not be downloaded. {error}", noun(model))))
-}
-
-fn noun(model: &Model) -> &'static str {
-    if model.name == SPEECH.name { "speech model" } else { "speaker model" }
+    result.map_err(|error| Error::message(format!("The {} could not be downloaded. {error}", model.noun)))
 }
 
 async fn fetch(model: &Model, destination: &Path, progress: &Progress) -> Result<()> {
@@ -98,7 +73,11 @@ async fn fetch(model: &Model, destination: &Path, progress: &Progress) -> Result
         .map_err(|error| Error::message(format!("Check your internet connection and try again. ({error})")))?;
     let total = response.content_length();
     let report = |downloaded| {
-        progress(ModelProgress { downloaded_bytes: downloaded, total_bytes: total, stage: model.stage.into() })
+        progress(ModelProgress {
+            downloaded_bytes: downloaded,
+            total_bytes: total,
+            stage: format!("Downloading {}", model.noun),
+        })
     };
 
     let mut file = tokio::fs::File::create(destination).await?;
@@ -161,6 +140,7 @@ async fn move_into_place(model: &Model, staging: &Path, models_dir: &Path) -> Re
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::catalog::{PARAKEET_V3 as SPEECH, PYANNOTE as SEGMENTATION, RESNET34 as EMBEDDING};
 
     #[test]
     fn archives_count_as_present_only_with_every_file() {

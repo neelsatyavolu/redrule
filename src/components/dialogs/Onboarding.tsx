@@ -14,14 +14,14 @@ export function Onboarding() {
     <Dialog
       open
       onOpenChange={(open) => !open && finish()}
-      title="Set up Minutes"
+      title="Set up Redrule"
       width={560}
-      description="Minutes records your calls, transcribes them on this Mac, and writes the notes with your own AI account. Recording other people can require their consent, so let them know."
+      description="Redrule records your calls, transcribes them on this Mac, and writes the notes with your own AI account. Recording other people can require their consent, so let them know."
       footer={
         <>
           <div className="flex-1" />
           <Button variant={ready ? "primary" : "ghost"} onClick={finish}>
-            {ready ? "Start using Minutes" : "Finish later"}
+            {ready ? "Start using Redrule" : "Finish later"}
           </Button>
         </>
       }

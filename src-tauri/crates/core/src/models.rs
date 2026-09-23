@@ -140,6 +140,9 @@ pub struct ActionItem {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner: Option<String>,
     pub task: String,
+    /// Checked off in the notes. Omitted while open, so older notes read unchanged.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub done: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -174,9 +177,12 @@ impl MeetingNote {
             let lines = self
                 .action_items
                 .iter()
-                .map(|item| match &item.owner {
-                    Some(owner) => format!("- [ ] **{owner}** — {}", item.task),
-                    None => format!("- [ ] {}", item.task),
+                .map(|item| {
+                    let mark = if item.done { "x" } else { " " };
+                    match &item.owner {
+                        Some(owner) => format!("- [{mark}] **{owner}** — {}", item.task),
+                        None => format!("- [{mark}] {}", item.task),
+                    }
                 })
                 .collect();
             blocks.push(bulleted("Action items", lines));
@@ -266,14 +272,23 @@ mod tests {
             sections: vec![NoteSection { heading: "Plan".into(), bullets: vec!["Freeze Thursday".into()] }],
             decisions: vec!["Ship Friday".into()],
             action_items: vec![
-                ActionItem { owner: Some("Me".into()), task: "Tell sales".into() },
-                ActionItem { owner: None, task: "Write notes".into() },
+                ActionItem { owner: Some("Me".into()), task: "Tell sales".into(), done: true },
+                ActionItem { owner: None, task: "Write notes".into(), done: false },
             ],
         };
         assert_eq!(
             note.markdown(),
-            "# Launch\n\nShip Friday.\n\n## Plan\n- Freeze Thursday\n\n## Decisions\n- Ship Friday\n\n## Action items\n- [ ] **Me** — Tell sales\n- [ ] Write notes\n"
+            "# Launch\n\nShip Friday.\n\n## Plan\n- Freeze Thursday\n\n## Decisions\n- Ship Friday\n\n## Action items\n- [x] **Me** — Tell sales\n- [ ] Write notes\n"
         );
+    }
+
+    #[test]
+    fn action_items_are_open_unless_marked_done() {
+        let open: ActionItem = serde_json::from_str(r#"{"task":"t"}"#).unwrap();
+        assert!(!open.done);
+        assert_eq!(serde_json::to_string(&open).unwrap(), r#"{"task":"t"}"#);
+        let done = ActionItem { done: true, ..open };
+        assert_eq!(serde_json::to_string(&done).unwrap(), r#"{"task":"t","done":true}"#);
     }
 
     #[test]

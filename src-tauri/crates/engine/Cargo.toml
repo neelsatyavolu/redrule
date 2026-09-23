@@ -2,7 +2,7 @@
 name = "minutes-engine"
 version.workspace = true
 edition.workspace = true
-description = "Audio capture, on-device transcription and speaker recognition for Minutes."
+description = "Audio capture, on-device transcription and speaker recognition for Redrule."
 
 [dependencies]
 minutes-core.workspace = true

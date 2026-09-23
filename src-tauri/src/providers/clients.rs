@@ -57,7 +57,7 @@ struct CatalogEntry { id: String, label: String, effort: Option<String> }
 #[derive(Deserialize)]
 struct Catalog { version: u32, codex: Vec<CatalogEntry>, grok: Vec<CatalogEntry> }
 
-// Add IDs here only when Minutes should hide them. New IDs show by default.
+// Add IDs here only when Redrule should hide them. New IDs show by default.
 const HIDDEN_MODELS: &[&str] = &[];
 
 pub async fn refresh_model_choices() {

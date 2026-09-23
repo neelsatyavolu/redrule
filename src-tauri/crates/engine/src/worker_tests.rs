@@ -39,12 +39,17 @@ impl Transcribe for FakeTranscriber {
 struct FakeDiarizer {
     calls: Arc<AtomicUsize>,
     result: fn() -> Result<Vec<SpeakerTurn>>,
+    final_ids: SpeakerMap,
 }
 
 impl Diarize for FakeDiarizer {
     async fn turns(&mut self, _window: &AudioWindow) -> Result<Vec<SpeakerTurn>> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         (self.result)()
+    }
+
+    fn finish(&self) -> SpeakerMap {
+        self.final_ids.clone()
     }
 }
 
@@ -78,12 +83,22 @@ async fn run(
     chunks: Vec<Chunk>,
     folder: Option<&Path>,
 ) -> Run {
+    run_with_final_ids(transcriber, turns, chunks, folder, SpeakerMap::default()).await
+}
+
+async fn run_with_final_ids(
+    transcriber: FakeTranscriber,
+    turns: fn() -> Result<Vec<SpeakerTurn>>,
+    chunks: Vec<Chunk>,
+    folder: Option<&Path>,
+    final_ids: SpeakerMap,
+) -> Run {
     let emitted = Arc::new(Mutex::new(Vec::new()));
     let errors = Arc::new(Mutex::new(Vec::new()));
     let calls = Arc::new(AtomicUsize::new(0));
     let worker = Worker {
         transcriber,
-        diarizer: FakeDiarizer { calls: calls.clone(), result: turns },
+        diarizer: FakeDiarizer { calls: calls.clone(), result: turns, final_ids },
         on_segment: {
             let emitted = emitted.clone();
             Arc::new(move |segment| emitted.lock().unwrap().push(segment))
@@ -150,6 +165,20 @@ async fn splits_only_call_audio_between_speakers() {
             (Speaker::Me, None, "me at 0.00", 0.0),
         ]
     );
+}
+
+#[tokio::test]
+async fn returns_the_final_speakers_while_live_updates_keep_the_provisional_ones() {
+    let chunks = vec![chunk(Speaker::Me, 3.0, 3.0), chunk(Speaker::Them, 3.0, 13.0)];
+    // The end-of-meeting pass found voice 2 was voice 1 all along.
+    let final_ids = SpeakerMap::from_ids(&[("1", "1"), ("2", "1")]);
+    let result = run_with_final_ids(working(), two_speakers, chunks, None, final_ids).await;
+    let ids = |segments: &[TranscriptSegment]| -> Vec<Option<String>> {
+        segments.iter().filter(|s| s.speaker == Speaker::Them).map(|s| s.speaker_id.clone()).collect()
+    };
+    assert_eq!(ids(&result.segments), [Some("1".to_string()), Some("1".to_string())]);
+    assert_eq!(ids(&result.emitted), [Some("1".to_string()), Some("2".to_string())]);
+    assert_eq!(result.segments.iter().find(|s| s.speaker == Speaker::Me).unwrap().speaker_id, None);
 }
 
 #[tokio::test]

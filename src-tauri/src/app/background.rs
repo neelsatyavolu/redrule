@@ -2,6 +2,8 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use minutes_engine::Transcriber;
+
 use super::state::{App, Banner, SpeechModel};
 use crate::core::detector_logic::{DetectionEvent, DetectorLogic};
 use crate::platform::detection;
@@ -67,20 +69,25 @@ impl App {
     pub fn prepare_speech_model(self: &Arc<Self>) {
         self.update(|state| state.speech_model = SpeechModel::Loading { progress: None });
         let app = Arc::clone(self);
+        let transcriber = self.transcriber();
         tauri::async_runtime::spawn(async move {
             let reporter = Arc::clone(&app);
+            let preparing = Arc::clone(&transcriber);
             let last = std::sync::Mutex::new(Instant::now() - PROGRESS_INTERVAL);
-            let result = app
-                .transcriber
+            let result = transcriber
                 .prepare(move |progress| {
                     // Downloads report thousands of times; the UI needs a few updates a second.
                     let mut last = last.lock().unwrap();
-                    if last.elapsed() >= PROGRESS_INTERVAL {
+                    if last.elapsed() >= PROGRESS_INTERVAL && reporter.is_current(&preparing) {
                         *last = Instant::now();
                         reporter.update(|state| state.speech_model = SpeechModel::Loading { progress: Some(progress) });
                     }
                 })
                 .await;
+            // The user switched models meanwhile: the newer preparation reports instead.
+            if !app.is_current(&transcriber) {
+                return;
+            }
             app.update(|state| {
                 state.speech_model = match result {
                     Ok(()) => SpeechModel::Ready,
@@ -88,5 +95,9 @@ impl App {
                 }
             });
         });
+    }
+
+    fn is_current(&self, transcriber: &Arc<Transcriber>) -> bool {
+        Arc::ptr_eq(&self.transcriber(), transcriber)
     }
 }

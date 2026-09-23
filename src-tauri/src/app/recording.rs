@@ -18,7 +18,7 @@ impl App {
         self.set_banner(None);
         self.refresh_permissions();
         if !self.read(|state| state.permissions.all_granted()) {
-            self.report("Minutes needs Microphone and Screen & System Audio Recording access before it can record. Grant them in Settings, under Permissions.");
+            self.report("Redrule needs Microphone and Screen & System Audio Recording access before it can record. Grant them in Settings, under Permissions.");
             return;
         }
 
@@ -49,7 +49,7 @@ impl App {
             let app = Arc::clone(self);
             Arc::new(move |message: String| app.report(format!("Part of the audio could not be processed. {message}")))
         };
-        match RecordingPipeline::start(Arc::clone(&self.transcriber), audio_folder, settings.microphone_id, on_segment, on_error).await {
+        match RecordingPipeline::start(self.transcriber(), audio_folder, settings.microphone_id, on_segment, on_error).await {
             Ok(pipeline) => *slot = Some(ActiveRecording { meeting, pipeline }),
             Err(error) => {
                 self.update(|state| state.recording_id = None);

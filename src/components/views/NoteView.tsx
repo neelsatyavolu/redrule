@@ -1,11 +1,14 @@
 import { Check } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { api } from "../../lib/api";
 import { meetingSentence, shortDate } from "../../lib/format";
-import type { Meeting, MeetingNote } from "../../lib/types";
+import { attempt } from "../../lib/store";
+import type { ActionItem, Meeting, MeetingNote } from "../../lib/types";
 import { PadPage, PadRow } from "../Pad";
 
 /** The finished notes, set on the pad. Action item owners hang in the margin. */
 export function NoteView({ meeting, note }: { meeting: Meeting; note: MeetingNote }) {
+  const [actionItems, toggle] = useCheckedItems(meeting.id, note);
   return (
     <PadPage>
       <article className="selectable">
@@ -51,17 +54,28 @@ export function NoteView({ meeting, note }: { meeting: Meeting; note: MeetingNot
           </section>
         )}
 
-        {note.actionItems.length > 0 && (
+        {actionItems.length > 0 && (
           <section className="mt-9">
             <PadRow>
               <SectionHeading>Action items</SectionHeading>
             </PadRow>
             <ul className="mt-2 space-y-2">
-              {note.actionItems.map((item, index) => (
+              {actionItems.map((item, index) => (
                 <PadRow key={index} label={<span className="font-medium text-ink">{item.owner}</span>}>
                   <li className="flex gap-3 text-[14.5px] leading-[1.6]">
-                    <span aria-hidden className="mt-[5px] size-3.5 shrink-0 rounded-[4px] border-[1.5px] border-faint" />
-                    <span>{item.task}</span>
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={!!item.done}
+                      aria-label={item.done ? "Mark as not done" : "Mark as done"}
+                      onClick={() => toggle(index)}
+                      className={`mt-[5px] grid size-3.5 shrink-0 cursor-default place-items-center rounded-[4px] border-[1.5px] transition-colors ${
+                        item.done ? "border-focus bg-focus text-paper" : "border-faint hover:border-graphite"
+                      }`}
+                    >
+                      {item.done && <Check size={10} strokeWidth={3.5} aria-hidden />}
+                    </button>
+                    <span className={item.done ? "text-graphite line-through decoration-faint" : undefined}>{item.task}</span>
                   </li>
                 </PadRow>
               ))}
@@ -84,6 +98,23 @@ export function MeetingHeading({ meeting, title }: { meeting: Meeting; title: st
       </PadRow>
     </>
   );
+}
+
+/** Action items that check off at once and save in the background, reverting if the save fails. */
+function useCheckedItems(id: string, note: MeetingNote): [ActionItem[], (index: number) => void] {
+  const [items, setItems] = useState(note.actionItems);
+  const [shownNote, setShownNote] = useState(note);
+  if (shownNote !== note) {
+    setShownNote(note);
+    setItems(note.actionItems);
+  }
+
+  const toggle = (index: number) => {
+    const next = items.map((item, i) => (i === index ? { ...item, done: !item.done } : item));
+    setItems(next);
+    void attempt(() => api.saveNote(id, { ...note, actionItems: next })).then((saved) => saved || setItems(items));
+  };
+  return [items, toggle];
 }
 
 function SectionHeading({ children }: { children: ReactNode }) {

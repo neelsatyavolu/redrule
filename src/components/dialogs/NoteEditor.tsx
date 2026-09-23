@@ -15,6 +15,7 @@ interface ActionDraft {
   key: number;
   owner: string;
   task: string;
+  done: boolean;
 }
 
 interface Draft {
@@ -39,7 +40,7 @@ function toDraft(note: MeetingNote): Draft {
     summary: note.tldr,
     sections: note.sections.map((s) => ({ key: key(), heading: s.heading, bullets: s.bullets.join("\n") })),
     decisions: note.decisions.join("\n"),
-    actions: note.actionItems.map((a) => ({ key: key(), owner: a.owner ?? "", task: a.task })),
+    actions: note.actionItems.map((a) => ({ key: key(), owner: a.owner ?? "", task: a.task, done: a.done ?? false })),
   };
 }
 
@@ -51,7 +52,7 @@ function toNote(draft: Draft): MeetingNote {
     decisions: lines(draft.decisions),
     actionItems: draft.actions
       .filter((a) => a.task.trim() !== "")
-      .map((a) => ({ owner: a.owner.trim() || null, task: a.task.trim() })),
+      .map((a) => ({ owner: a.owner.trim() || null, task: a.task.trim(), done: a.done })),
   };
 }
 
@@ -173,7 +174,7 @@ export function NoteEditor({ meeting, onClose }: { meeting: Meeting; onClose: ()
                   </IconButton>
                 </div>
               ))}
-              <Button size="sm" variant="ghost" onClick={() => update({ actions: [...draft.actions, { key: key(), owner: "", task: "" }] })}>
+              <Button size="sm" variant="ghost" onClick={() => update({ actions: [...draft.actions, { key: key(), owner: "", task: "", done: false }] })}>
                 <Plus size={14} /> Add action item
               </Button>
             </div>

@@ -1,4 +1,4 @@
-//! Parakeet TDT v3 speech recognition through sherpa-onnx. Blocking: call from a blocking thread.
+//! Parakeet TDT speech recognition through sherpa-onnx. Blocking: call from a blocking thread.
 
 use std::path::Path;
 
@@ -6,7 +6,7 @@ use minutes_core::windower::SAMPLE_RATE;
 use minutes_core::{Error, Result};
 use sherpa_onnx::{OfflineRecognizer, OfflineRecognizerConfig, OfflineTransducerModelConfig};
 
-use crate::model_download::SPEECH;
+use crate::model_download::Model;
 use crate::words::words;
 
 /// Leaves cores free for capture and the rest of the app.
@@ -17,8 +17,8 @@ pub struct Transcription {
     pub words: Vec<minutes_core::transcript::TranscriptWord>,
 }
 
-pub(crate) fn load(models_dir: &Path) -> Result<OfflineRecognizer> {
-    let dir = SPEECH.path(models_dir);
+pub(crate) fn load(models_dir: &Path, model: &Model) -> Result<OfflineRecognizer> {
+    let dir = model.path(models_dir);
     let file = |name: &str| Some(dir.join(name).to_string_lossy().into_owned());
     let mut config = OfflineRecognizerConfig::default();
     config.model_config.transducer = OfflineTransducerModelConfig {

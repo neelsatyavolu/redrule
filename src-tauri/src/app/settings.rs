@@ -1,14 +1,20 @@
-//! Preferences in `NSUserDefaults`, under the Swift app's keys, so they carry over.
+//! Preferences in `NSUserDefaults`, under the Swift app's keys.
+use objc2::AllocAnyThread;
 use objc2_foundation::{NSString, NSUserDefaults};
 use serde::{Deserialize, Serialize};
 
 use crate::providers::clients::ModelChoice;
+use minutes_engine::catalog;
+
+const LEGACY_DOMAIN: &str = "co.nenu.minutes";
 
 mod key {
     pub const MODEL_CHOICE: &str = "modelChoice";
     pub const KEEP_AUDIO: &str = "keepAudio";
     pub const MICROPHONE: &str = "microphoneUID";
     pub const ONBOARDED: &str = "onboarded";
+    pub const SPEECH_MODEL: &str = "speechModel";
+    pub const SPEAKER_MODEL: &str = "speakerModel";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -19,6 +25,9 @@ pub struct Settings {
     /// CoreAudio device UID, or empty for the system default.
     pub microphone_id: String,
     pub onboarded: bool,
+    /// On-device model ids from `minutes_engine::catalog`.
+    pub speech_model_id: String,
+    pub speaker_model_id: String,
 }
 
 /// A partial update from the settings screen.
@@ -29,18 +38,25 @@ pub struct SettingsPatch {
     pub keep_audio: Option<bool>,
     pub microphone_id: Option<String>,
     pub onboarded: Option<bool>,
+    pub speech_model_id: Option<String>,
+    pub speaker_model_id: Option<String>,
 }
 
 impl Settings {
     pub fn load() -> Self {
         let defaults = NSUserDefaults::standardUserDefaults();
-        let text = |key: &str| defaults.stringForKey(&NSString::from_str(key)).map(|s| s.to_string());
-        let flag = |key: &str| defaults.boolForKey(&NSString::from_str(key));
-        Self {
-            model_choice_id: text(key::MODEL_CHOICE).unwrap_or_else(|| ModelChoice::default_for(crate::core::oauth::ProviderId::Codex).id()),
-            keep_audio: flag(key::KEEP_AUDIO),
-            microphone_id: text(key::MICROPHONE).unwrap_or_default(),
-            onboarded: flag(key::ONBOARDED),
+        if has_settings(&defaults) {
+            return read(&defaults);
+        }
+        // The app was called Minutes (co.nenu.minutes). Its preferences are copied over once.
+        let legacy = NSUserDefaults::initWithSuiteName(NSUserDefaults::alloc(), Some(&NSString::from_str(LEGACY_DOMAIN)));
+        match legacy.filter(|legacy| has_settings(legacy)) {
+            Some(legacy) => {
+                let settings = read(&legacy);
+                settings.save();
+                settings
+            }
+            None => read(&defaults),
         }
     }
 
@@ -54,6 +70,14 @@ impl Settings {
             keep_audio: patch.keep_audio.unwrap_or(self.keep_audio),
             microphone_id: patch.microphone_id.unwrap_or_else(|| self.microphone_id.clone()),
             onboarded: patch.onboarded.unwrap_or(self.onboarded),
+            speech_model_id: patch
+                .speech_model_id
+                .map(|id| catalog::speech_option(&id).id.to_string())
+                .unwrap_or_else(|| self.speech_model_id.clone()),
+            speaker_model_id: patch
+                .speaker_model_id
+                .map(|id| catalog::speaker_option(&id).id.to_string())
+                .unwrap_or_else(|| self.speaker_model_id.clone()),
         };
         next.save();
         next
@@ -68,11 +92,38 @@ impl Settings {
         };
         set_text(key::MODEL_CHOICE, &self.model_choice_id);
         set_text(key::MICROPHONE, &self.microphone_id);
+        set_text(key::SPEECH_MODEL, &self.speech_model_id);
+        set_text(key::SPEAKER_MODEL, &self.speaker_model_id);
         defaults.setBool_forKey(self.keep_audio, &NSString::from_str(key::KEEP_AUDIO));
         defaults.setBool_forKey(self.onboarded, &NSString::from_str(key::ONBOARDED));
     }
 
     pub fn model_choice(&self) -> ModelChoice {
         ModelChoice::resolve(Some(&self.model_choice_id))
+    }
+}
+
+fn has_settings(defaults: &NSUserDefaults) -> bool {
+    [key::ONBOARDED, key::MODEL_CHOICE].iter().any(|key| defaults.objectForKey(&NSString::from_str(key)).is_some())
+}
+
+fn read(defaults: &NSUserDefaults) -> Settings {
+    let text = |key: &str| defaults.stringForKey(&NSString::from_str(key)).map(|s| s.to_string());
+    let flag = |key: &str| defaults.boolForKey(&NSString::from_str(key));
+    // New users start on the models that suit their Mac. Earlier users keep the speech model they
+    // already downloaded and move to the default speaker model, a small download that fixes split voices.
+    let (speech, speaker) = if flag(key::ONBOARDED) {
+        (catalog::DEFAULT_SPEECH, catalog::DEFAULT_SPEAKER)
+    } else {
+        super::speech_models::recommended()
+    };
+    Settings {
+        model_choice_id: text(key::MODEL_CHOICE)
+            .unwrap_or_else(|| ModelChoice::default_for(crate::core::oauth::ProviderId::Codex).id()),
+        keep_audio: flag(key::KEEP_AUDIO),
+        microphone_id: text(key::MICROPHONE).unwrap_or_default(),
+        onboarded: flag(key::ONBOARDED),
+        speech_model_id: catalog::speech_option(&text(key::SPEECH_MODEL).unwrap_or_else(|| speech.into())).id.into(),
+        speaker_model_id: catalog::speaker_option(&text(key::SPEAKER_MODEL).unwrap_or_else(|| speaker.into())).id.into(),
     }
 }

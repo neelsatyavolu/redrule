@@ -40,13 +40,13 @@ pub struct RecordItems {
 pub fn install(app: &AppHandle) -> tauri::Result<RecordItems> {
     let menu_record = MenuItem::with_id(app, "record", "Record Meeting", true, Some("CmdOrCtrl+Shift+R"))?;
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, Some("CmdOrCtrl+,"))?;
-    let quit = MenuItem::with_id(app, "quit", "Quit Minutes", true, Some("CmdOrCtrl+Q"))?;
+    let quit = MenuItem::with_id(app, "quit", "Quit Redrule", true, Some("CmdOrCtrl+Q"))?;
     let app_menu = Submenu::with_items(
         app,
-        "Minutes",
+        "Redrule",
         true,
         &[
-            &PredefinedMenuItem::about(app, Some("About Minutes"), None)?,
+            &PredefinedMenuItem::about(app, Some("About Redrule"), None)?,
             &PredefinedMenuItem::separator(app)?,
             &settings,
             &PredefinedMenuItem::separator(app)?,
@@ -86,16 +86,16 @@ pub fn install(app: &AppHandle) -> tauri::Result<RecordItems> {
         &[
             &tray_record,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "open", "Open Minutes", true, None::<&str>)?,
+            &MenuItem::with_id(app, "open", "Open Redrule", true, None::<&str>)?,
             &MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "quit", "Quit Minutes", true, None::<&str>)?,
+            &MenuItem::with_id(app, "quit", "Quit Redrule", true, None::<&str>)?,
         ],
     )?;
     let tray_icon = TrayIconBuilder::with_id("minutes")
         .icon(Image::from_bytes(include_bytes!("../icons/tray.png"))?)
         .icon_as_template(true)
-        .tooltip("Minutes")
+        .tooltip("Redrule")
         .menu(&tray_menu)
         .show_menu_on_left_click(true)
         .build(app)?;
@@ -154,7 +154,7 @@ pub fn show_main(handle: &AppHandle) {
     }
 }
 
-/// Closing the window leaves Minutes running in the menu bar only: it keeps watching for calls,
+/// Closing the window leaves Redrule running in the menu bar only: it keeps watching for calls,
 /// the call banner still offers to record, and the tray item starts and stops recordings.
 pub fn hide_to_menu_bar(handle: &AppHandle) {
     if let Some(window) = handle.get_webview_window(MAIN) {
@@ -201,7 +201,7 @@ fn create_banner(app: &AppHandle) -> tauri::Result<()> {
         .unwrap_or(LogicalPosition::new(BANNER_MARGIN, BANNER_MARGIN));
     PanelBuilder::<_, BannerPanel>::new(app, BANNER)
         .url(WebviewUrl::App("banner.html".into()))
-        .title("Minutes")
+        .title("Redrule")
         .size(tauri::Size::Logical(LogicalSize::new(width, height)))
         .position(tauri::Position::Logical(position))
         .level(PanelLevel::Status)
