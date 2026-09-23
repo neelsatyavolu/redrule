@@ -3,7 +3,8 @@ import { get, put, del, list, copy, head, BlobNotFoundError, BlobPreconditionFai
 import { validateNote } from './notes.js';
 import { validID } from './storage.js';
 
-export const MAX_MEETINGS = 500, MAX_BODY = 2000000;
+// MAX_BYTES bounds the meetings in one folder, as stored, so a member cannot fill it with 500 meetings of 2 MB.
+export const MAX_MEETINGS = 500, MAX_BODY = 2000000, MAX_BYTES = 200000000;
 export { validID };
 export const validMeetingID = id => typeof id === 'string' && /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/.test(id);
 export const newSecret = () => randomBytes(32).toString('hex');
@@ -36,7 +37,7 @@ function segment(s) {
     ...optional(s.speakerID, v => ({speakerID:text(v, 0, 200)})), ...optional(s.speakerName, v => ({speakerName:text(v, 0, 200)}))};
 }
 export function validateMeeting(m) {
-  if (!['zoom','googleMeet','manual'].includes(m?.app)) throw new Error('Invalid app');
+  if (!['zoom','googleMeet','teams','slack','webex','faceTime','manual'].includes(m?.app)) throw new Error('Invalid app');
   const {note} = validateNote({note:m.note});
   const actionItems = note.actionItems.map((a, i) => {
     const done = m.note.actionItems[i].done;
@@ -105,10 +106,12 @@ export async function writeMeeting(id, meeting, data, overwrite) {
   return info.uploadedAt.toISOString();
 }
 export const removeMeeting = (id, meeting) => del([meetingPath(id, meeting), summaryPath(id, meeting)]);
-export async function meetingList(id) {
+// Each stored meeting with its size in bytes.
+export async function meetingBlobs(id) {
   const prefix = meetingsPrefix(id);
-  return (await listAll(prefix)).map(b => ({id:b.pathname.slice(prefix.length, -5), updatedAt:new Date(b.uploadedAt).toISOString()})).filter(m => validMeetingID(m.id));
+  return (await listAll(prefix)).map(b => ({id:b.pathname.slice(prefix.length, -5), updatedAt:new Date(b.uploadedAt).toISOString(), size:b.size})).filter(m => validMeetingID(m.id));
 }
+export const meetingList = async id => (await meetingBlobs(id)).map(({id, updatedAt}) => ({id, updatedAt}));
 // Copies meetings and summaries, everything but folder.json, for a reset.
 export async function copyContents(from, to) {
   const prefix = folderPrefix(from);

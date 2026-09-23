@@ -1,7 +1,9 @@
-import { MAX_MEETINGS, validID, validMeetingID, hash, bearer, matches, tooLarge, validateMeeting, readFolder, readMeeting, writeMeeting, removeMeeting, meetingList } from '../lib/folders.js';
+import { MAX_MEETINGS, MAX_BYTES, validID, validMeetingID, hash, bearer, matches, tooLarge, validateMeeting, readFolder, readMeeting, writeMeeting, removeMeeting, meetingBlobs, meetingList } from '../lib/folders.js';
+import { limited, tooMany } from '../lib/limit.js';
 
 const NOT_MEMBER = 'This link does not let you add meetings to the folder.';
 const NOT_YOURS = 'Only the Mac that shared this meeting, or the folder’s owner, can change it.';
+const FULL = `This folder is full. It can hold ${MAX_MEETINGS} meetings.`;
 
 async function save(req, res, id, meeting, folder) {
   if (!matches(bearer(req.headers.authorization), folder.memberKeyHash)) return res.status(401).json({error:NOT_MEMBER});
@@ -12,8 +14,13 @@ async function save(req, res, id, meeting, folder) {
   try { data = validateMeeting(req.body); } catch { return res.status(400).json({error:'Invalid meeting content.'}); }
   const existing = await readMeeting(id, meeting);
   if (existing && !matches(editKey, existing.editKeyHash)) return res.status(403).json({error:NOT_YOURS});
-  if (!existing && (await meetingList(id)).length >= MAX_MEETINGS) return res.status(409).json({error:`This folder is full. It can hold ${MAX_MEETINGS} meetings.`});
-  const updatedAt = await writeMeeting(id, meeting, {...data, editKeyHash:hash(editKey)}, Boolean(existing));
+  const others = (await meetingBlobs(id)).filter(m => m.id !== meeting), stored = {...data, editKeyHash:hash(editKey)};
+  if (!existing && others.length >= MAX_MEETINGS) return res.status(409).json({error:FULL});
+  if (others.reduce((sum, m) => sum + m.size, 0) + Buffer.byteLength(JSON.stringify(stored)) > MAX_BYTES) return res.status(413).json({error:`This folder is full. It can hold ${MAX_BYTES / 1e6} MB of meetings.`});
+  const updatedAt = await writeMeeting(id, meeting, stored, Boolean(existing));
+  // Uploads running side by side can all pass the count above. A new meeting that then finds the folder over the limit
+  // takes itself back out, so the folder never stays above it.
+  if (!existing && (await meetingList(id)).length > MAX_MEETINGS) { await removeMeeting(id, meeting); return res.status(409).json({error:FULL}); }
   return res.status(200).json({updatedAt});
 }
 
@@ -34,6 +41,8 @@ export default async function handler(req, res) {
   const {id, meeting} = req.query;
   if (!validID(id)) return res.status(400).json({error:'Invalid folder ID.'});
   if (!validMeetingID(meeting)) return res.status(400).json({error:'Invalid meeting ID.'});
+  const wait = limited(req, req.method === 'GET' ? 'read' : 'write');
+  if (wait) return tooMany(res, wait);
   try {
     const folder = await readFolder(id);
     if (!folder) return res.status(404).json({error:'This folder no longer exists. Its owner may have reset its link or deleted it.'});

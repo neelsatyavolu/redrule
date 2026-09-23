@@ -42,8 +42,15 @@ pub fn parse_link(text: &str) -> Result<(String, String)> {
     Ok((id.to_string(), key.to_string()))
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
+pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// 32 random bytes from the thread's CSPRNG, as 64 lowercase hex characters.
+pub(crate) fn random_key() -> String {
+    let mut bytes = [0u8; 32];
+    rand::rng().fill_bytes(&mut bytes);
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 /// Proves this Mac uploaded a meeting. Derived rather than stored, and unchanged when a folder's link is reset.
@@ -59,9 +66,7 @@ pub fn device_secret(path: &Path) -> Result<String> {
         Err(error) if error.kind() != std::io::ErrorKind::NotFound => return Err(error.into()),
         Err(_) => {}
     }
-    let mut bytes = [0u8; 32];
-    rand::rng().fill_bytes(&mut bytes);
-    let secret: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+    let secret = random_key();
     write_private(path, secret.as_bytes())?;
     Ok(secret)
 }

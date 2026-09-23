@@ -1,5 +1,5 @@
-import { authorized } from '../lib/notes.js';
 import { validID, newSecret, hash, bearer, matches, tooLarge, validateName, readFolder, createFolder, updateFolder, meetingList, removeFolder } from '../lib/folders.js';
+import { limited, tooMany } from '../lib/limit.js';
 
 const GONE = 'This folder no longer exists. Its owner may have reset its link or deleted it.';
 const NOT_OWNER = 'Only the folder’s owner can do this.';
@@ -8,8 +8,9 @@ function name(req, res) {
   try { return validateName(req.body?.name); } catch { res.status(400).json({error:'Folder names need 1 to 80 characters.'}); return null; }
 }
 
+// Anyone can create a folder; the keys it answers with are the only way to use it. Old apps still send the legacy
+// MINUTES_SHARE_KEY, which is ignored.
 async function create(req, res) {
-  if (!authorized(req.headers.authorization, process.env.MINUTES_SHARE_KEY)) return res.status(401).json({error:'Creating folders is not authorized on this Mac.'});
   const folderName = name(req, res);
   if (folderName === null) return;
   const id = newSecret(), memberKey = newSecret(), ownerKey = newSecret();
@@ -19,9 +20,11 @@ async function create(req, res) {
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
+  if (!['GET','POST','PATCH','DELETE'].includes(req.method)) { res.setHeader('Allow', 'GET, POST, PATCH, DELETE'); return res.status(405).end(); }
+  const wait = limited(req, {GET:'read', POST:'create'}[req.method] ?? 'write');
+  if (wait) return tooMany(res, wait);
   try {
     if (req.method === 'POST') return await create(req, res);
-    if (!['GET','PATCH','DELETE'].includes(req.method)) { res.setHeader('Allow', 'GET, POST, PATCH, DELETE'); return res.status(405).end(); }
     const id = req.query.id;
     if (!validID(id)) return res.status(400).json({error:'Invalid folder ID.'});
     const folder = await readFolder(id);

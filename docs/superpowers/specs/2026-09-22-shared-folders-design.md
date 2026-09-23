@@ -27,7 +27,7 @@ Link: `https://redrule.vercel.app/f/<folderId>#<memberKey>`. Both values are 64 
 
 The server stores only SHA-256 hex hashes of the keys and compares them with `timingSafeEqual`.
 
-Creating a folder needs the existing `MINUTES_SHARE_KEY` bearer token, so only the owner's Mac can create folders.
+Anyone can create a folder; the keys it returns are the only way to use it. Apps up to 0.2.4 still send the legacy `MINUTES_SHARE_KEY` bearer token, which the service ignores. Every endpoint is rate limited per client IP; see the README.
 
 ## Server contract (`sharing/`, Vercel functions + private Blob)
 
@@ -53,13 +53,13 @@ TranscriptSegment is `{speaker:"me"|"them", start, end, text, speakerID?, speake
 
 | Method & path | Auth | Result |
 |---|---|---|
-| `POST /api/folder` body `{name}` | `Bearer MINUTES_SHARE_KEY` | 201 `{id, memberKey, ownerKey}` |
+| `POST /api/folder` body `{name}` | none | 201 `{id, memberKey, ownerKey}` |
 | `GET /api/folder?id=` | none; an optional `Bearer memberKey` adds `member:true/false` | 200 `{name, meetings:[{id, updatedAt}]}` or 404 |
 | `PATCH /api/folder?id=` body `{name}` | `Bearer ownerKey` | 200 `{name}` |
 | `DELETE /api/folder?id=` | `Bearer ownerKey` | 204; deletes every blob in the folder |
 | `POST /api/folder-reset?id=` | `Bearer ownerKey` | 200 `{id, memberKey}`; copies the meetings to a new id, keeps the owner key, deletes the old folder |
 | `GET /api/folder-meeting?id=&meeting=` | none | 200 stored meeting (without `editKeyHash`), plus `id` and `updatedAt`, or 404 |
-| `PUT /api/folder-meeting?id=&meeting=` | `Bearer memberKey` + `X-Edit-Key` | 200 `{updatedAt}`. Creates the meeting, or updates it when the edit key matches (403 otherwise). 409 when a new meeting would exceed 500. |
+| `PUT /api/folder-meeting?id=&meeting=` | `Bearer memberKey` + `X-Edit-Key` | 200 `{updatedAt}`. Creates the meeting, or updates it when the edit key matches (403 otherwise). 409 when a new meeting would exceed 500; 413 when the folder's meetings would pass 200 MB. |
 | `DELETE /api/folder-meeting?id=&meeting=` | `Bearer ownerKey`, or `Bearer memberKey` + matching `X-Edit-Key` | 204, also when the meeting is already gone |
 
 Errors are JSON `{error}` written for a person. Limits:

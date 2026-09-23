@@ -28,7 +28,7 @@ mock.module('@vercel/blob', {namedExports:{
   del: async p => { for (const x of [p].flat()) { if (hooks.failDel?.(pathOf(x))) throw new Error('Storage unavailable'); store.delete(pathOf(x)); } },
   list: async ({prefix, cursor}) => {
     const all = [...store.keys()].filter(k => k.startsWith(prefix)).sort(), start = Number(cursor ?? 0);
-    const blobs = all.slice(start, start + 2).map(k => ({pathname:k, url:url(k), uploadedAt:store.get(k).uploadedAt}));
+    const blobs = all.slice(start, start + 2).map(k => ({pathname:k, url:url(k), uploadedAt:store.get(k).uploadedAt, size:Buffer.byteLength(store.get(k).body)}));
     return {blobs, hasMore:start + 2 < all.length, cursor:start + 2 < all.length ? String(start + 2) : undefined};
   }
 }});
@@ -48,18 +48,18 @@ const meeting = (over = {}) => ({title:'Planning', app:'zoom', startedAt:'2026-0
   note:{title:'Planning notes', tldr:'We planned.', sections:[{heading:'Scope', bullets:['Ship folders']}], decisions:['Go'], actionItems:[{owner:'Sam', task:'Write spec', done:true}, {task:'Review'}]},
   transcript:[{speaker:'me', start:0, end:2, text:'Hello'}, {speaker:'them', start:75.4, end:80, text:'Hi', speakerName:'Lee'}], ...over});
 function response() { return {code:200, headers:{}, status(c) { this.code = c; return this; }, setHeader(k, v) { this.headers[k] = v; return this; }, json(b) { this.body = b; return this; }, send(b) { this.body = b; return this; }, end() { return this; }}; }
-async function call(handler, method, query, {auth, edit, body} = {}) {
+async function call(handler, method, query, {auth, edit, body, ip} = {}) {
   const res = response();
-  await handler({method, query, body, headers:{...(auth === undefined ? {} : {authorization:auth}), ...(edit === undefined ? {} : {'x-edit-key':edit})}}, res);
+  await handler({method, query, body, headers:{...(auth === undefined ? {} : {authorization:auth}), ...(edit === undefined ? {} : {'x-edit-key':edit}), ...(ip === undefined ? {} : {'x-real-ip':ip})}}, res);
   return res;
 }
-async function newFolder(name = 'Team') { return (await call(folderAPI, 'POST', {}, {auth:SHARE, body:{name}})).body; }
+async function newFolder(name = 'Team') { return (await call(folderAPI, 'POST', {}, {body:{name}})).body; }
 const put = (f, mid, edit, body = meeting(), auth = `Bearer ${f.memberKey}`) => call(meetingAPI, 'PUT', {id:f.id, meeting:mid}, {auth, edit, body});
 
-test('creating a folder needs the share key and stores only key hashes', async () => {
-  assert.equal((await call(folderAPI, 'POST', {}, {body:{name:'Team'}})).code, 401);
-  assert.equal((await call(folderAPI, 'POST', {}, {auth:'Bearer wrong', body:{name:'Team'}})).code, 401);
-  const res = await call(folderAPI, 'POST', {}, {auth:SHARE, body:{name:'  Team  '}});
+test('anyone can create a folder, old apps still send the share key, and only key hashes are stored', async () => {
+  assert.equal((await call(folderAPI, 'POST', {}, {auth:SHARE, body:{name:'Team'}})).code, 201);
+  assert.equal((await call(folderAPI, 'POST', {}, {auth:'Bearer wrong', body:{name:'Team'}})).code, 201);
+  const res = await call(folderAPI, 'POST', {}, {body:{name:'  Team  '}});
   assert.equal(res.code, 201);
   for (const k of ['id', 'memberKey', 'ownerKey']) assert.match(res.body[k], /^[a-f0-9]{64}$/);
   const stored = JSON.parse(store.get(`folders/${res.body.id}/folder.json`).body);
@@ -211,7 +211,7 @@ test('invalid meeting content is rejected and unknown fields are dropped', async
   assert.ok(!JSON.stringify(valid).includes('secret'));
   assert.equal(validateMeeting(meeting({endedAt:null})).endedAt, null);
   const bad = [
-    {app:'teams'}, {title:'x'.repeat(301)}, {title:3}, {recordedBy:''}, {recordedBy:'   '}, {recordedBy:'x'.repeat(61)},
+    {app:'skype'}, {title:'x'.repeat(301)}, {title:3}, {recordedBy:''}, {recordedBy:'   '}, {recordedBy:'x'.repeat(61)},
     {startedAt:'yesterday'}, {startedAt:'2026-13-45T00:00:00Z'}, {endedAt:undefined}, {note:undefined}, {note:{...meeting().note, title:5}},
     {note:{...meeting().note, actionItems:[{task:'x', done:'yes'}]}}, {transcript:undefined}, {transcript:'x'},
     {transcript:[{speaker:'Alice', start:0, end:1, text:'a'}]}, {transcript:[{speaker:'me', start:Infinity, end:1, text:'a'}]},
@@ -220,7 +220,7 @@ test('invalid meeting content is rejected and unknown fields are dropped', async
   for (const over of bad) assert.throws(() => validateMeeting(meeting(over)), undefined, JSON.stringify(over));
 
   const f = await newFolder();
-  assert.equal((await put(f, M1, editA, meeting({app:'teams'}))).code, 400);
+  assert.equal((await put(f, M1, editA, meeting({app:'skype'}))).code, 400);
   assert.equal((await put(f, M1, editA, {...meeting(), padding:'x'.repeat(2000001)})).code, 413);
   assert.equal((await put(f, M1, undefined)).code, 400);
   assert.equal((await put(f, M1, 'short')).code, 400);
@@ -339,4 +339,52 @@ test('every API 404 carries a JSON error', async () => {
     await call(meetingAPI, 'GET', {id:f.id, meeting:M1})
   ];
   for (const res of responses) { assert.equal(res.code, 404); assert.equal(typeof res.body?.error, 'string'); assert.ok(res.body.error.length > 0); }
+});
+
+test('meetings from every supported call app are accepted', async () => {
+  const f = await newFolder();
+  const ids = ['teams', 'slack', 'webex', 'faceTime'].map((app, i) => [app, `22222222-2222-2222-2222-00000000000${i}`]);
+  for (const [app, mid] of ids) assert.equal((await put(f, mid, editA, meeting({app}))).code, 200, app);
+  assert.equal((await put(f, M2, editA, meeting({app:'skype'}))).code, 400);
+});
+
+test('a folder holds at most MAX_BYTES of meetings', async () => {
+  const f = await newFolder();
+  const {MAX_BYTES} = await import('../lib/folders.js');
+  store.set(`folders/${f.id}/meetings/${M2}.json`, {body:'x'.repeat(MAX_BYTES - 100), uploadedAt:new Date(clock)});
+  const res = await put(f, M1, editA);
+  assert.equal(res.code, 413);
+  assert.match(res.body.error, /200 MB/);
+  assert.equal(store.has(`folders/${f.id}/meetings/${M1}.json`), false);
+  store.delete(`folders/${f.id}/meetings/${M2}.json`);
+});
+
+test('uploads racing past 500 meetings take themselves back out', async () => {
+  const f = await newFolder();
+  const hex = n => n.toString(16).toUpperCase().padStart(12, '0');
+  for (let i = 0; i < 499; i++) store.set(`folders/${f.id}/meetings/00000000-0000-0000-0000-${hex(i)}.json`, {body:JSON.stringify({...meeting(), editKeyHash:sha(editA)}), uploadedAt:new Date(clock)});
+  const results = await Promise.all([put(f, M1, editA), put(f, M2, editB)]);
+  const count = [...store.keys()].filter(k => k.startsWith(`folders/${f.id}/meetings/`)).length;
+  assert.ok(count <= 500, `folder holds ${count}`);
+  assert.ok(results.some(r => r.code === 409));
+});
+
+test('creates, writes and folder pages are rate limited per client', async () => {
+  const {LIMITS} = await import('../lib/limit.js');
+  const [creates] = LIMITS.create, [pages] = LIMITS.page;
+  for (let i = 0; i < creates; i++) assert.equal((await call(folderAPI, 'POST', {}, {ip:'198.51.100.1', body:{name:'Team'}})).code, 201);
+  let res = await call(folderAPI, 'POST', {}, {ip:'198.51.100.1', body:{name:'Team'}});
+  assert.equal(res.code, 429);
+  assert.match(res.headers['Retry-After'], /^\d+$/);
+  assert.equal(typeof res.body.error, 'string');
+  assert.equal((await call(folderAPI, 'POST', {}, {ip:'198.51.100.2', body:{name:'Team'}})).code, 201);
+
+  const f = await newFolder();
+  for (let i = 0; i < pages; i++) assert.equal((await call(pageAPI, 'GET', {id:f.id}, {ip:'198.51.100.3'})).code, 200);
+  hooks.reads.length = 0;
+  res = await call(pageAPI, 'GET', {id:f.id}, {ip:'198.51.100.3'});
+  assert.equal(res.code, 429);
+  assert.equal(typeof res.body, 'string');
+  assert.deepEqual(hooks.reads, [], 'a limited request touches no storage');
+  assert.equal((await call(pageAPI, 'GET', {id:f.id, meeting:M1}, {ip:'198.51.100.3'})).code, 404, 'one meeting’s page has its own limit');
 });
