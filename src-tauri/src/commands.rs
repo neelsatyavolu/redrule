@@ -7,6 +7,7 @@ use tauri::State;
 
 use crate::app::{App, LocalModels, MeetingDetail, ModelKind, Settings, SettingsPatch, State as Snapshot};
 use crate::core::Result;
+use crate::core::api_providers::ApiProvider;
 use crate::core::ask::Exchange;
 use crate::core::models::{MeetingApp, MeetingNote};
 use crate::core::oauth::ProviderId;
@@ -172,6 +173,17 @@ pub fn cancel_connecting(app: AppState) {
 #[tauri::command]
 pub fn disconnect(app: AppState, provider: ProviderId) {
     app.disconnect(provider);
+}
+
+/// Checks the key with the provider before saving it. `base_url` and `model` are for a custom server.
+#[tauri::command]
+pub async fn save_api_key(app: AppState<'_>, provider: ApiProvider, key: String, base_url: String, model: String) -> Result<()> {
+    app.save_api_key(provider, &key, &base_url, &model).await
+}
+
+#[tauri::command]
+pub fn remove_api_key(app: AppState, provider: ApiProvider) -> Result<()> {
+    app.remove_api_key(provider)
 }
 
 #[tauri::command]

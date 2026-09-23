@@ -1,5 +1,5 @@
 // Dev-only: runs the UI in a plain browser against sample data, for design review.
-// Open http://localhost:1420/preview.html?view=notes (notes | transcript | live | loading | writing | failed | empty | settings | transcription | onboarding | share | tags | folder | newFolder | move)
+// Open http://localhost:1420/preview.html?view=notes (notes | transcript | live | loading | writing | failed | empty | settings | transcription | accounts | onboarding | share | tags | folder | newFolder | move)
 import { mockIPC } from "@tauri-apps/api/mocks";
 import type { AppState, Meeting, MeetingDetail } from "../lib/types";
 
@@ -17,6 +17,8 @@ const at = (daysAgo: number, hour: number, minute = 0) => {
 const plus = (iso: string, minutes: number) => new Date(Date.parse(iso) + minutes * 60_000).toISOString();
 
 const FOLDER = "f".repeat(64);
+/** Settings views show an API key and a custom server as set up. */
+const withKeys = view === "settings" || view === "accounts";
 
 const meetings: Meeting[] = [
   { id: "M1", title: "Q4 roadmap review", app: "zoom", startedAt: at(0, 14, 5), endedAt: plus(at(0, 14, 5), 42), status: writingNotes ? "summarizing" : "done", tags: ["Product", "Planning"], folderId: FOLDER },
@@ -70,7 +72,7 @@ const state: AppState = {
   noteModel: null,
   askModel: null,
   notesProgress: writingNotes ? { meetingId: "M1", stage: view === "loading" ? "loading" : "writing", percent: view === "loading" ? 63 : 42 } : null,
-  connected: view === "failed" ? [] : ["codex"],
+  connected: view === "failed" ? [] : withKeys ? ["codex", "anthropic", "compatible"] : ["codex"],
   connecting: null,
   connectionError: null,
   permissions: { microphone: view !== "onboarding", screenRecording: true },
@@ -82,6 +84,8 @@ const state: AppState = {
     onboarded: view !== "onboarding",
     speechModelId: "parakeet-v3",
     speakerModelId: "accurate",
+    compatibleUrl: withKeys ? "http://localhost:11434/v1" : "",
+    compatibleModel: withKeys ? "llama3.2" : "",
   },
   sharingBusy: false,
   revision: 1,
@@ -91,7 +95,7 @@ const state: AppState = {
   displayName: "Neel",
 };
 
-mockIPC((command) => {
+mockIPC((command, args) => {
   switch (command) {
     case "get_state":
       return state;
@@ -111,6 +115,10 @@ mockIPC((command) => {
       return [
         { id: "codex:gpt-6-astra", provider: "codex", model: "gpt-6-astra", label: "GPT-6 Astra", effort: "low" },
         { id: "grok:grok-4.7", provider: "grok", model: "grok-4.7", label: "Grok 4.7", effort: "low" },
+        { id: "openai:gpt-6-astra", provider: "openai", model: "gpt-6-astra", label: "GPT-6 Astra", effort: "low" },
+        { id: "anthropic:claude-opus-5", provider: "anthropic", model: "claude-opus-5", label: "Claude Opus 5", effort: "low" },
+        { id: "anthropic:claude-haiku-4-5", provider: "anthropic", model: "claude-haiku-4-5", label: "Claude Haiku 4.5", effort: "" },
+        { id: "gemini:gemini-3.8-flash", provider: "gemini", model: "gemini-3.8-flash", label: "Gemini 3.8 Flash", effort: "low" },
       ];
     case "local_models":
       return {
@@ -129,6 +137,14 @@ mockIPC((command) => {
         ],
         hardware: { memoryGb: 16, appleSilicon: true, cores: 10 },
       };
+    case "save_api_key":
+      // Any key works in the preview except "bad", which shows the error.
+      return new Promise((resolve, reject) =>
+        setTimeout(() => {
+          if ((args as { key?: string } | undefined)?.key === "bad") reject("OpenAI did not accept the API key. Check it in Settings, under Accounts.");
+          else resolve(null);
+        }, 900),
+      );
     case "microphones":
       return [{ id: "a", name: "MacBook Pro Microphone" }, { id: "b", name: "AirPods Pro" }];
     default:

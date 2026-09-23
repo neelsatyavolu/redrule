@@ -84,6 +84,8 @@ pub fn run() {
             commands::submit_pasted_code,
             commands::cancel_connecting,
             commands::disconnect,
+            commands::save_api_key,
+            commands::remove_api_key,
             commands::request_microphone,
             commands::request_screen_recording,
             commands::update_settings,

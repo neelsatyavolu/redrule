@@ -72,6 +72,7 @@ The design spec is in `docs/superpowers/specs/`.
 ## Notes
 
 - The Codex and Grok sign-ins reuse the OAuth clients of their official command-line tools, the same approach as apexline. Suitable for personal use only.
+- API keys (OpenAI, Anthropic, Gemini, or any OpenAI-compatible server) are the alternative that does not depend on those clients. Keys are checked by listing the provider's models, then kept in the Keychain (service `Redrule`, account `apikey:<provider>`). A custom server's base URL and model name are preferences (`compatibleURL`, `compatibleModel`); plain http is accepted only for localhost.
 - Recording other people can require their consent. Tell them.
 
 ## Notes, transcripts, and sharing

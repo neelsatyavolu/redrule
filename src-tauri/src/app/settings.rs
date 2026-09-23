@@ -3,6 +3,7 @@ use objc2::AllocAnyThread;
 use objc2_foundation::{NSString, NSUserDefaults};
 use serde::{Deserialize, Serialize};
 
+use crate::core::api_providers::{ApiProvider, Provider, split_choice};
 use crate::providers::clients::ModelChoice;
 use minutes_engine::catalog;
 
@@ -18,6 +19,8 @@ mod key {
     pub const ONBOARDED: &str = "onboarded";
     pub const SPEECH_MODEL: &str = "speechModel";
     pub const SPEAKER_MODEL: &str = "speakerModel";
+    pub const COMPATIBLE_URL: &str = "compatibleURL";
+    pub const COMPATIBLE_MODEL: &str = "compatibleModel";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -34,6 +37,10 @@ pub struct Settings {
     /// On-device model ids from `minutes_engine::catalog`.
     pub speech_model_id: String,
     pub speaker_model_id: String,
+    /// The OpenAI-compatible server's base URL and model name; empty when none is set up.
+    /// Its key, if it needs one, is in the Keychain.
+    pub compatible_url: String,
+    pub compatible_model: String,
 }
 
 /// A partial update from the settings screen.
@@ -47,6 +54,11 @@ pub struct SettingsPatch {
     pub onboarded: Option<bool>,
     pub speech_model_id: Option<String>,
     pub speaker_model_id: Option<String>,
+    /// Set only after the server has been checked, so not from the webview.
+    #[serde(skip)]
+    pub compatible_url: Option<String>,
+    #[serde(skip)]
+    pub compatible_model: Option<String>,
 }
 
 impl Settings {
@@ -69,15 +81,18 @@ impl Settings {
 
     /// Returns the updated settings and writes the changed values through.
     pub fn apply(&self, patch: SettingsPatch) -> Self {
+        let compatible_model = patch.compatible_model.unwrap_or_else(|| self.compatible_model.clone());
+        let follow = |id: String| following_compatible(id, &compatible_model);
         let next = Self {
-            model_choice_id: patch
-                .model_choice_id
-                .map(|id| known_choice(&id))
-                .unwrap_or_else(|| self.model_choice_id.clone()),
-            ask_model_choice_id: patch
-                .ask_model_choice_id
-                .map(|id| if id.is_empty() { id } else { known_choice(&id) })
-                .unwrap_or_else(|| self.ask_model_choice_id.clone()),
+            model_choice_id: follow(
+                patch.model_choice_id.map(|id| known_choice(&id)).unwrap_or_else(|| self.model_choice_id.clone()),
+            ),
+            ask_model_choice_id: follow(
+                patch
+                    .ask_model_choice_id
+                    .map(|id| if id.is_empty() { id } else { known_choice(&id) })
+                    .unwrap_or_else(|| self.ask_model_choice_id.clone()),
+            ),
             keep_audio: patch.keep_audio.unwrap_or(self.keep_audio),
             microphone_id: patch.microphone_id.unwrap_or_else(|| self.microphone_id.clone()),
             onboarded: patch.onboarded.unwrap_or(self.onboarded),
@@ -89,6 +104,8 @@ impl Settings {
                 .speaker_model_id
                 .map(|id| catalog::speaker_option(&id).id.to_string())
                 .unwrap_or_else(|| self.speaker_model_id.clone()),
+            compatible_url: patch.compatible_url.unwrap_or_else(|| self.compatible_url.clone()),
+            compatible_model,
         };
         next.save();
         next
@@ -106,6 +123,8 @@ impl Settings {
         set_text(key::MICROPHONE, &self.microphone_id);
         set_text(key::SPEECH_MODEL, &self.speech_model_id);
         set_text(key::SPEAKER_MODEL, &self.speaker_model_id);
+        set_text(key::COMPATIBLE_URL, &self.compatible_url);
+        set_text(key::COMPATIBLE_MODEL, &self.compatible_model);
         defaults.setBool_forKey(self.keep_audio, &NSString::from_str(key::KEEP_AUDIO));
         defaults.setBool_forKey(self.onboarded, &NSString::from_str(key::ONBOARDED));
     }
@@ -132,6 +151,16 @@ impl Settings {
     pub fn local_ask_model(&self) -> Option<&'static catalog::NoteOption> {
         self.ask_choice_id().strip_prefix(LOCAL_NOTES).map(catalog::note_option)
     }
+
+    /// The model to switch to for `provider`: its first listed model, or the custom server's model.
+    pub fn default_choice(&self, provider: Provider) -> Option<ModelChoice> {
+        match provider {
+            Provider::Api(ApiProvider::Compatible) if !self.compatible_model.is_empty() => {
+                Some(ModelChoice::custom(ApiProvider::Compatible, &self.compatible_model))
+            }
+            _ => ModelChoice::default_for(provider),
+        }
+    }
 }
 
 /// A choice that is still offered: retired account models and note models fall back to a default.
@@ -139,6 +168,16 @@ fn known_choice(id: &str) -> String {
     match id.strip_prefix(LOCAL_NOTES) {
         Some(local) => format!("{LOCAL_NOTES}{}", catalog::note_option(local).id),
         None => ModelChoice::resolve(Some(id)).id(),
+    }
+}
+
+/// Choices of the custom server follow its model name when that changes.
+fn following_compatible(id: String, model: &str) -> String {
+    match split_choice(&id) {
+        (Some(Provider::Api(ApiProvider::Compatible)), _) if !model.is_empty() => {
+            format!("{}:{model}", ApiProvider::Compatible.raw())
+        }
+        _ => id,
     }
 }
 
@@ -158,13 +197,15 @@ fn read(defaults: &NSUserDefaults) -> Settings {
     };
     Settings {
         model_choice_id: text(key::MODEL_CHOICE)
-            .unwrap_or_else(|| ModelChoice::default_for(crate::core::oauth::ProviderId::Codex).id()),
+            .unwrap_or_else(|| ModelChoice::resolve(None).id()),
         ask_model_choice_id: text(key::ASK_MODEL_CHOICE).map(|id| if id.is_empty() { id } else { known_choice(&id) }).unwrap_or_default(),
         keep_audio: flag(key::KEEP_AUDIO),
         microphone_id: text(key::MICROPHONE).unwrap_or_default(),
         onboarded: flag(key::ONBOARDED),
         speech_model_id: catalog::speech_option(&text(key::SPEECH_MODEL).unwrap_or_else(|| speech.into())).id.into(),
         speaker_model_id: catalog::speaker_option(&text(key::SPEAKER_MODEL).unwrap_or_else(|| speaker.into())).id.into(),
+        compatible_url: text(key::COMPATIBLE_URL).unwrap_or_default(),
+        compatible_model: text(key::COMPATIBLE_MODEL).unwrap_or_default(),
     }
 }
 
@@ -177,6 +218,29 @@ mod tests {
         assert_eq!(known_choice("local:qwen3.5-9b"), "local:qwen3.5-9b");
         assert_eq!(known_choice("local:retired"), format!("local:{}", catalog::DEFAULT_NOTES));
         assert_eq!(known_choice("grok:grok-4.6"), "grok:grok-4.6");
+        assert_eq!(known_choice("codex:retired"), ModelChoice::resolve(None).id());
+        assert_eq!(known_choice("anthropic:claude-opus-5"), "anthropic:claude-opus-5");
+        assert_eq!(known_choice("openai:my-fine-tune"), "openai:my-fine-tune");
+    }
+
+    #[test]
+    fn custom_server_choices_follow_its_model_name() {
+        assert_eq!(following_compatible("compatible:llama3.2".into(), "qwen3"), "compatible:qwen3");
+        assert_eq!(following_compatible("compatible:llama3.2".into(), ""), "compatible:llama3.2");
+        assert_eq!(following_compatible("codex:gpt-6-astra".into(), "qwen3"), "codex:gpt-6-astra");
+        assert_eq!(following_compatible(String::new(), "qwen3"), "");
+    }
+
+    #[test]
+    fn the_custom_server_supplies_its_own_default_model() {
+        let mut custom = settings("codex:gpt-6-astra", "");
+        assert_eq!(custom.default_choice(Provider::Api(ApiProvider::Compatible)), None);
+        custom.compatible_model = "llama3.2".into();
+        assert_eq!(custom.default_choice(Provider::Api(ApiProvider::Compatible)).map(|c| c.id()).as_deref(), Some("compatible:llama3.2"));
+        assert_eq!(
+            custom.default_choice(Provider::Api(ApiProvider::Gemini)).map(|c| c.model).as_deref(),
+            Some("gemini-3.8-flash")
+        );
     }
 
     fn settings(notes: &str, ask: &str) -> Settings {
@@ -188,6 +252,8 @@ mod tests {
             onboarded: true,
             speech_model_id: catalog::DEFAULT_SPEECH.into(),
             speaker_model_id: catalog::DEFAULT_SPEAKER.into(),
+            compatible_url: String::new(),
+            compatible_model: String::new(),
         }
     }
 
