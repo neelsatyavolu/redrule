@@ -28,6 +28,7 @@ mod key {
     pub const CONSENT_NOTICE: &str = "consentNotice";
     pub const CRASH_REPORTS: &str = "crashReports";
     pub const USE_CALENDAR: &str = "useCalendar";
+    pub const IGNORED_CALENDARS: &str = "ignoredCalendars";
     pub const COMPATIBLE_URL: &str = "compatibleURL";
     pub const COMPATIBLE_MODEL: &str = "compatibleModel";
 }
@@ -56,6 +57,8 @@ pub struct Settings {
     /// Names meetings and lists attendees from the calendar. On by default, but it does nothing
     /// until the person allows calendar access, which Redrule only asks for when they choose to.
     pub use_calendar: bool,
+    /// Calendar identifiers whose events never name a meeting. New calendars are used until left out.
+    pub ignored_calendars: Vec<String>,
     /// The OpenAI-compatible server's base URL and model name; empty when none is set up.
     /// Its key, if it needs one, is in the Keychain.
     pub compatible_url: String,
@@ -78,6 +81,7 @@ pub struct SettingsPatch {
     pub consent_notice: Option<String>,
     pub crash_reports: Option<bool>,
     pub use_calendar: Option<bool>,
+    pub ignored_calendars: Option<Vec<String>>,
     /// Set only after the server has been checked, so not from the webview.
     #[serde(skip)]
     pub compatible_url: Option<String>,
@@ -133,6 +137,7 @@ impl Settings {
             consent_notice: patch.consent_notice.map(|notice| consent_notice(&notice)).unwrap_or_else(|| self.consent_notice.clone()),
             crash_reports: patch.crash_reports.unwrap_or(self.crash_reports),
             use_calendar: patch.use_calendar.unwrap_or(self.use_calendar),
+            ignored_calendars: patch.ignored_calendars.map(|ids| calendar_ids(ids.iter().map(String::as_str))).unwrap_or_else(|| self.ignored_calendars.clone()),
             compatible_url: patch.compatible_url.unwrap_or_else(|| self.compatible_url.clone()),
             compatible_model,
         };
@@ -155,6 +160,7 @@ impl Settings {
         set_text(key::CONSENT_NOTICE, &self.consent_notice);
         set_text(key::COMPATIBLE_URL, &self.compatible_url);
         set_text(key::COMPATIBLE_MODEL, &self.compatible_model);
+        set_text(key::IGNORED_CALENDARS, &self.ignored_calendars.join("\n"));
         defaults.setBool_forKey(self.consent_reminder, &NSString::from_str(key::CONSENT_REMINDER));
         defaults.setBool_forKey(self.show_in_dock, &NSString::from_str(key::SHOW_IN_DOCK));
         defaults.setBool_forKey(self.keep_audio, &NSString::from_str(key::KEEP_AUDIO));
@@ -201,6 +207,17 @@ impl Settings {
 fn consent_notice(text: &str) -> String {
     let text: String = text.trim().chars().take(MAX_CONSENT_NOTICE).collect();
     if text.is_empty() { DEFAULT_CONSENT_NOTICE.to_string() } else { text }
+}
+
+/// Calendar identifiers without blanks or repeats. They are stored one per line.
+fn calendar_ids<'a>(given: impl IntoIterator<Item = &'a str>) -> Vec<String> {
+    let mut ids: Vec<String> = Vec::new();
+    for id in given.into_iter().map(str::trim).filter(|id| !id.is_empty()) {
+        if !ids.iter().any(|known| known == id) {
+            ids.push(id.to_string());
+        }
+    }
+    ids
 }
 
 /// A choice that is still offered: retired account models and note models fall back to a default.
@@ -250,6 +267,7 @@ fn read(defaults: &NSUserDefaults) -> Settings {
         consent_notice: consent_notice(&text(key::CONSENT_NOTICE).unwrap_or_default()),
         crash_reports: flag(key::CRASH_REPORTS),
         use_calendar: unset(key::USE_CALENDAR) || flag(key::USE_CALENDAR),
+        ignored_calendars: calendar_ids(text(key::IGNORED_CALENDARS).unwrap_or_default().lines()),
         compatible_url: text(key::COMPATIBLE_URL).unwrap_or_default(),
         compatible_model: text(key::COMPATIBLE_MODEL).unwrap_or_default(),
     }
@@ -308,9 +326,17 @@ mod tests {
             consent_notice: DEFAULT_CONSENT_NOTICE.into(),
             crash_reports: false,
             use_calendar: true,
+            ignored_calendars: Vec::new(),
             compatible_url: String::new(),
             compatible_model: String::new(),
         }
+    }
+
+    #[test]
+    fn calendar_ids_drop_blanks_and_repeats() {
+        assert_eq!(calendar_ids(" A1 \n\nB2\nA1\n".lines()), vec!["A1".to_string(), "B2".to_string()]);
+        assert_eq!(calendar_ids(["C3", " ", "C3"]), vec!["C3".to_string()]);
+        assert!(calendar_ids("".lines()).is_empty());
     }
 
     #[test]

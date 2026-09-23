@@ -115,9 +115,19 @@ export interface Settings {
   crashReports: boolean;
   /** Takes titles and attendees from the calendar, once access is allowed. */
   useCalendar: boolean;
+  /** Identifiers of calendars whose events never name a recording. */
+  ignoredCalendars: string[];
   /** The OpenAI-compatible server's base URL and model name; empty when none is set up. */
   compatibleUrl: string;
   compatibleModel: string;
+}
+
+/** A calendar that holds events, as listed in settings. */
+export interface Calendar {
+  id: string;
+  title: string;
+  /** The account it syncs with, such as iCloud or a work address. */
+  account: string;
 }
 
 /** A meeting whose title, tags, notes or transcript hold every word searched for. */

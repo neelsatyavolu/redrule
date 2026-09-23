@@ -89,6 +89,7 @@ const state: AppState = {
     consentNotice: "Heads up: I'm recording this call to take notes. Let me know if you'd rather I didn't.",
     crashReports: false,
     useCalendar: true,
+    ignoredCalendars: ["birthdays"],
     compatibleUrl: withKeys ? "http://localhost:11434/v1" : "",
     compatibleModel: withKeys ? "llama3.2" : "",
   },
@@ -155,6 +156,17 @@ mockIPC((command, args) => {
           else resolve(null);
         }, 900),
       );
+    case "plugin:app|version":
+      return "0.3.1";
+    case "check_for_updates":
+      return new Promise((resolve) => setTimeout(() => resolve(null), 900));
+    case "calendars":
+      return [
+        { id: "work", title: "Work", account: "jane@example.com" },
+        { id: "holidays", title: "Holidays", account: "jane@example.com" },
+        { id: "home", title: "Home", account: "iCloud" },
+        { id: "birthdays", title: "Birthdays", account: "Other" },
+      ];
     case "microphones":
       return [{ id: "a", name: "MacBook Pro Microphone" }, { id: "b", name: "AirPods Pro" }];
     default:

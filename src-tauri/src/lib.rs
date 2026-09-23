@@ -95,6 +95,7 @@ pub fn run() {
             commands::request_microphone,
             commands::request_screen_recording,
             commands::request_calendar,
+            commands::calendars,
             commands::update_settings,
             commands::microphones,
             commands::model_choices,
@@ -105,6 +106,7 @@ pub fn run() {
             commands::dismiss_banner,
             commands::show_main_window,
             commands::reveal_meeting,
+            commands::check_for_updates,
             commands::restart_to_update,
             commands::report_error,
         ])

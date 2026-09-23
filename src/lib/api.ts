@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   ApiProvider,
   AppState,
+  Calendar,
   Exchange,
   MeetingApp,
   MeetingDetail,
@@ -58,6 +59,7 @@ export const api = {
   requestMicrophone: () => invoke<void>("request_microphone"),
   requestScreenRecording: () => invoke<void>("request_screen_recording"),
   requestCalendar: () => invoke<void>("request_calendar"),
+  calendars: () => invoke<Calendar[]>("calendars"),
   updateSettings: (patch: Partial<Settings>) => invoke<Settings>("update_settings", { patch }),
   microphones: () => invoke<Microphone[]>("microphones"),
   modelChoices: () => invoke<ModelOption[]>("model_choices"),
@@ -68,6 +70,8 @@ export const api = {
   dismissBanner: () => invoke<void>("dismiss_banner"),
   showMainWindow: () => invoke<void>("show_main_window"),
   revealMeeting: (id: string) => invoke<void>("reveal_meeting", { id }),
+  /** Checks now and installs a newer version. Resolves to the version waiting for a restart, if any. */
+  checkForUpdates: () => invoke<string | null>("check_for_updates"),
   restartToUpdate: () => invoke<void>("restart_to_update"),
   reportError: (message: string, stack: string | null) => invoke<void>("report_error", { message, stack }),
 };

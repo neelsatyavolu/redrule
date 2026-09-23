@@ -228,11 +228,22 @@ pub fn request_screen_recording(app: AppState) {
 
 /// Optional: lets recordings take their calendar event's title and attendees.
 #[tauri::command]
-pub async fn request_calendar(app: AppState<'_>) -> Result<()> {
+pub async fn request_calendar(handle: tauri::AppHandle, app: AppState<'_>) -> Result<()> {
     // Waits for the person to answer the system prompt.
-    let _ = tauri::async_runtime::spawn_blocking(calendar::request).await;
+    let prompted = tauri::async_runtime::spawn_blocking(calendar::request).await.unwrap_or(false);
     app.refresh_permissions();
+    // Answering the prompt hands focus to the app before it, which leaves the window behind
+    // other windows when Redrule has no Dock icon to click.
+    if prompted {
+        shell::show_main(&handle);
+    }
     Ok(())
+}
+
+/// The calendars to choose from in settings; empty until access is allowed.
+#[tauri::command]
+pub async fn calendars() -> Vec<calendar::Calendar> {
+    tauri::async_runtime::spawn_blocking(calendar::calendars).await.unwrap_or_default()
 }
 
 #[tauri::command]
@@ -285,6 +296,12 @@ pub fn retry_note_model(app: AppState) {
 #[tauri::command]
 pub fn dismiss_banner(app: AppState) {
     app.set_banner(None);
+}
+
+/// Checks for a newer version now and installs it. Returns the version waiting for a restart, if any.
+#[tauri::command]
+pub async fn check_for_updates(handle: tauri::AppHandle) -> Result<Option<String>> {
+    updates::install_newer(&handle).await.map_err(crate::core::Error::message)
 }
 
 /// Restarts into the version the updater installed in the background.

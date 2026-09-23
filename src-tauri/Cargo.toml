@@ -60,7 +60,7 @@ objc2-av-foundation = { version = "0.3", features = ["AVCaptureDevice", "AVMedia
 objc2-core-audio = { version = "0.3", features = ["AudioHardware"] }
 objc2-core-graphics = { version = "0.3", features = ["CGWindow"] }
 objc2-core-foundation = "0.3"
-objc2-event-kit = { version = "0.3", default-features = false, features = ["EKCalendar", "EKCalendarItem", "EKEvent", "EKEventStore", "EKObject", "EKParticipant", "EKTypes", "block2", "std"] }
+objc2-event-kit = { version = "0.3", default-features = false, features = ["EKCalendar", "EKCalendarItem", "EKEvent", "EKEventStore", "EKObject", "EKParticipant", "EKSource", "EKTypes", "block2", "std"] }
 tauri-nspanel = "2.1"
 tauri-plugin-dialog = "2"
 tauri-plugin-updater = "2"

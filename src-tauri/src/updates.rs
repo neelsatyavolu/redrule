@@ -83,7 +83,7 @@ pub fn restart(handle: &AppHandle) {
 }
 
 /// Downloads and installs a newer version if there is one. Returns the version waiting for a restart.
-async fn install_newer(handle: &AppHandle) -> Result<Option<String>, String> {
+pub async fn install_newer(handle: &AppHandle) -> Result<Option<String>, String> {
     let updates = handle.state::<Updates>();
     let mut installed = updates.installed.lock().await;
     if installed.is_some() {

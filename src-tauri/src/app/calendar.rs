@@ -17,12 +17,13 @@ pub type EventLookup = JoinHandle<Option<CalendarEvent>>;
 impl App {
     /// Starts looking up the current event off the main thread, when the person allowed it.
     pub(super) fn look_up_event(&self) -> Option<EventLookup> {
-        if !self.read(|state| state.settings.use_calendar) || !calendar::granted() {
+        let (use_calendar, ignored) = self.read(|state| (state.settings.use_calendar, state.settings.ignored_calendars.clone()));
+        if !use_calendar || !calendar::granted() {
             return None;
         }
-        Some(tauri::async_runtime::spawn_blocking(|| {
+        Some(tauri::async_runtime::spawn_blocking(move || {
             let now = Utc::now();
-            current_event(&calendar::events_around(now), now).cloned()
+            current_event(&calendar::events_around(now, &ignored), now).cloned()
         }))
     }
 

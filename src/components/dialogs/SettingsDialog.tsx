@@ -4,10 +4,12 @@ import { attempt, useStore } from "../../lib/store";
 import { LOCAL_NOTES, writesNotesLocally, type Microphone, type ModelOption } from "../../lib/types";
 import { Button, Dialog, Segmented, SettingRow, Switch, TextArea } from "../ui";
 import { ApiKeyRows } from "./ApiKeyRows";
+import { CalendarChoices } from "./CalendarChoices";
 import type { SettingsTab } from "./dialogState";
 import { ModelSelect, remoteDetail, SELECT } from "./ModelSelect";
 import { AccountRows, CalendarRow, CrashReportsRow, PermissionRows } from "./SetupSections";
 import { ModelStatus, TranscriptionSettings, useLocalModels } from "./TranscriptionSettings";
+import { UpdatesRow } from "./UpdatesRow";
 
 export function SettingsDialog({ initialTab = "general", onClose }: { initialTab?: SettingsTab; onClose: () => void }) {
   const [tab, setTab] = useState<SettingsTab>(initialTab);
@@ -178,7 +180,11 @@ function GeneralSettings() {
           </Button>
         )}
       </SettingRow>
+      {app.permissions.calendar && settings.useCalendar && (
+        <CalendarChoices ignored={settings.ignoredCalendars} onChange={(ignoredCalendars) => update({ ignoredCalendars })} />
+      )}
       <CrashReportsRow />
+      <UpdatesRow />
     </div>
   );
 }
