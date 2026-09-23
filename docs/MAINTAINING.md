@@ -8,7 +8,7 @@ Notes for the maintainer: releases, signing, hosting and the sharing service. Co
 scripts/install-desktop.sh --open   # build, sign with the Developer ID, install to /Applications
 ```
 
-Signing with a stable Developer ID keeps the Keychain's "Always Allow" and both privacy permissions across rebuilds. `scripts/load-apple-creds.sh` loads the certificate from 1Password through a shared loader script that lives outside this repo (set `AGMUX_APPLE_CREDS_LOADER` to its path). `OP_ACCOUNT` and the vault names can be overridden with environment variables. Without the loader, use `--adhoc`.
+Signing with a stable Developer ID keeps the Keychain's "Always Allow" and both privacy permissions across rebuilds. `scripts/load-apple-creds.sh` loads the certificate from 1Password through a shared loader script that lives outside this repo (set `AGMUX_APPLE_CREDS_LOADER` to its path). The 1Password account, vault names, signing identity and updater key reference come from `scripts/maintainer.local`, which git ignores; copy `scripts/maintainer.local.example` to create it. Without the loader, use `--adhoc`.
 
 The Tauri app's bundle id is `co.neel.redrule`. On first launch it adopts data from the earlier copy: `~/Library/Application Support/Minutes` is renamed to `Redrule`, Keychain items under the service `Minutes` are copied to `Redrule`, and preferences are copied from the `co.nenu.minutes` domain. macOS asks for Microphone and Screen & System Audio Recording again, because the bundle id is new.
 
@@ -19,9 +19,9 @@ scripts/release.sh <version> "What changed"   # bump, build, sign, notarize, pub
 git commit -am "chore: release <version>"
 ```
 
-The script publishes `Redrule.dmg`, the signed update archive and `latest.json` to the public repo [neelsatyavolu/redrule-releases](https://github.com/neelsatyavolu/redrule-releases). Installed copies check `latest.json` a minute after launch and every six hours, install the update in the background and offer to restart (never during a recording). **Check for Updates…** is in the Redrule menu and the menu bar.
+The script publishes `Redrule.dmg`, the signed update archive and `latest.json` to this repo's [GitHub Releases](https://github.com/neelsatyavolu/redrule/releases). Versions up to 0.3.0 were published to the separate `neelsatyavolu/redrule-releases` repo, which 0.3.0 and earlier still check for updates; 0.3.1 was published to both so those copies move over. Installed copies check `latest.json` a minute after launch and every six hours, install the update in the background and offer to restart (never during a recording). **Check for Updates…** is in the Redrule menu and the menu bar.
 
-`release.sh` reads the Developer ID, the notary API key and the updater signing key from 1Password (see `UPDATER_KEY` in the script). The updater key's public half is in `src-tauri/tauri.conf.json`. If the private key is lost, installed copies can't be updated, so never rotate it casually.
+`release.sh` reads the Developer ID, the notary API key and the updater signing key from 1Password (`REDRULE_UPDATER_KEY` in `scripts/maintainer.local`). The updater key's public half is in `src-tauri/tauri.conf.json`. If the private key is lost, installed copies can't be updated, so never rotate it casually.
 
 Crash reports are opt-in ("Send crash reports" in setup and Settings, off by default) and go to Sentry only from builds compiled with `REDRULE_SENTRY_DSN` set. The release script takes it from the environment and prints a warning when it is missing; the build still succeeds and never reports. Dev builds and forks have no DSN. For example, with the DSN stored in 1Password: `REDRULE_SENTRY_DSN="op://<vault>/<item>/dsn" op run -- scripts/release.sh 0.2.5 "What changed"`. Reports carry panics, uncaught webview errors, stack traces, the app version and the OS and Mac model, with home folder names and token-like strings removed (see `src-tauri/src/telemetry.rs`). Turn on "Prevent storing of IP addresses" in the Sentry project's security settings.
 

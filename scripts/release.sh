@@ -9,9 +9,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 VERSION="${1:-}"
 NOTES="${2:-}"
-REPO="neelsatyavolu/redrule-releases"
+REPO="neelsatyavolu/redrule"
 ARCH="aarch64"
-UPDATER_KEY="op://Private/Redrule Updater Signing Key"
 BUNDLE="src-tauri/target/release/bundle"
 APP="$BUNDLE/macos/Redrule.app"
 TARBALL="$BUNDLE/macos/Redrule.app.tar.gz"
@@ -41,9 +40,14 @@ perl -0pi -e "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/ta
 perl -0pi -e "s/(\[workspace\.package\]\nversion = )\"[^\"]*\"/\${1}\"$VERSION\"/" src-tauri/Cargo.toml
 
 echo "Loading the Developer ID certificate, notary key and update key from 1Password…"
-export OP_ACCOUNT="${OP_ACCOUNT:-YOUR_1PASSWORD_ACCOUNT}"
-export AGMUX_APPLE_SIGNING_VAULT="${AGMUX_APPLE_SIGNING_VAULT:-Private}"
-export AGMUX_APPLE_NOTARY_VAULT="${AGMUX_APPLE_NOTARY_VAULT:-Private}"
+# Maintainer settings (1Password account, vaults, signing identity, updater key) live in an untracked file.
+# shellcheck disable=SC1091
+[ -f scripts/maintainer.local ] && source scripts/maintainer.local
+UPDATER_KEY="${REDRULE_UPDATER_KEY:-}"
+if [ -z "$UPDATER_KEY" ]; then
+    echo "error: set REDRULE_UPDATER_KEY (see scripts/maintainer.local.example)." >&2
+    exit 1
+fi
 # shellcheck disable=SC1091
 source scripts/load-apple-creds.sh
 STAGE="$(mktemp -d)"

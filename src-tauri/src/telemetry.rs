@@ -219,14 +219,14 @@ mod tests {
 
     #[test]
     fn home_folders_become_a_tilde() {
-        assert_eq!(home_to_tilde("~/Library/Redrule/a.md"), "~/Library/Redrule/a.md");
+        assert_eq!(home_to_tilde("/Users/jane/Library/Redrule/a.md"), "~/Library/Redrule/a.md");
         assert_eq!(home_to_tilde("open /Users/jane.doe and file:///Users/bob/x"), "open ~ and file://~/x");
         assert_eq!(home_to_tilde("/usr/lib/libSystem.dylib"), "/usr/lib/libSystem.dylib");
     }
 
     #[test]
     fn keys_and_tokens_are_redacted_but_words_stay() {
-        let key = "sk-proj-4f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c";
+        let key = "sk-proj-4f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c"; // gitleaks:allow (fake key)
         assert_eq!(redact_tokens(&format!("Bearer {key} failed")), "Bearer [redacted] failed");
         assert_eq!(redact_tokens("index out of bounds: the len is 3 but the index is 7"), "index out of bounds: the len is 3 but the index is 7");
         assert_eq!(redact_tokens("minutes_lib::app::recording::finish_recording_and_write"), "minutes_lib::app::recording::finish_recording_and_write");
@@ -235,18 +235,18 @@ mod tests {
     #[test]
     fn scrub_drops_personal_fields_and_shortens_paths() {
         let frame = Frame {
-            abs_path: Some("~/src/lib.rs".into()),
-            package: Some("~/Applications/Redrule.app/Contents/MacOS/minutes".into()),
+            abs_path: Some("/Users/jane/src/lib.rs".into()),
+            package: Some("/Users/jane/Applications/Redrule.app/Contents/MacOS/minutes".into()),
             ..Default::default()
         };
         let mut event = Event {
-            message: Some("could not read ~/Documents/Weekly sync.md".into()),
+            message: Some("could not read /Users/jane/Documents/Weekly sync.md".into()),
             server_name: Some("Neels-MacBook-Pro".into()),
             user: Some(User { username: Some("neel".into()), ..Default::default() }),
             request: Some(Request { url: "https://example.com".parse().ok(), ..Default::default() }),
             breadcrumbs: vec![Breadcrumb { message: Some("Weekly sync".into()), ..Default::default() }].into(),
             exception: vec![Exception {
-                value: Some("token 0123456789abcdef0123456789abcdef at ~/x".into()),
+                value: Some("token 0123456789abcdef0123456789abcdef at /Users/jane/x".into()),
                 stacktrace: Some(Stacktrace { frames: vec![frame], ..Default::default() }),
                 ..Default::default()
             }]

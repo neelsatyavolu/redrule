@@ -6,7 +6,7 @@
   "redirects": [
     {
       "source": "/download",
-      "destination": "https://github.com/neelsatyavolu/redrule-releases/releases/latest/download/Redrule.dmg",
+      "destination": "https://github.com/neelsatyavolu/redrule/releases/latest/download/Redrule.dmg",
       "permanent": false
     }
   ],

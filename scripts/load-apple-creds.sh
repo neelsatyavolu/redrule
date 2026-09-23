@@ -19,7 +19,7 @@ set -euo pipefail
 
 _MINUTES_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
 _AGMUX_LOADER="${AGMUX_APPLE_CREDS_LOADER:-${HOME}/Documents/GitHub/agmux/scripts/load-apple-creds.sh}"
-_DEFAULT_IDENTITY="Developer ID Application: Ramakrishna Satyavolu (VTQW687WBQ)"
+_DEFAULT_IDENTITY="${REDRULE_SIGNING_IDENTITY:-}"
 
 if [ ! -f "$_AGMUX_LOADER" ]; then
   echo "error: shared Apple creds loader not found at:" >&2

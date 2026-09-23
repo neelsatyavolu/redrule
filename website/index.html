@@ -176,13 +176,14 @@
     <nav aria-label="Site">
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
-      <a href="https://github.com/neelsatyavolu/redrule-releases/releases">Release notes</a>
+      <a href="https://github.com/neelsatyavolu/redrule/releases">Release notes</a>
+      <a href="https://github.com/neelsatyavolu/redrule">Source code</a>
     </nav>
   </footer>
 
   <script>
     // Shows the newest version next to the download button; the page reads fine without it.
-    fetch("https://api.github.com/repos/neelsatyavolu/redrule-releases/releases/latest")
+    fetch("https://api.github.com/repos/neelsatyavolu/redrule/releases/latest")
       .then((response) => (response.ok ? response.json() : null))
       .then((release) => {
         const version = release?.tag_name?.replace(/^v/, "");

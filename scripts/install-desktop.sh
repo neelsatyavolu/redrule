@@ -33,9 +33,9 @@ done
 
 if [ "$ADHOC" = 0 ]; then
     echo "Loading the Developer ID certificate from 1Password…"
-    export OP_ACCOUNT="${OP_ACCOUNT:-YOUR_1PASSWORD_ACCOUNT}"
-    export AGMUX_APPLE_SIGNING_VAULT="${AGMUX_APPLE_SIGNING_VAULT:-Private}"
-    export AGMUX_APPLE_NOTARY_VAULT="${AGMUX_APPLE_NOTARY_VAULT:-Private}"
+    # Maintainer settings (1Password account, vaults, signing identity) live in an untracked file.
+    # shellcheck disable=SC1091
+    [ -f scripts/maintainer.local ] && source scripts/maintainer.local
     # shellcheck disable=SC1091
     source scripts/load-apple-creds.sh
     trap minutes_cleanup_apple_creds EXIT

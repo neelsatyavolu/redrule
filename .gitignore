@@ -10,6 +10,8 @@ node_modules/
 .vercel/
 /public
 .env*
+env.local
+scripts/maintainer.local
 
 dist/
 src-tauri/target/

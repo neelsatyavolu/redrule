@@ -1,0 +1,10 @@
+# Copy to scripts/maintainer.local (git ignores it) and fill in. Only the maintainer's signed builds
+# and releases need this; contributors build with --adhoc.
+# The 1Password account that holds the certificate (its user ID, when several accounts share a host).
+export OP_ACCOUNT=""
+export AGMUX_APPLE_SIGNING_VAULT=""
+export AGMUX_APPLE_NOTARY_VAULT=""
+# e.g. "Developer ID Application: Your Name (TEAMID)"
+export REDRULE_SIGNING_IDENTITY=""
+# 1Password reference to the updater signing key item, e.g. "op://Vault/Item"
+export REDRULE_UPDATER_KEY=""

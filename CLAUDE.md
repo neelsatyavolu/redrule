@@ -1,0 +1,3 @@
+# Redrule
+
+@AGENTS.md
