@@ -1,4 +1,4 @@
-//! Microphone and Screen & System Audio Recording permissions.
+//! Microphone and Screen & System Audio Recording permissions, and the optional calendar.
 use block2::RcBlock;
 use objc2::runtime::Bool;
 use objc2_av_foundation::{AVAuthorizationStatus, AVCaptureDevice, AVMediaTypeAudio};
@@ -10,11 +10,17 @@ use serde::Serialize;
 pub struct Permissions {
     pub microphone: bool,
     pub screen_recording: bool,
+    /// Optional: only names meetings, never needed to record.
+    pub calendar: bool,
 }
 
 impl Permissions {
     pub fn current() -> Self {
-        Self { microphone: microphone_status() == AVAuthorizationStatus::Authorized, screen_recording: CGPreflightScreenCaptureAccess() }
+        Self {
+            microphone: microphone_status() == AVAuthorizationStatus::Authorized,
+            screen_recording: CGPreflightScreenCaptureAccess(),
+            calendar: super::calendar::granted(),
+        }
     }
 
     pub fn all_granted(&self) -> bool {
@@ -63,7 +69,7 @@ pub fn request_screen_recording() {
     }
 }
 
-fn open_settings(pane: &str) {
+pub(super) fn open_settings(pane: &str) {
     let url = format!("x-apple.systempreferences:com.apple.preference.security?{pane}");
     let _ = std::process::Command::new("/usr/bin/open").arg(url).spawn();
 }

@@ -65,6 +65,20 @@ export function PermissionRows() {
   );
 }
 
+/** Optional, so it is kept apart from the permissions recording needs. */
+export function CalendarRow() {
+  const granted = useStore((s) => s.app?.permissions.calendar);
+  if (granted === undefined) return null;
+  return (
+    <SetupRow
+      title="Calendar (optional)"
+      detail="Names each recording after the calendar event happening when it starts, and gives the notes the attendees’ names. Recording works without it."
+      done={granted}
+      action={!granted && <Button size="sm" onClick={() => void attempt(api.requestCalendar)}>Allow</Button>}
+    />
+  );
+}
+
 export function AccountRows() {
   const app = useStore((s) => s.app);
   const [pasted, setPasted] = useState("");

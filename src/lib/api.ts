@@ -52,6 +52,7 @@ export const api = {
   disconnect: (provider: ProviderId) => invoke<void>("disconnect", { provider }),
   requestMicrophone: () => invoke<void>("request_microphone"),
   requestScreenRecording: () => invoke<void>("request_screen_recording"),
+  requestCalendar: () => invoke<void>("request_calendar"),
   updateSettings: (patch: Partial<Settings>) => invoke<Settings>("update_settings", { patch }),
   microphones: () => invoke<Microphone[]>("microphones"),
   modelChoices: () => invoke<ModelOption[]>("model_choices"),

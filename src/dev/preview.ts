@@ -19,9 +19,9 @@ const plus = (iso: string, minutes: number) => new Date(Date.parse(iso) + minute
 const FOLDER = "f".repeat(64);
 
 const meetings: Meeting[] = [
-  { id: "M1", title: "Q4 roadmap review", app: "zoom", startedAt: at(0, 14, 5), endedAt: plus(at(0, 14, 5), 42), status: writingNotes ? "summarizing" : "done", tags: ["Product", "Planning"], folderId: FOLDER },
+  { id: "M1", title: "Q4 roadmap review", app: "zoom", startedAt: at(0, 14, 5), endedAt: plus(at(0, 14, 5), 42), status: writingNotes ? "summarizing" : "done", tags: ["Product", "Planning"], folderId: FOLDER, attendees: ["Dana Whitfield", "Priya Raman", "Marcus Lee", "Sofia Alvarez", "Tom Becker", "Jin Park"] },
   { id: "M2", title: "Pricing page copy", app: "googleMeet", startedAt: at(0, 10, 30), endedAt: plus(at(0, 10, 30), 18), status: view === "failed" ? "failed" : "done", errorMessage: "Connect ChatGPT or Grok in Settings to generate notes." },
-  { id: "M3", title: "Hiring sync with Priya", app: "zoom", startedAt: at(1, 16), endedAt: plus(at(1, 16), 27), status: "done", tags: ["Hiring"] },
+  { id: "M3", title: "Hiring sync with Priya", app: "zoom", startedAt: at(1, 16), endedAt: plus(at(1, 16), 27), status: "done", tags: ["Hiring"], attendees: ["Priya Raman"] },
   { id: "M4", title: "Weekly design critique", app: "googleMeet", startedAt: at(1, 11), endedAt: plus(at(1, 11), 55), status: "done" },
   { id: "M5", title: "Vendor contract call", app: "manual", startedAt: at(3, 9, 15), endedAt: plus(at(3, 9, 15), 71), status: "done" },
   { id: "M6", title: "Onboarding interview 3", app: "zoom", startedAt: at(4, 15), endedAt: plus(at(4, 15), 33), status: "done", tags: ["Hiring"] },
@@ -73,7 +73,7 @@ const state: AppState = {
   connected: view === "failed" ? [] : ["codex"],
   connecting: null,
   connectionError: null,
-  permissions: { microphone: view !== "onboarding", screenRecording: true },
+  permissions: { microphone: view !== "onboarding", screenRecording: true, calendar: view !== "onboarding" },
   settings: {
     modelChoiceId: "codex:gpt-6-astra",
     askModelChoiceId: "",
@@ -86,6 +86,7 @@ const state: AppState = {
     consentReminder: true,
     consentNotice: "Heads up: I'm recording this call to take notes. Let me know if you'd rather I didn't.",
     crashReports: false,
+    useCalendar: true,
   },
   sharingBusy: false,
   revision: 1,

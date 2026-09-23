@@ -13,7 +13,7 @@ use crate::core::export::ExportFormat;
 use crate::core::models::{MeetingApp, MeetingNote};
 use crate::core::oauth::ProviderId;
 use crate::core::search::SearchHit;
-use crate::platform::permissions;
+use crate::platform::{calendar, permissions};
 use crate::providers::clients::{model_choices as available_models, refresh_model_choices, ModelChoice};
 use crate::shell;
 use crate::telemetry;
@@ -212,6 +212,15 @@ pub async fn request_microphone(app: AppState<'_>) -> Result<()> {
 pub fn request_screen_recording(app: AppState) {
     permissions::request_screen_recording();
     app.refresh_permissions();
+}
+
+/// Optional: lets recordings take their calendar event's title and attendees.
+#[tauri::command]
+pub async fn request_calendar(app: AppState<'_>) -> Result<()> {
+    // Waits for the person to answer the system prompt.
+    let _ = tauri::async_runtime::spawn_blocking(calendar::request).await;
+    app.refresh_permissions();
+    Ok(())
 }
 
 #[tauri::command]

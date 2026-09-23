@@ -23,12 +23,13 @@ impl App {
             return;
         }
 
+        // Runs alongside capture starting up, so it never holds the recording back.
+        let event = self.look_up_event();
         // Hold the slot while capture starts, so a quick stop waits for it instead of leaving capture running.
         let mut slot = self.recording.lock().await;
-        let title = if app == MeetingApp::Manual { "New meeting".to_string() } else { format!("{} meeting", app.display_name()) };
         let meeting = Meeting {
             id: uuid::Uuid::new_v4().to_string().to_uppercase(),
-            title,
+            title: app.default_title(),
             app,
             started_at: Utc::now(),
             ended_at: None,
@@ -37,6 +38,7 @@ impl App {
             archived_at: None,
             tags: vec![],
             folder_id: folder.filter(|id| self.folders.accepts(id)),
+            attendees: vec![],
         };
         self.persist(&meeting);
         self.update(|state| state.recording_id = Some(meeting.id.clone()));
@@ -53,7 +55,10 @@ impl App {
             Arc::new(move |message: String| app.report(format!("Part of the audio could not be processed. {message}")))
         };
         match RecordingPipeline::start(self.transcriber(), audio_folder, settings.microphone_id, on_segment, on_error).await {
-            Ok(pipeline) => *slot = Some(ActiveRecording { meeting, pipeline }),
+            Ok(pipeline) => {
+                let meeting = self.name_after_event(meeting, event).await;
+                *slot = Some(ActiveRecording { meeting, pipeline });
+            }
             Err(error) => {
                 self.update(|state| state.recording_id = None);
                 self.persist(&Meeting { ended_at: Some(Utc::now()), ..meeting }.failed(format!("Recording could not start. {error}")));

@@ -57,6 +57,13 @@ export function meetingSentence(meeting: Meeting): string {
   return `${weekday.format(start)} at ${time.format(start)}${lengthPart}${place}`;
 }
 
+/** "With Ada, Grace and Dana"; past five names, "With Ada, Grace, Dana, Lee and 3 others". */
+export function attendeeSentence(names: string[], shown = 4): string {
+  if (names.length <= 1) return names.length === 1 ? `With ${names[0]}` : "";
+  if (names.length > shown + 1) return `With ${names.slice(0, shown).join(", ")} and ${names.length - shown} others`;
+  return `With ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
 export function sidebarSubtitle(meeting: Meeting): string {
   const duration = durationSeconds(meeting);
   const start = timeOfDay(meeting.startedAt);

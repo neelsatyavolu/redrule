@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { api } from "../../lib/api";
-import { meetingSentence, shortDate } from "../../lib/format";
+import { attendeeSentence, meetingSentence, shortDate } from "../../lib/format";
 import { attempt } from "../../lib/store";
 import type { ActionItem, Meeting, MeetingNote } from "../../lib/types";
 import { PadPage, PadRow } from "../Pad";
@@ -100,6 +100,13 @@ export function MeetingHeading({ meeting, title }: { meeting: Meeting; title: st
           {meeting.recordedBy && `. Recorded by ${meeting.recordedBy}`}
         </p>
       </PadRow>
+      {meeting.attendees && meeting.attendees.length > 0 && (
+        <PadRow className="mt-0.5">
+          <p className="text-[13px] text-graphite" title={meeting.attendees.join(", ")}>
+            {attendeeSentence(meeting.attendees)}
+          </p>
+        </PadRow>
+      )}
     </>
   );
 }

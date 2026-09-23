@@ -2,6 +2,7 @@
 mod accounts;
 mod ask;
 mod background;
+mod calendar;
 mod folder_sync;
 mod folders;
 mod library;

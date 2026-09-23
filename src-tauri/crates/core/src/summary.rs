@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::error::{Error, Result};
-use super::models::{ActionItem, Meeting, MeetingApp, MeetingNote, NoteSection, TranscriptSegment};
+use super::models::{ActionItem, Meeting, MeetingNote, NoteSection, TranscriptSegment};
 use super::transcript;
 
 /// Transcripts longer than this are digested chunk by chunk before the final note is written.
@@ -38,17 +38,25 @@ fn started(started_at: DateTime<Utc>) -> String {
     started_at.with_timezone(&Local).format("%b %-d, %Y at %-I:%M %p").to_string()
 }
 
-pub fn user_prompt(transcript: &str, app: MeetingApp, started_at: DateTime<Utc>) -> String {
-    format!("Meeting on {}, started {}.\n\nTranscript:\n{transcript}", app.display_name(), started(started_at))
+/// When and where the meeting was, and who the calendar invited.
+fn context(meeting: &Meeting) -> String {
+    let when = format!("Meeting on {}, started {}.", meeting.app.display_name(), started(meeting.started_at));
+    if meeting.attendees.is_empty() {
+        return when;
+    }
+    format!(
+        "{when}\nInvited, per the calendar: {}. Spell these names as written here, and name them as owners only when the transcript shows who took a task.",
+        meeting.attendees.join(", ")
+    )
 }
 
-pub fn user_prompt_from_digests(digests: &[String], app: MeetingApp, started_at: DateTime<Utc>) -> String {
+pub fn user_prompt(transcript: &str, meeting: &Meeting) -> String {
+    format!("{}\n\nTranscript:\n{transcript}", context(meeting))
+}
+
+pub fn user_prompt_from_digests(digests: &[String], meeting: &Meeting) -> String {
     let body = digests.iter().enumerate().map(|(i, d)| format!("Part {}:\n{d}", i + 1)).collect::<Vec<_>>().join("\n\n");
-    format!(
-        "Meeting on {}, started {}.\n\nDigests of the transcript, in order:\n{body}",
-        app.display_name(),
-        started(started_at)
-    )
+    format!("{}\n\nDigests of the transcript, in order:\n{body}", context(meeting))
 }
 
 /// Strict JSON schema for providers that support structured output.
@@ -163,23 +171,23 @@ pub async fn summarize<P: SummaryProvider>(
     let pieces = transcript::chunks_by(&rendered, chunk_budget, |line| provider.measure(line));
     provider.plan(if pieces.len() == 1 { 1 } else { pieces.len() + 1 });
     let user = if pieces.len() == 1 {
-        user_prompt(&rendered, meeting.app, meeting.started_at)
+        user_prompt(&rendered, meeting)
     } else {
         let mut digests = Vec::with_capacity(pieces.len());
         for piece in &pieces {
             digests.push(provider.complete(DIGEST_SYSTEM, piece, None).await?);
         }
-        user_prompt_from_digests(&digests, meeting.app, meeting.started_at)
+        user_prompt_from_digests(&digests, meeting)
     };
 
     let schema = schema();
     let first = provider.complete(SYSTEM, &user, Some(&schema)).await?;
     if let Ok(note) = parse_note(&first) {
-        return Ok(note);
+        return Ok(named(note, meeting));
     }
     let second = provider.complete(SYSTEM, &user, Some(&schema)).await?;
     if let Ok(note) = parse_note(&second) {
-        return Ok(note);
+        return Ok(named(note, meeting));
     }
     // Keep whatever the model wrote rather than losing the meeting.
     Ok(MeetingNote {
@@ -191,29 +199,40 @@ pub async fn summarize<P: SummaryProvider>(
     })
 }
 
+/// The notes name the meeting only while its title is generic: a calendar or typed title stays.
+fn named(note: MeetingNote, meeting: &Meeting) -> MeetingNote {
+    if meeting.has_default_title() { note } else { MeetingNote { title: meeting.title.clone(), ..note } }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Mutex;
 
     use super::*;
-    use crate::models::{MeetingStatus, Speaker};
+    use crate::models::{MeetingApp, MeetingStatus, Speaker};
 
     const NOTE: &str = r#"{"title":"Launch","tldr":"Ship.","sections":[{"heading":"Plan","bullets":["a"]}],"decisions":[],"action_items":[{"owner":" ","task":"t"},{"owner":"Me","task":"u"}]}"#;
 
     struct Scripted {
         replies: Mutex<Vec<String>>,
         calls: Mutex<Vec<(String, bool)>>,
+        users: Mutex<Vec<String>>,
     }
 
     impl Scripted {
         fn new(replies: &[&str]) -> Self {
-            Self { replies: Mutex::new(replies.iter().rev().map(|s| s.to_string()).collect()), calls: Mutex::default() }
+            Self {
+                replies: Mutex::new(replies.iter().rev().map(|s| s.to_string()).collect()),
+                calls: Mutex::default(),
+                users: Mutex::default(),
+            }
         }
     }
 
     impl SummaryProvider for Scripted {
-        async fn complete(&self, system: &str, _user: &str, schema: Option<&Value>) -> Result<String> {
+        async fn complete(&self, system: &str, user: &str, schema: Option<&Value>) -> Result<String> {
             self.calls.lock().unwrap().push((system.to_string(), schema.is_some()));
+            self.users.lock().unwrap().push(user.to_string());
             Ok(self.replies.lock().unwrap().pop().unwrap_or_default())
         }
     }
@@ -230,6 +249,7 @@ mod tests {
             archived_at: None,
             tags: vec![],
             folder_id: None,
+            attendees: vec![],
         }
     }
 
@@ -269,6 +289,16 @@ mod tests {
         let note = summarize(&provider, &meeting(), &segments(), CHUNK_BUDGET).await.unwrap();
         assert_eq!(note.title, "Launch");
         assert_eq!(provider.calls.lock().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn calendar_attendees_and_titles_reach_the_notes() {
+        let invited = meeting().titled("Acme kickoff").with_attendees(vec!["Ada Lovelace".into(), "Grace Hopper".into()]);
+        let provider = Scripted::new(&[NOTE]);
+        let note = summarize(&provider, &invited, &segments(), CHUNK_BUDGET).await.unwrap();
+        assert_eq!(note.title, "Acme kickoff");
+        assert!(provider.users.lock().unwrap()[0].contains("Invited, per the calendar: Ada Lovelace, Grace Hopper."));
+        assert!(!user_prompt("t", &meeting()).contains("Invited"));
     }
 
     #[tokio::test]

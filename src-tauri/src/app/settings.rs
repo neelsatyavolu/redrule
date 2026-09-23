@@ -26,6 +26,7 @@ mod key {
     pub const CONSENT_REMINDER: &str = "consentReminder";
     pub const CONSENT_NOTICE: &str = "consentNotice";
     pub const CRASH_REPORTS: &str = "crashReports";
+    pub const USE_CALENDAR: &str = "useCalendar";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -49,6 +50,9 @@ pub struct Settings {
     pub consent_notice: String,
     /// Sends crash reports when the build has a Sentry DSN. Off by default.
     pub crash_reports: bool,
+    /// Names meetings and lists attendees from the calendar. On by default, but it does nothing
+    /// until the person allows calendar access, which Redrule only asks for when they choose to.
+    pub use_calendar: bool,
 }
 
 /// A partial update from the settings screen.
@@ -66,6 +70,7 @@ pub struct SettingsPatch {
     pub consent_reminder: Option<bool>,
     pub consent_notice: Option<String>,
     pub crash_reports: Option<bool>,
+    pub use_calendar: Option<bool>,
 }
 
 impl Settings {
@@ -112,6 +117,7 @@ impl Settings {
             consent_reminder: patch.consent_reminder.unwrap_or(self.consent_reminder),
             consent_notice: patch.consent_notice.map(|notice| consent_notice(&notice)).unwrap_or_else(|| self.consent_notice.clone()),
             crash_reports: patch.crash_reports.unwrap_or(self.crash_reports),
+            use_calendar: patch.use_calendar.unwrap_or(self.use_calendar),
         };
         next.save();
         next
@@ -135,6 +141,7 @@ impl Settings {
         defaults.setBool_forKey(self.keep_audio, &NSString::from_str(key::KEEP_AUDIO));
         defaults.setBool_forKey(self.onboarded, &NSString::from_str(key::ONBOARDED));
         defaults.setBool_forKey(self.crash_reports, &NSString::from_str(key::CRASH_REPORTS));
+        defaults.setBool_forKey(self.use_calendar, &NSString::from_str(key::USE_CALENDAR));
     }
 
     pub fn model_choice(&self) -> ModelChoice {
@@ -182,6 +189,7 @@ fn has_settings(defaults: &NSUserDefaults) -> bool {
 fn read(defaults: &NSUserDefaults) -> Settings {
     let text = |key: &str| defaults.stringForKey(&NSString::from_str(key)).map(|s| s.to_string());
     let flag = |key: &str| defaults.boolForKey(&NSString::from_str(key));
+    let unset = |key: &str| defaults.objectForKey(&NSString::from_str(key)).is_none();
     // New users start on the models that suit their Mac. Earlier users keep the speech model they
     // already downloaded and move to the default speaker model, a small download that fixes split voices.
     let (speech, speaker) = if flag(key::ONBOARDED) {
@@ -202,6 +210,7 @@ fn read(defaults: &NSUserDefaults) -> Settings {
         consent_reminder: defaults.objectForKey(&NSString::from_str(key::CONSENT_REMINDER)).is_none() || flag(key::CONSENT_REMINDER),
         consent_notice: consent_notice(&text(key::CONSENT_NOTICE).unwrap_or_default()),
         crash_reports: flag(key::CRASH_REPORTS),
+        use_calendar: unset(key::USE_CALENDAR) || flag(key::USE_CALENDAR),
     }
 }
 
@@ -234,6 +243,7 @@ mod tests {
             consent_reminder: true,
             consent_notice: DEFAULT_CONSENT_NOTICE.into(),
             crash_reports: false,
+            use_calendar: true,
         }
     }
 

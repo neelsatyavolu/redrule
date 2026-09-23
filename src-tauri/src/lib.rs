@@ -92,6 +92,7 @@ pub fn run() {
             commands::disconnect,
             commands::request_microphone,
             commands::request_screen_recording,
+            commands::request_calendar,
             commands::update_settings,
             commands::microphones,
             commands::model_choices,
