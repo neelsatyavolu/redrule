@@ -200,6 +200,7 @@ h1 em { display: block; }
 .notes p { margin: 0 0 12px; font-size: 15px; }
 .notes label { display: flex; gap: 9px; align-items: center; font-size: 14px; margin-top: 4px; }
 .notes input { accent-color: var(--margin); margin: 0; }
+.notes label b { font-weight: 600; min-width: 2.6em; }
 
 /* Bring your own AI: an inverted band straight after the hero */
 .byo {
