@@ -1,7 +1,7 @@
 // Mirrors the Rust types serialised by the backend (see src-tauri/src/app/state.rs).
 
 export type Speaker = "me" | "them";
-export type MeetingApp = "zoom" | "googleMeet" | "manual";
+export type MeetingApp = "zoom" | "googleMeet" | "teams" | "slack" | "webex" | "faceTime" | "manual";
 export type MeetingStatus = "recording" | "transcribing" | "summarizing" | "done" | "failed";
 export type ProviderId = "codex" | "grok";
 
@@ -99,7 +99,20 @@ export interface Settings {
   onboarded: boolean;
   speechModelId: string;
   speakerModelId: string;
+  /** Reminds the person to tell everyone on the call that it is being recorded. */
+  consentReminder: boolean;
+  /** What "Copy notice" puts on the clipboard. */
+  consentNotice: string;
 }
+
+/** A meeting whose title, tags, notes or transcript hold every word searched for. */
+export interface SearchHit {
+  id: string;
+  /** The passage that matched; null when only the title did. */
+  snippet: string | null;
+}
+
+export type ExportFormat = "markdown" | "text";
 
 export type ModelKind = "speech" | "speaker" | "notes";
 

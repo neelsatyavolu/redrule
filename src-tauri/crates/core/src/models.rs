@@ -62,6 +62,12 @@ impl TranscriptSegment {
 pub enum MeetingApp {
     Zoom,
     GoogleMeet,
+    Teams,
+    Slack,
+    Webex,
+    FaceTime,
+    /// Also what an app added by a newer version reads as, so its meetings still load.
+    #[serde(other)]
     Manual,
 }
 
@@ -70,6 +76,10 @@ impl MeetingApp {
         match self {
             MeetingApp::Zoom => "Zoom",
             MeetingApp::GoogleMeet => "Google Meet",
+            MeetingApp::Teams => "Microsoft Teams",
+            MeetingApp::Slack => "Slack",
+            MeetingApp::Webex => "Webex",
+            MeetingApp::FaceTime => "FaceTime",
             MeetingApp::Manual => "Recording",
         }
     }
@@ -266,6 +276,17 @@ mod tests {
         assert!(!written.contains("endedAt"));
         assert!(meeting.tags.is_empty());
         assert!(!written.contains("tags"));
+    }
+
+    #[test]
+    fn apps_from_newer_versions_read_as_manual() {
+        let meeting: Meeting =
+            serde_json::from_str(r#"{"app":"someNewApp","id":"A","startedAt":"2026-09-21T14:05:00Z","status":"done","title":"T"}"#)
+                .unwrap();
+        assert_eq!(meeting.app, MeetingApp::Manual);
+        let teams: MeetingApp = serde_json::from_str(r#""teams""#).unwrap();
+        assert_eq!(teams, MeetingApp::Teams);
+        assert_eq!(serde_json::to_string(&MeetingApp::FaceTime).unwrap(), r#""faceTime""#);
     }
 
     #[test]

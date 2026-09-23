@@ -3,6 +3,7 @@ import { api } from "../../lib/api";
 import { APP_NAMES, clock } from "../../lib/format";
 import { attempt, scopeFolder, useStore } from "../../lib/store";
 import { canWriteNotes, type Meeting, type SpeechModel, type TranscriptSegment } from "../../lib/types";
+import { CopyNoticeButton } from "../ConsentNotice";
 import { useDialogs } from "../dialogs/dialogState";
 import { PadPage, PadRow } from "../Pad";
 import { Button, RecordingDot, Spinner } from "../ui";
@@ -13,6 +14,7 @@ import { TranscriptRows } from "./TranscriptRows";
 export function LiveView({ meeting }: { meeting: Meeting }) {
   const segments = useStore((s) => s.app?.liveSegments ?? []);
   const speechModel = useStore((s) => s.app?.speechModel);
+  const remind = useStore((s) => s.app?.settings.consentReminder ?? false);
   const elapsed = useElapsed(meeting.startedAt);
 
   return (
@@ -28,6 +30,12 @@ export function LiveView({ meeting }: { meeting: Meeting }) {
             ? "Recording your microphone and this Mac's audio."
             : `Recording your ${APP_NAMES[meeting.app]} call.`}
         </p>
+        {remind && (
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 text-[13px] text-graphite">
+            <span>Make sure everyone knows they're being recorded.</span>
+            <CopyNoticeButton variant="ghost" />
+          </div>
+        )}
       </PadRow>
       <PadRow className="mt-5">
         <Button variant="record" onClick={() => void attempt(api.stopRecording)}>

@@ -9,6 +9,10 @@ use minutes_engine::catalog;
 const LEGACY_DOMAIN: &str = "co.nenu.minutes";
 /// Model choices that write notes on this Mac are stored as "local:<note model id>".
 pub const LOCAL_NOTES: &str = "local:";
+/// What "Copy notice" puts on the clipboard until the person writes their own.
+const MAX_CONSENT_NOTICE: usize = 500;
+pub const DEFAULT_CONSENT_NOTICE: &str =
+    "Heads up: I'm recording this call to take notes. Let me know if you'd rather I didn't.";
 
 mod key {
     pub const MODEL_CHOICE: &str = "modelChoice";
@@ -19,6 +23,8 @@ mod key {
     pub const ONBOARDED: &str = "onboarded";
     pub const SPEECH_MODEL: &str = "speechModel";
     pub const SPEAKER_MODEL: &str = "speakerModel";
+    pub const CONSENT_REMINDER: &str = "consentReminder";
+    pub const CONSENT_NOTICE: &str = "consentNotice";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -36,6 +42,10 @@ pub struct Settings {
     /// On-device model ids from `minutes_engine::catalog`.
     pub speech_model_id: String,
     pub speaker_model_id: String,
+    /// Reminds the person to tell everyone on the call that it is being recorded.
+    pub consent_reminder: bool,
+    /// The message "Copy notice" puts on the clipboard.
+    pub consent_notice: String,
 }
 
 /// A partial update from the settings screen.
@@ -50,6 +60,8 @@ pub struct SettingsPatch {
     pub onboarded: Option<bool>,
     pub speech_model_id: Option<String>,
     pub speaker_model_id: Option<String>,
+    pub consent_reminder: Option<bool>,
+    pub consent_notice: Option<String>,
 }
 
 impl Settings {
@@ -93,6 +105,8 @@ impl Settings {
                 .speaker_model_id
                 .map(|id| catalog::speaker_option(&id).id.to_string())
                 .unwrap_or_else(|| self.speaker_model_id.clone()),
+            consent_reminder: patch.consent_reminder.unwrap_or(self.consent_reminder),
+            consent_notice: patch.consent_notice.map(|notice| consent_notice(&notice)).unwrap_or_else(|| self.consent_notice.clone()),
         };
         next.save();
         next
@@ -110,6 +124,8 @@ impl Settings {
         set_text(key::MICROPHONE, &self.microphone_id);
         set_text(key::SPEECH_MODEL, &self.speech_model_id);
         set_text(key::SPEAKER_MODEL, &self.speaker_model_id);
+        set_text(key::CONSENT_NOTICE, &self.consent_notice);
+        defaults.setBool_forKey(self.consent_reminder, &NSString::from_str(key::CONSENT_REMINDER));
         defaults.setBool_forKey(self.show_in_dock, &NSString::from_str(key::SHOW_IN_DOCK));
         defaults.setBool_forKey(self.keep_audio, &NSString::from_str(key::KEEP_AUDIO));
         defaults.setBool_forKey(self.onboarded, &NSString::from_str(key::ONBOARDED));
@@ -137,6 +153,12 @@ impl Settings {
     pub fn local_ask_model(&self) -> Option<&'static catalog::NoteOption> {
         self.ask_choice_id().strip_prefix(LOCAL_NOTES).map(catalog::note_option)
     }
+}
+
+/// A blank notice goes back to the default wording.
+fn consent_notice(text: &str) -> String {
+    let text: String = text.trim().chars().take(MAX_CONSENT_NOTICE).collect();
+    if text.is_empty() { DEFAULT_CONSENT_NOTICE.to_string() } else { text }
 }
 
 /// A choice that is still offered: retired account models and note models fall back to a default.
@@ -171,6 +193,8 @@ fn read(defaults: &NSUserDefaults) -> Settings {
         onboarded: flag(key::ONBOARDED),
         speech_model_id: catalog::speech_option(&text(key::SPEECH_MODEL).unwrap_or_else(|| speech.into())).id.into(),
         speaker_model_id: catalog::speaker_option(&text(key::SPEAKER_MODEL).unwrap_or_else(|| speaker.into())).id.into(),
+        consent_reminder: defaults.objectForKey(&NSString::from_str(key::CONSENT_REMINDER)).is_none() || flag(key::CONSENT_REMINDER),
+        consent_notice: consent_notice(&text(key::CONSENT_NOTICE).unwrap_or_default()),
     }
 }
 
@@ -195,7 +219,16 @@ mod tests {
             onboarded: true,
             speech_model_id: catalog::DEFAULT_SPEECH.into(),
             speaker_model_id: catalog::DEFAULT_SPEAKER.into(),
+            consent_reminder: true,
+            consent_notice: DEFAULT_CONSENT_NOTICE.into(),
         }
+    }
+
+    #[test]
+    fn a_blank_consent_notice_returns_to_the_default() {
+        assert_eq!(consent_notice("  "), DEFAULT_CONSENT_NOTICE);
+        assert_eq!(consent_notice(" Recording for notes. "), "Recording for notes.");
+        assert_eq!(consent_notice(&"x".repeat(600)).len(), MAX_CONSENT_NOTICE);
     }
 
     #[test]

@@ -22,6 +22,7 @@ if (previewView === "folder") {
   useStore.getState().setLibrary(folderScope("f".repeat(64)));
   useStore.getState().select("R1");
 }
+if (previewView === "search") useStore.getState().setSearch("free tier");
 if (previewView === "newFolder") useDialogs.getState().open({ kind: "newFolder" });
 if (previewView === "move" && meeting) useDialogs.getState().open({ kind: "move", meeting });
 if (previewView === "tags" && meeting) useDialogs.getState().open({ kind: "tags", meeting });

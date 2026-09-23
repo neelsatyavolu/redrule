@@ -7,6 +7,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri::async_runtime::JoinHandle;
 
 use super::folders::{FolderInfo, FolderMeeting, Folders};
+use super::search::SearchCache;
 use super::settings::Settings;
 use crate::core::models::{Meeting, MeetingApp, MeetingStatus, TranscriptSegment};
 use crate::core::oauth::ProviderId;
@@ -109,6 +110,7 @@ pub struct App {
     /// Identifies the current banner, so a stale auto-dismiss timer does nothing.
     pub banner_generation: Mutex<u64>,
     pub folders: Folders,
+    pub search_cache: SearchCache,
 }
 
 impl App {
@@ -161,6 +163,7 @@ impl App {
             local_notes: tokio::sync::Mutex::new(()),
             banner_generation: Mutex::new(0),
             folders: Folders::new(support),
+            search_cache: SearchCache::default(),
         }
     }
 

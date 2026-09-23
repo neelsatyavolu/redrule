@@ -3,6 +3,10 @@ import type { Meeting, MeetingApp, TranscriptSegment } from "./types";
 export const APP_NAMES: Record<MeetingApp, string> = {
   zoom: "Zoom",
   googleMeet: "Google Meet",
+  teams: "Microsoft Teams",
+  slack: "Slack",
+  webex: "Webex",
+  faceTime: "FaceTime",
   manual: "Recording",
 };
 
@@ -131,7 +135,8 @@ export function allTags(meetings: Meeting[]): string[] {
 }
 
 /** Case-insensitive match on title, for the sidebar search. */
-export function matchesSearch(meeting: Meeting, query: string): boolean {
+/** Titles match as you type; `hits` adds meetings whose notes or transcript matched in the backend. */
+export function matchesSearch(meeting: Meeting, query: string, hits?: ReadonlyMap<string, string | null>): boolean {
   const needle = query.trim().toLowerCase();
-  return needle === "" || meeting.title.toLowerCase().includes(needle);
+  return needle === "" || meeting.title.toLowerCase().includes(needle) || Boolean(hits?.has(meeting.id));
 }

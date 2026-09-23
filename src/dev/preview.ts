@@ -1,5 +1,5 @@
 // Dev-only: runs the UI in a plain browser against sample data, for design review.
-// Open http://localhost:1420/preview.html?view=notes (notes | transcript | live | loading | writing | failed | empty | settings | transcription | onboarding | share | tags | folder | newFolder | move)
+// Open http://localhost:1420/preview.html?view=notes (notes | transcript | live | loading | writing | failed | empty | settings | transcription | onboarding | share | tags | folder | newFolder | move | search)
 import { mockIPC } from "@tauri-apps/api/mocks";
 import type { AppState, Meeting, MeetingDetail } from "../lib/types";
 
@@ -83,6 +83,8 @@ const state: AppState = {
     onboarded: view !== "onboarding",
     speechModelId: "parakeet-v3",
     speakerModelId: "accurate",
+    consentReminder: true,
+    consentNotice: "Heads up: I'm recording this call to take notes. Let me know if you'd rather I didn't.",
   },
   sharingBusy: false,
   revision: 1,
@@ -130,6 +132,10 @@ mockIPC((command) => {
         ],
         hardware: { memoryGb: 16, appleSilicon: true, cores: 10 },
       };
+    case "search_meetings":
+      return [{ id: "M2", snippet: "Them: Let's keep the free tier at three seats and revisit pricing in Q1." }];
+    case "export_meeting":
+      return true;
     case "microphones":
       return [{ id: "a", name: "MacBook Pro Microphone" }, { id: "b", name: "AirPods Pro" }];
     default:

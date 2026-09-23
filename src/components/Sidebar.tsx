@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import { allTags, bytes, groupByDay, matchesSearch, sidebarSubtitle } from "../lib/format";
 import { attempt, keptTag, scopeFolder, useStore, visibleMeetings, type Library } from "../lib/store";
 import type { FolderInfo, Meeting, SpeechModel } from "../lib/types";
+import { useSearchHits } from "../lib/useSearchHits";
 import { useDialogs } from "./dialogs/dialogState";
 import { MeetingContextMenu } from "./MeetingMenu";
 import { FolderActions, ScopeMenu } from "./ScopeMenu";
@@ -20,10 +21,11 @@ export function Sidebar() {
   const folderId = scopeFolder(library);
   const folder = folders.find((f) => f.id === folderId);
 
+  const hits = useSearchHits(search);
   const tags = useMemo(() => allTags(visibleMeetings(app, library)), [app, library]);
   const groups = useMemo(
-    () => groupByDay(visibleMeetings(app, library, tag).filter((m) => matchesSearch(m, search))),
-    [app, library, tag, search],
+    () => groupByDay(visibleMeetings(app, library, tag).filter((m) => matchesSearch(m, search, hits ?? undefined))),
+    [app, library, tag, search, hits],
   );
 
   const changeLibrary = (next: Library) => {
@@ -50,7 +52,7 @@ export function Sidebar() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search meetings"
+            placeholder="Search notes and transcripts"
             aria-label="Search meetings"
             className="h-full min-w-0 flex-1 bg-transparent text-[12.5px] text-ink placeholder:text-faint focus:outline-none"
           />
@@ -80,6 +82,7 @@ export function Sidebar() {
                       meeting={meeting}
                       live={meeting.id === app?.recordingId}
                       selected={meeting.id === selectedId}
+                      snippet={hits?.get(meeting.id) ?? null}
                       onSelect={() => select(meeting.id)}
                     />
                   </MeetingContextMenu>
@@ -130,11 +133,13 @@ interface RowProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   meeting: Meeting;
   live: boolean;
   selected: boolean;
+  /** Where a search matched, shown under the title. */
+  snippet: string | null;
   onSelect: () => void;
   ref?: Ref<HTMLButtonElement>;
 }
 
-function SidebarRow({ meeting, live, selected, onSelect, ...menuProps }: RowProps) {
+function SidebarRow({ meeting, live, selected, snippet, onSelect, ...menuProps }: RowProps) {
   return (
     <button
       type="button"
@@ -153,6 +158,7 @@ function SidebarRow({ meeting, live, selected, onSelect, ...menuProps }: RowProp
           {meeting.recordedBy && <span> · {meeting.recordedBy}</span>}
           {meeting.tags?.length ? <span className="text-faint"> · {meeting.tags.join(", ")}</span> : null}
         </span>
+        {snippet && <span className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-graphite">{snippet}</span>}
       </span>
       <RowStatus meeting={meeting} live={live} />
     </button>
@@ -196,7 +202,7 @@ function TagFilter({ tags, value, onChange }: { tags: string[]; value: string | 
 
 function EmptyList({ folder, archive, searching }: { folder: boolean; archive: boolean; searching: boolean }) {
   const text = searching
-    ? "No meeting titles match."
+    ? "No meetings match."
     : folder
       ? "Meetings in this folder appear here. Record with the folder open, or move a meeting here from its menu."
       : archive

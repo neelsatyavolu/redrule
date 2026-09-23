@@ -9,7 +9,7 @@ import {
   type ModelOption,
   type ProviderId,
 } from "../../lib/types";
-import { Dialog, Segmented, SettingRow, Switch } from "../ui";
+import { Dialog, Segmented, SettingRow, Switch, TextArea } from "../ui";
 import type { SettingsTab } from "./dialogState";
 import { AccountRows, PermissionRows } from "./SetupSections";
 import { ModelStatus, sizeLabel, TranscriptionSettings, useLocalModels } from "./TranscriptionSettings";
@@ -135,11 +135,40 @@ function GeneralSettings() {
       </SettingRow>
 
       <SettingRow
+        title="Remind me to ask for consent"
+        detail="Many places require everyone on a call to agree to being recorded. When a call starts, Redrule reminds you and offers a notice to paste into the chat."
+      >
+        <Switch
+          label="Remind me to ask for consent"
+          checked={settings.consentReminder}
+          onChange={(consentReminder) => update({ consentReminder })}
+        />
+      </SettingRow>
+      {settings.consentReminder && <ConsentNoticeField saved={settings.consentNotice} onSave={(consentNotice) => update({ consentNotice })} />}
+
+      <SettingRow
         title="Keep audio recordings"
         detail="Off by default: audio is transcribed as the meeting runs and never written to disk. Turn this on to keep a WAV file of each side next to the notes."
       >
         <Switch label="Keep audio recordings" checked={settings.keepAudio} onChange={(keepAudio) => update({ keepAudio })} />
       </SettingRow>
+    </div>
+  );
+}
+
+/** The notice text, saved when the field loses focus. Clearing it restores the default wording. */
+function ConsentNoticeField({ saved, onSave }: { saved: string; onSave: (text: string) => void }) {
+  const [text, setText] = useState(saved);
+  useEffect(() => setText(saved), [saved]);
+  return (
+    <div className="pb-3">
+      <TextArea
+        aria-label="Recording notice"
+        value={text}
+        maxLength={500}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => text !== saved && onSave(text)}
+      />
     </div>
   );
 }

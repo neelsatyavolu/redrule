@@ -4,12 +4,15 @@ use std::sync::Arc;
 use minutes_engine::Microphone;
 use serde::Serialize;
 use tauri::State;
+use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use crate::app::{App, LocalModels, MeetingDetail, ModelKind, Settings, SettingsPatch, State as Snapshot};
 use crate::core::Result;
 use crate::core::ask::Exchange;
+use crate::core::export::ExportFormat;
 use crate::core::models::{MeetingApp, MeetingNote};
 use crate::core::oauth::ProviderId;
+use crate::core::search::SearchHit;
 use crate::platform::permissions;
 use crate::providers::clients::{model_choices as available_models, refresh_model_choices, ModelChoice};
 use crate::shell;
@@ -67,6 +70,21 @@ pub async fn generate_notes(app: AppState<'_>, id: String) -> Result<()> {
 #[tauri::command]
 pub async fn ask_meeting(app: AppState<'_>, id: String, question: String, history: Vec<Exchange>) -> Result<String> {
     app.ask_meeting(&id, &question, &history).await
+}
+
+/// Blocking: the first search reads every meeting's notes and transcript from disk.
+#[tauri::command]
+pub async fn search_meetings(app: AppState<'_>, query: String) -> Result<Vec<SearchHit>> {
+    let app = Arc::clone(app.inner());
+    tauri::async_runtime::spawn_blocking(move || app.search_meetings(&query))
+        .await
+        .map_err(|error| crate::core::Error::message(error.to_string()))
+}
+
+#[tauri::command]
+pub fn copy_consent_notice(handle: tauri::AppHandle, app: AppState) -> Result<()> {
+    let notice = app.read(|state| state.settings.consent_notice.clone());
+    handle.clipboard().write_text(notice).map_err(|e| crate::core::Error::message(format!("The notice could not be copied. {e}")))
 }
 
 #[tauri::command]
@@ -137,6 +155,14 @@ pub fn save_note(app: AppState, id: String, note: MeetingNote) -> Result<()> {
 #[tauri::command]
 pub fn copy_markdown(app: AppState, id: String) -> Result<()> {
     app.copy_markdown(&id)
+}
+
+#[tauri::command]
+pub async fn export_meeting(app: AppState<'_>, id: String, format: ExportFormat) -> Result<bool> {
+    let app = Arc::clone(app.inner());
+    tauri::async_runtime::spawn_blocking(move || app.export_meeting(&id, format))
+        .await
+        .map_err(|error| crate::core::Error::message(error.to_string()))?
 }
 
 #[tauri::command]

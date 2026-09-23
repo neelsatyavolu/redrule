@@ -10,7 +10,9 @@ import type {
   ModelKind,
   ModelOption,
   ProviderId,
+  SearchHit,
   Settings,
+  ExportFormat,
 } from "./types";
 
 /** Typed wrappers for the backend commands in src-tauri/src/commands.rs. */
@@ -23,6 +25,7 @@ export const api = {
   generateNotes: (id: string) => invoke<void>("generate_notes", { id }),
   askMeeting: (id: string, question: string, history: Exchange[]) =>
     invoke<string>("ask_meeting", { id, question, history }),
+  searchMeetings: (query: string) => invoke<SearchHit[]>("search_meetings", { query }),
   renameMeeting: (id: string, title: string) => invoke<void>("rename_meeting", { id, title }),
   setArchived: (id: string, archived: boolean) => invoke<void>("set_archived", { id, archived }),
   setTags: (id: string, tags: string[]) => invoke<void>("set_tags", { id, tags }),
@@ -37,6 +40,9 @@ export const api = {
   deleteMeeting: (id: string) => invoke<void>("delete_meeting", { id }),
   saveNote: (id: string, note: MeetingNote) => invoke<void>("save_note", { id, note }),
   copyMarkdown: (id: string) => invoke<void>("copy_markdown", { id }),
+  /** Resolves false when the save panel was cancelled. */
+  exportMeeting: (id: string, format: ExportFormat) => invoke<boolean>("export_meeting", { id, format }),
+  copyConsentNotice: () => invoke<void>("copy_consent_notice"),
   renameSpeaker: (id: string, key: string, name: string) => invoke<void>("rename_speaker", { id, key, name }),
   publishShare: (id: string, includeTranscript: boolean) => invoke<string>("publish_share", { id, includeTranscript }),
   revokeShare: (id: string) => invoke<void>("revoke_share", { id }),

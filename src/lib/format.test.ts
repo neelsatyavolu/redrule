@@ -84,6 +84,11 @@ describe("matchesSearch", () => {
     expect(matchesSearch(meeting({}), "  ")).toBe(true);
     expect(matchesSearch(meeting({}), "budget")).toBe(false);
   });
+
+  it("includes meetings whose notes or transcript matched", () => {
+    expect(matchesSearch(meeting({}), "budget", new Map([["A", "…the budget moved…"]]))).toBe(true);
+    expect(matchesSearch(meeting({}), "budget", new Map([["B", null]]))).toBe(false);
+  });
 });
 
 describe("tags", () => {

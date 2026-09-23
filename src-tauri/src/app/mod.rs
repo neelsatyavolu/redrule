@@ -6,6 +6,7 @@ mod folder_sync;
 mod folders;
 mod library;
 mod recording;
+mod search;
 mod settings;
 mod sharing;
 mod speech_models;
