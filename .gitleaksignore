@@ -1,0 +1,2 @@
+# Fake key in a test fixture (src-tauri/src/telemetry.rs), marked gitleaks:allow in later commits.
+fa8a9c194bf994450e320143cb8582a9664218d1:src-tauri/src/telemetry.rs:generic-api-key:224
