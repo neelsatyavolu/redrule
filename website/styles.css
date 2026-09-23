@@ -12,7 +12,10 @@
   --margin: #c8372d;
   --margin-soft: rgb(200 55 45 / 0.22);
   --binding: #2a322d;
-  --margin-on-ink: #ff8a7e;
+  /* The note-writing band: deep green with light text in both appearances. */
+  --band: #1b2a22;
+  --band-ink: #f2f5ef;
+  --band-accent: #ff8a7e;
   --shadow: 0 1px 2px rgb(24 32 27 / 0.06), 0 30px 60px -24px rgb(24 32 27 / 0.28);
   --gutter: clamp(56px, 7vw, 112px);
   /* The margin rule sits this far left of the text. */
@@ -36,7 +39,9 @@
     --margin: #ef6a5e;
     --margin-soft: rgb(239 106 94 / 0.25);
     --binding: #0c0f0d;
-    --margin-on-ink: #b3261c;
+    --band: #213428;
+    --band-ink: #e4eae3;
+    --band-accent: #f2877c;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 30px 60px -24px rgb(0 0 0 / 0.7);
     color-scheme: dark;
   }
@@ -203,14 +208,14 @@ h1 em { display: block; }
 .notes input { accent-color: var(--margin); margin: 0; }
 .notes label b { font-weight: 600; min-width: 2.6em; }
 
-/* Note writing: an inverted band straight after the hero */
+/* Note writing: a deep green band straight after the hero */
 .byo {
   margin: 0 calc(-1 * var(--gutter));
   padding: clamp(64px, 10vh, 112px) var(--gutter);
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--band);
+  color: var(--band-ink);
 }
-.byo .kicker, .byo h2 em { color: var(--margin-on-ink); }
+.byo .kicker, .byo h2 em { color: var(--band-accent); }
 .byo-head { max-width: 760px; }
 .byo-head h2 { margin-bottom: 20px; }
 .byo-head h2 em { display: block; }
@@ -223,7 +228,7 @@ h1 em { display: block; }
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: clamp(20px, 3vw, 40px);
 }
-.byo-points li { padding-top: 18px; border-top: 2px solid var(--margin-on-ink); }
+.byo-points li { padding-top: 18px; border-top: 2px solid var(--band-accent); }
 .byo-points p { margin: 0; opacity: 0.72; font-size: 16px; }
 .byo + section { border-top: 0; }
 
