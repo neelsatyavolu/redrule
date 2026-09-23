@@ -99,6 +99,18 @@ h1 em, h2 em { color: var(--margin); }
   font: 400 26px var(--serif);
 }
 .brand img { border-radius: 7px; }
+.top-links { display: flex; align-items: center; gap: 20px; }
+.gh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--graphite);
+  font: 500 14px var(--sans);
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+.gh:hover { color: var(--ink); }
+.gh:focus-visible { outline: 3px solid var(--margin-soft); outline-offset: 3px; border-radius: 6px; }
 
 .button {
   display: inline-flex;
@@ -335,6 +347,8 @@ h3 { font: 600 19px/1.3 var(--sans); margin: 0 0 8px; }
   .transcript li { grid-template-columns: 44px 1fr; column-gap: 12px; }
   .transcript .mono { font-size: 10px; padding-right: 6px; }
   .button:not(.small) { width: 100%; justify-content: center; }
+  .top-links { gap: 16px; }
+  .gh span { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
