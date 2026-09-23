@@ -2,9 +2,9 @@
 use std::sync::Arc;
 
 use chrono::Utc;
-use minutes_engine::{LocalNoteWriter, RecordingPipeline};
+use minutes_engine::{LocalNoteWriter, NoteProgress, NoteProgressSink, RecordingPipeline};
 
-use super::state::{ActiveRecording, App};
+use super::state::{ActiveRecording, App, NotesProgress, NotesStage};
 use crate::core::models::{Meeting, MeetingApp, MeetingStatus, TranscriptSegment};
 use crate::core::summary::{CHUNK_BUDGET, summarize};
 use crate::core::{Error, Result};
@@ -86,22 +86,42 @@ impl App {
         }
     }
 
-    async fn write_notes(&self, meeting: &Meeting) -> Result<String> {
+    async fn write_notes(self: &Arc<Self>, meeting: &Meeting) -> Result<String> {
         let store = self.store()?;
         let segments = store.transcript(&meeting.id)?;
         let note = match self.read(|state| state.settings.local_note_model()) {
             Some(option) => {
                 let _one_at_a_time = self.local_notes.lock().await;
-                let dir = self.models_dir.clone();
-                let writer = tauri::async_runtime::spawn_blocking(move || LocalNoteWriter::load(option, &dir))
-                    .await
-                    .map_err(|error| Error::message(error.to_string()))??;
-                summarize(&writer, meeting, &segments, option.chunk_chars).await?
+                let (dir, sink) = (self.models_dir.clone(), self.notes_progress(&meeting.id));
+                let written = async {
+                    let writer = tauri::async_runtime::spawn_blocking(move || LocalNoteWriter::load_reporting(option, &dir, sink))
+                        .await
+                        .map_err(|error| Error::message(error.to_string()))??;
+                    summarize(&writer, meeting, &segments, option.chunk_tokens).await
+                }
+                .await;
+                self.update(|state| state.notes_progress = None);
+                written?
             }
             None => summarize(&self.summary_client()?, meeting, &segments, CHUNK_BUDGET).await?,
         };
         store.save_note(&note, &meeting.id)?;
         Ok(note.title)
+    }
+
+    /// Publishes how far along the notes on this Mac are, only when the shown percentage changes.
+    fn notes_progress(self: &Arc<Self>, meeting_id: &str) -> NoteProgressSink {
+        let (app, meeting_id) = (Arc::clone(self), meeting_id.to_string());
+        Arc::new(move |progress| {
+            let (stage, done) = match progress {
+                NoteProgress::Loading(done) => (NotesStage::Loading, done),
+                NoteProgress::Writing(done) => (NotesStage::Writing, done),
+            };
+            let next = NotesProgress { meeting_id: meeting_id.clone(), stage, percent: (done * 100.0).clamp(0.0, 99.0) as u8 };
+            if app.read(|state| state.notes_progress.as_ref() != Some(&next)) {
+                app.update(|state| state.notes_progress = Some(next));
+            }
+        })
     }
 
     fn summary_client(&self) -> Result<SummaryClient> {

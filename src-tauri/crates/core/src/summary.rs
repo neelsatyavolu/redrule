@@ -17,17 +17,22 @@ pub const SYSTEM: &str = r#"You write meeting notes from a transcript, in the st
 Rules:
 - Report only what was said. Never invent names, numbers, dates or commitments.
 - The transcript comes from speech recognition: silently fix obvious mis-hearings, ignore filler and small talk.
+- Cover the whole meeting from start to finish. The last part often settles decisions and next steps, so read it as closely as the first.
+- When a point changed during the meeting, report where it ended up, not the earlier position.
+- Be brief: only what matters, in short one-line bullets, never the same point twice. Skip small talk, logistics and remarks about the meeting itself unless they led to a decision.
 - title: 3-7 words naming the meeting's subject, no date.
 - tldr: two or three sentences a colleague who missed the meeting could act on.
-- sections: 2-6 topic sections in the order discussed, each with concise, specific bullets.
-- decisions: things actually agreed. Empty list if none.
-- action_items: concrete follow-ups. owner is a name if one was stated, "Me" for the recorder, otherwise an empty string.
+- sections: the important topics in the order discussed, usually 3-6, each with 2-5 concise bullets on what was proposed, settled or left open, keeping key numbers, dates and names.
+- decisions: every point that was settled or agreed, including small choices of option, feature, material, price, date or owner, one short line each. Not scores, opinions or options that were only discussed. Empty list if none.
+- action_items: every concrete follow-up someone took on or was asked to do. owner is a name if one was stated, "Me" for the recorder, otherwise an empty string.
 Reply with a single JSON object and nothing else, with exactly these keys:
 {"title": string, "tldr": string, "sections": [{"heading": string, "bullets": [string]}], "decisions": [string], "action_items": [{"owner": string, "task": string}]}"#;
 
 pub const DIGEST_SYSTEM: &str = "You are condensing one part of a long meeting transcript so that notes can be written later from your digest.
-Keep every decision, number, date, name, commitment and open question. Drop filler. Keep the order of discussion.
-Reply with plain text bullets only.";
+Cover this whole part, start to end. Group by topic: no timestamps and no line-by-line retelling.
+Reply in plain text with two lists of one-line bullets:
+Settled in this part: every decision, agreement and next step, including small choices, each with its specifics (which option, how many, what it is made of, price, date) and who owns it.
+Discussed: the topics in order, with the proposals, key numbers, dates, names and open questions.";
 
 fn started(started_at: DateTime<Utc>) -> String {
     started_at.with_timezone(&Local).format("%b %-d, %Y at %-I:%M %p").to_string()
@@ -133,6 +138,15 @@ pub fn codex_output_text(body: &str) -> Result<String> {
 pub trait SummaryProvider: Send + Sync {
     /// Sends one prompt and returns the model's text. `schema` is a hint for providers with structured output.
     fn complete(&self, system: &str, user: &str, schema: Option<&Value>) -> impl Future<Output = Result<String>> + Send;
+
+    /// The size of `text` in the units of `summarize`'s chunk budget: characters unless the provider
+    /// counts tokens itself.
+    fn measure(&self, text: &str) -> usize {
+        text.chars().count()
+    }
+
+    /// Called once before the first prompt with how many prompts the notes are expected to take.
+    fn plan(&self, _prompts: usize) {}
 }
 
 pub async fn summarize<P: SummaryProvider>(
@@ -146,7 +160,8 @@ pub async fn summarize<P: SummaryProvider>(
         return Err(Error::EmptyTranscript);
     }
 
-    let pieces = transcript::chunks(&rendered, chunk_budget);
+    let pieces = transcript::chunks_by(&rendered, chunk_budget, |line| provider.measure(line));
+    provider.plan(if pieces.len() == 1 { 1 } else { pieces.len() + 1 });
     let user = if pieces.len() == 1 {
         user_prompt(&rendered, meeting.app, meeting.started_at)
     } else {

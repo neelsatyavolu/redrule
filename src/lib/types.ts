@@ -103,6 +103,13 @@ export interface LocalModels {
   hardware: { memoryGb: number; appleSilicon: boolean; cores: number };
 }
 
+/** Notes being written on this Mac: loading the model, then writing (an estimate). */
+export interface NotesProgress {
+  meetingId: string;
+  stage: "loading" | "writing";
+  percent: number;
+}
+
 export interface AppState {
   meetings: Meeting[];
   recordingId: string | null;
@@ -111,6 +118,7 @@ export interface AppState {
   speechModel: SpeechModel;
   /** The on-device note model's download; null while notes are written with an account. */
   noteModel: SpeechModel | null;
+  notesProgress: NotesProgress | null;
   connected: ProviderId[];
   connecting: ProviderId | null;
   connectionError: string | null;

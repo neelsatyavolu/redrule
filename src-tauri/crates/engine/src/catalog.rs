@@ -167,6 +167,8 @@ pub struct NoteOption {
     pub context_tokens: u32,
     /// Transcripts longer than this many characters are digested in parts first.
     pub chunk_chars: usize,
+    /// Notes: transcripts longer than this many of the model's tokens are digested in parts first.
+    pub chunk_tokens: usize,
     pub(crate) model: &'static Model,
 }
 
@@ -180,6 +182,7 @@ pub const NOTE_OPTIONS: &[NoteOption] = &[
         size_mb: 2741,
         context_tokens: 24_576,
         chunk_chars: 64_000,
+        chunk_tokens: 20_000,
         model: &QWEN35_4B,
     },
     NoteOption {
@@ -189,6 +192,7 @@ pub const NOTE_OPTIONS: &[NoteOption] = &[
         size_mb: 5681,
         context_tokens: 24_576,
         chunk_chars: 64_000,
+        chunk_tokens: 20_000,
         model: &QWEN35_9B,
     },
 ];

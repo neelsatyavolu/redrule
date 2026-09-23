@@ -1,9 +1,11 @@
 // Dev-only: runs the UI in a plain browser against sample data, for design review.
-// Open http://localhost:1420/preview.html?view=notes (notes | transcript | live | failed | empty | settings | transcription | onboarding | share)
+// Open http://localhost:1420/preview.html?view=notes (notes | transcript | live | loading | writing | failed | empty | settings | transcription | onboarding | share)
 import { mockIPC } from "@tauri-apps/api/mocks";
 import type { AppState, Meeting, MeetingDetail } from "../lib/types";
 
 const view = new URLSearchParams(location.search).get("view") ?? "notes";
+/** Notes for the first meeting are being written on this Mac. */
+const writingNotes = view === "loading" || view === "writing";
 if (new URLSearchParams(location.search).get("theme") === "dark") document.documentElement.style.colorScheme = "dark";
 
 const at = (daysAgo: number, hour: number, minute = 0) => {
@@ -15,7 +17,7 @@ const at = (daysAgo: number, hour: number, minute = 0) => {
 const plus = (iso: string, minutes: number) => new Date(Date.parse(iso) + minutes * 60_000).toISOString();
 
 const meetings: Meeting[] = [
-  { id: "M1", title: "Q4 roadmap review", app: "zoom", startedAt: at(0, 14, 5), endedAt: plus(at(0, 14, 5), 42), status: "done" },
+  { id: "M1", title: "Q4 roadmap review", app: "zoom", startedAt: at(0, 14, 5), endedAt: plus(at(0, 14, 5), 42), status: writingNotes ? "summarizing" : "done" },
   { id: "M2", title: "Pricing page copy", app: "googleMeet", startedAt: at(0, 10, 30), endedAt: plus(at(0, 10, 30), 18), status: view === "failed" ? "failed" : "done", errorMessage: "Connect ChatGPT or Grok in Settings to generate notes." },
   { id: "M3", title: "Hiring sync with Priya", app: "zoom", startedAt: at(1, 16), endedAt: plus(at(1, 16), 27), status: "done" },
   { id: "M4", title: "Weekly design critique", app: "googleMeet", startedAt: at(1, 11), endedAt: plus(at(1, 11), 55), status: "done" },
@@ -59,6 +61,7 @@ const state: AppState = {
   banner: null,
   speechModel: view === "live" ? { state: "ready" } : { state: "loading", progress: { downloadedBytes: 214_000_000, totalBytes: 487_000_000, stage: "Downloading speech model" } },
   noteModel: null,
+  notesProgress: writingNotes ? { meetingId: "M1", stage: view === "loading" ? "loading" : "writing", percent: view === "loading" ? 63 : 42 } : null,
   connected: view === "failed" ? [] : ["codex"],
   connecting: null,
   connectionError: null,
@@ -81,7 +84,7 @@ mockIPC((command) => {
     case "get_state":
       return state;
     case "meeting_detail":
-      return view === "failed" ? { ...detail, note: null } : detail;
+      return view === "failed" || writingNotes ? { ...detail, note: null } : detail;
     case "model_choices":
       return [
         { id: "codex:gpt-6-astra", provider: "codex", model: "gpt-6-astra", label: "GPT-6 Astra", effort: "low" },

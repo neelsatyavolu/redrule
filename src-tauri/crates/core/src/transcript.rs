@@ -75,9 +75,14 @@ fn words(text: &str) -> HashSet<String> {
 /// Splits text on line boundaries into chunks of at most `budget` characters.
 /// A single line longer than the budget becomes its own chunk.
 pub fn chunks(text: &str, budget: usize) -> Vec<String> {
+    chunks_by(text, budget, |line| line.chars().count())
+}
+
+/// Like `chunks`, with each line's size counted by `measure`, such as a model's tokenizer.
+pub fn chunks_by(text: &str, budget: usize, measure: impl Fn(&str) -> usize) -> Vec<String> {
     let mut groups: Vec<(Vec<&str>, usize)> = Vec::new();
     for line in text.split('\n') {
-        let length = line.chars().count();
+        let length = measure(line);
         match groups.last_mut() {
             Some((lines, size)) if *size + length <= budget => {
                 lines.push(line);
@@ -201,6 +206,9 @@ mod tests {
     fn chunks_on_line_boundaries() {
         assert_eq!(chunks("aaa\nbbb\nccc", 7), ["aaa\nbbb", "ccc"]);
         assert_eq!(chunks("a-very-long-line\nb", 4), ["a-very-long-line", "b"]);
+        // Counted in words instead of characters, as a tokenizer would count tokens.
+        let words = |line: &str| line.split_whitespace().count();
+        assert_eq!(chunks_by("one two\nthree four five\nsix", 5, words), ["one two", "three four five\nsix"]);
     }
 
     #[test]

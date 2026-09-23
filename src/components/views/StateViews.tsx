@@ -97,7 +97,7 @@ export function ProcessingView({ meeting, segments }: { meeting: Meeting; segmen
         ) : (
           <p className="flex items-center gap-2.5 font-serif text-[16px] text-graphite">
             <Spinner />
-            {meeting.status === "transcribing" ? "Finishing the transcript" : "Writing notes"}
+            {meeting.status === "transcribing" ? "Finishing the transcript" : <NotesStatus meetingId={meeting.id} />}
           </p>
         )}
       </PadRow>
@@ -107,6 +107,19 @@ export function ProcessingView({ meeting, segments }: { meeting: Meeting; segmen
         </div>
       )}
     </PadPage>
+  );
+}
+
+/** "Loading model" then "Writing notes" with a percentage while notes are written on this Mac. */
+function NotesStatus({ meetingId }: { meetingId: string }) {
+  const progress = useStore((s) => s.app?.notesProgress);
+  if (progress?.meetingId !== meetingId) return <>Writing notes</>;
+  const label = progress.stage === "loading" ? "Loading model" : "Writing notes";
+  return (
+    <>
+      {label}
+      {progress.percent > 0 && <span className="tabular text-faint">{progress.percent}%</span>}
+    </>
   );
 }
 

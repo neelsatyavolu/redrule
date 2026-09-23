@@ -26,6 +26,6 @@ pub use asr::Transcription;
 pub use diarization::SpeakerRecognizer;
 pub use microphones::{Microphone, microphones};
 pub use model_download::ModelProgress;
-pub use note_writer::LocalNoteWriter;
+pub use note_writer::{LocalNoteWriter, NoteProgress, NoteProgressSink};
 pub use pipeline::RecordingPipeline;
 pub use transcriber::Transcriber;

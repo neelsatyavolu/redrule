@@ -5,6 +5,7 @@
 //! [EVAL_NOTES=qwen3.5-4b] cargo test -p minutes-engine --release note_eval -- --ignored --nocapture
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Instant;
 
 use chrono::Utc;
@@ -26,12 +27,31 @@ async fn note_eval() {
     for option in options {
         option.download(&models_dir, |_| {}).await.unwrap();
         let clock = Instant::now();
-        let writer = LocalNoteWriter::load(option, &models_dir).unwrap();
+        // Prints each tenth of the progress shown in the app, with the time it was reached.
+        let steps = std::sync::Mutex::new((String::new(), Instant::now()));
+        let sink: crate::NoteProgressSink = Arc::new(move |progress| {
+            let (stage, done) = match progress {
+                crate::NoteProgress::Loading(done) => ("loading", done),
+                crate::NoteProgress::Writing(done) => ("writing", done),
+            };
+            let step = format!("{stage} {}%", (done * 10.0) as u32 * 10);
+            let mut last = steps.lock().unwrap();
+            if last.0 != step {
+                if step.starts_with("writing 0") && !last.0.starts_with("writing") {
+                    last.1 = Instant::now();
+                }
+                println!("  {step:<12} at {:.1}s", last.1.elapsed().as_secs_f32());
+                last.0 = step;
+            }
+        });
+        let writer = LocalNoteWriter::load_reporting(option, &models_dir, sink).unwrap();
         println!("{} loaded in {:.1}s", option.id, clock.elapsed().as_secs_f32());
         for path in var("EVAL_TRANSCRIPTS").split(',') {
             let segments: Vec<TranscriptSegment> = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
             let clock = Instant::now();
-            let note = summarize(&writer, &meeting(), &segments, option.chunk_chars).await.unwrap();
+            // EVAL_CHUNK_TOKENS tries a different split for long meetings.
+            let budget = std::env::var("EVAL_CHUNK_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(option.chunk_tokens);
+            let note = summarize(&writer, &meeting(), &segments, budget).await.unwrap();
             let name = Path::new(path).parent().and_then(Path::file_name).unwrap().to_string_lossy().into_owned();
             println!("{name} {} {:.1}s: {}", option.id, clock.elapsed().as_secs_f32(), note.title);
             std::fs::write(out.join(format!("{name}__{}.md", option.id)), note.markdown()).unwrap();

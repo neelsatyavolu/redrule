@@ -33,6 +33,23 @@ pub enum SpeechModel {
     Failed { message: String },
 }
 
+/// Notes being written on this Mac for one meeting: loading the model, then writing.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotesProgress {
+    pub meeting_id: String,
+    pub stage: NotesStage,
+    /// 0-99; an estimate while writing.
+    pub percent: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NotesStage {
+    Loading,
+    Writing,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct State {
@@ -47,6 +64,7 @@ pub struct State {
     pub speech_model: SpeechModel,
     /// The on-device note model's download; absent while notes are written with an account.
     pub note_model: Option<SpeechModel>,
+    pub notes_progress: Option<NotesProgress>,
     pub connected: Vec<ProviderId>,
     pub connecting: Option<ProviderId>,
     pub connection_error: Option<String>,
@@ -103,6 +121,7 @@ impl App {
             banner: None,
             speech_model: SpeechModel::Loading { progress: None },
             note_model: None,
+            notes_progress: None,
             connected: Vec::new(),
             connecting: None,
             connection_error: None,
