@@ -5,7 +5,7 @@
 Please report vulnerabilities privately. Don't open a public issue.
 
 - Preferred: GitHub private vulnerability reporting. On this repository, open **Security**, then **Report a vulnerability**.
-- Or email **security@REPLACE-ME** <!-- REPLACE-ME: the owner must set a real address. -->
+- Or email **neel@xanom.co**
 
 Include what you found, how to reproduce it, and the Redrule version. We'll reply as soon as we can. Please give us a reasonable time to fix the issue before you disclose it.
 
