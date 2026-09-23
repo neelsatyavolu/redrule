@@ -17,11 +17,13 @@ if (previewView === "transcript") document.querySelectorAll<HTMLButtonElement>('
 if (previewView === "failed") useStore.getState().select("M2");
 if (previewView === "settings") useDialogs.getState().open({ kind: "settings" });
 if (previewView === "transcription") useDialogs.getState().open({ kind: "settings", tab: "transcription" });
+if (previewView === "accounts") useDialogs.getState().open({ kind: "settings", tab: "accounts" });
 if (previewView === "share" && meeting) useDialogs.getState().open({ kind: "share", meeting });
 if (previewView === "folder") {
   useStore.getState().setLibrary(folderScope("f".repeat(64)));
   useStore.getState().select("R1");
 }
+if (previewView === "search") useStore.getState().setSearch("free tier");
 if (previewView === "newFolder") useDialogs.getState().open({ kind: "newFolder" });
 if (previewView === "move" && meeting) useDialogs.getState().open({ kind: "move", meeting });
 if (previewView === "tags" && meeting) useDialogs.getState().open({ kind: "tags", meeting });

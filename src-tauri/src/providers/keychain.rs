@@ -2,6 +2,7 @@
 //! Items saved under the previous service name are read and copied across.
 use security_framework::passwords::{delete_generic_password, get_generic_password, set_generic_password};
 
+use crate::core::api_providers::ApiProvider;
 use crate::core::oauth::{ProviderId, TokenBundle};
 use crate::core::{Error, Result};
 
@@ -55,10 +56,41 @@ pub fn delete_tokens(provider: ProviderId) -> Result<()> {
     remove(LEGACY_SERVICE, provider.raw())
 }
 
-/// The upload key for the sharing service, provisioned by `scripts/setup-sharing.swift`.
-pub fn sharing_key() -> Result<String> {
-    let bytes = load(SHARING_ACCOUNT)?.ok_or_else(|| {
-        Error::message("Sharing is not configured on this Mac. Run the sharing setup script from the Redrule project.")
-    })?;
-    String::from_utf8(bytes).map_err(|_| Error::message("The sharing key in the Keychain is not readable."))
+/// A provider's API key. These items are new, so there is no older copy to look for.
+pub fn load_api_key(provider: ApiProvider) -> Result<Option<String>> {
+    Ok(read(SERVICE, &provider.key_account())?.and_then(|bytes| String::from_utf8(bytes).ok()))
+}
+
+pub fn save_api_key(provider: ApiProvider, key: &str) -> Result<()> {
+    set_generic_password(SERVICE, &provider.key_account(), key.as_bytes()).map_err(describe)
+}
+
+pub fn delete_api_key(provider: ApiProvider) -> Result<()> {
+    remove(SERVICE, &provider.key_account())
+}
+
+fn text(bytes: Option<Vec<u8>>) -> Result<Option<String>> {
+    bytes.map(|b| String::from_utf8(b).map_err(|_| Error::message("A sharing key in the Keychain is not readable."))).transpose()
+}
+
+/// The legacy service key from `scripts/setup-sharing.swift`, if this Mac has one. Links made before owner keys need it.
+pub fn sharing_key() -> Result<Option<String>> {
+    text(load(SHARING_ACCOUNT)?)
+}
+
+fn share_account(share_id: &str) -> String {
+    format!("share:{share_id}")
+}
+
+/// The owner key of one shared link, or None for a link made before owner keys.
+pub fn share_key(share_id: &str) -> Result<Option<String>> {
+    text(read(SERVICE, &share_account(share_id))?)
+}
+
+pub fn save_share_key(share_id: &str, key: &str) -> Result<()> {
+    set_generic_password(SERVICE, &share_account(share_id), key.as_bytes()).map_err(describe)
+}
+
+pub fn delete_share_key(share_id: &str) -> Result<()> {
+    remove(SERVICE, &share_account(share_id))
 }

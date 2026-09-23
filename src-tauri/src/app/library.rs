@@ -4,9 +4,11 @@ use std::sync::Arc;
 use chrono::Utc;
 use serde::Serialize;
 use tauri_plugin_clipboard_manager::ClipboardExt;
+use tauri_plugin_dialog::DialogExt;
 
 use super::state::App;
 use crate::core::models::{ActionItem, MeetingNote, MeetingShare, NoteSection, TranscriptSegment};
+use crate::core::export::{self, ExportFormat};
 use crate::core::transcript;
 use crate::core::{Error, Result};
 
@@ -86,6 +88,26 @@ impl App {
             None => self.store()?.note(id)?.ok_or_else(|| Error::message("This meeting has no notes yet."))?,
         };
         self.handle.clipboard().write_text(note.markdown()).map_err(|e| Error::message(format!("The notes could not be copied. {e}")))
+    }
+
+    /// Asks where to save, then writes the file. Blocks on the save panel. Returns false when cancelled.
+    pub fn export_meeting(&self, id: &str, format: ExportFormat) -> Result<bool> {
+        let meeting = self
+            .meeting(id)
+            .or_else(|| self.read(|state| state.folder_meetings.iter().find(|m| m.meeting.id == id).map(|m| m.meeting.clone())))
+            .ok_or_else(|| Error::message("That meeting does not exist."))?;
+        let detail = self.meeting_detail(id)?;
+        let text = export::render(format, &meeting, detail.note.as_ref(), &detail.transcript);
+        let chosen = self
+            .handle
+            .dialog()
+            .file()
+            .set_file_name(export::file_name(&meeting, format))
+            .add_filter(format.filter_name(), &[format.extension()])
+            .blocking_save_file();
+        let Some(path) = chosen.and_then(|file| file.into_path().ok()) else { return Ok(false) };
+        std::fs::write(&path, text).map_err(|e| Error::message(format!("The file could not be saved. {e}")))?;
+        Ok(true)
     }
 
     pub fn rename_speaker(&self, id: &str, key: &str, name: &str) -> Result<()> {

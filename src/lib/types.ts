@@ -1,9 +1,13 @@
 // Mirrors the Rust types serialised by the backend (see src-tauri/src/app/state.rs).
 
 export type Speaker = "me" | "them";
-export type MeetingApp = "zoom" | "googleMeet" | "manual";
+export type MeetingApp = "zoom" | "googleMeet" | "teams" | "slack" | "webex" | "faceTime" | "manual";
 export type MeetingStatus = "recording" | "transcribing" | "summarizing" | "done" | "failed";
+/** Accounts signed in through the browser. */
 export type ProviderId = "codex" | "grok";
+/** Providers reached with the person's own API key; "compatible" is any OpenAI-compatible server. */
+export type ApiProvider = "openai" | "anthropic" | "gemini" | "compatible";
+export type NoteProvider = ProviderId | ApiProvider;
 
 export interface TranscriptSegment {
   speaker: Speaker;
@@ -26,6 +30,8 @@ export interface Meeting {
   tags?: string[];
   /** The shared folder the meeting is in. */
   folderId?: string;
+  /** Names from the calendar event, without the person recording. */
+  attendees?: string[];
   /** Set on other people's meetings from a shared folder, which are read-only. */
   remote?: boolean;
   recordedBy?: string;
@@ -87,6 +93,8 @@ export type SpeechModel =
 export interface Permissions {
   microphone: boolean;
   screenRecording: boolean;
+  /** Optional: only names meetings, never needed to record. */
+  calendar: boolean;
 }
 
 export interface Settings {
@@ -99,7 +107,27 @@ export interface Settings {
   onboarded: boolean;
   speechModelId: string;
   speakerModelId: string;
+  /** Reminds the person to tell everyone on the call that it is being recorded. */
+  consentReminder: boolean;
+  /** What "Copy notice" puts on the clipboard. */
+  consentNotice: string;
+  /** Sends crash reports, when the build has somewhere to send them. Off by default. */
+  crashReports: boolean;
+  /** Takes titles and attendees from the calendar, once access is allowed. */
+  useCalendar: boolean;
+  /** The OpenAI-compatible server's base URL and model name; empty when none is set up. */
+  compatibleUrl: string;
+  compatibleModel: string;
 }
+
+/** A meeting whose title, tags, notes or transcript hold every word searched for. */
+export interface SearchHit {
+  id: string;
+  /** The passage that matched; null when only the title did. */
+  snippet: string | null;
+}
+
+export type ExportFormat = "markdown" | "text";
 
 export type ModelKind = "speech" | "speaker" | "notes";
 
@@ -139,7 +167,8 @@ export interface AppState {
   /** The on-device model that answers questions; null while an account answers them. */
   askModel: SpeechModel | null;
   notesProgress: NotesProgress | null;
-  connected: ProviderId[];
+  /** Signed-in accounts, then API providers with a saved key (or a custom server that is set up). */
+  connected: NoteProvider[];
   connecting: ProviderId | null;
   connectionError: string | null;
   permissions: Permissions;
@@ -152,6 +181,8 @@ export interface AppState {
   folderMeetings: Meeting[];
   /** Shown on meetings this Mac adds to shared folders. */
   displayName: string;
+  /** The build has somewhere to send crash reports; the setting is hidden otherwise. */
+  crashReportsAvailable: boolean;
 }
 
 /** Model choices that write notes on this Mac, as stored in `Settings.modelChoiceId`. */
@@ -161,7 +192,7 @@ export function writesNotesLocally(settings: Settings): boolean {
   return settings.modelChoiceId.startsWith(LOCAL_NOTES);
 }
 
-/** Notes can be written: an account is connected or an on-device model is chosen. */
+/** Notes can be written: an account or API key is set up, or an on-device model is chosen. */
 export function canWriteNotes(app: AppState): boolean {
   return app.connected.length > 0 || writesNotesLocally(app.settings);
 }
@@ -179,7 +210,7 @@ export interface Microphone {
 
 export interface ModelOption {
   id: string;
-  provider: ProviderId;
+  provider: NoteProvider;
   model: string;
   label: string;
   effort: string;

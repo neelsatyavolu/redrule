@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use super::{NetResult, keychain};
+use super::NetResult;
 use crate::core::models::{MeetingNote, MeetingShare, TranscriptSegment};
 use crate::core::transcript::timestamp;
 use crate::core::{Error, Result};
@@ -35,12 +35,14 @@ pub fn share_url(id: &str) -> String {
     format!("{BASE_URL}/s/{id}")
 }
 
-/// Share ids are 64 lowercase hex characters: unguessable, and safe in a URL.
-pub fn new_share_id() -> String {
-    format!("{}{}", uuid::Uuid::new_v4().simple(), uuid::Uuid::new_v4().simple())
-}
-
-pub async fn publish(http: &reqwest::Client, share: &MeetingShare, note: &MeetingNote, transcript: &[TranscriptSegment]) -> Result<()> {
+/// `key` is the link's owner key, or the legacy service key for a link made before owner keys.
+pub async fn publish(
+    http: &reqwest::Client,
+    share: &MeetingShare,
+    key: &str,
+    note: &MeetingNote,
+    transcript: &[TranscriptSegment],
+) -> Result<()> {
     let transcript = share.includes_transcript.then(|| {
         transcript
             .iter()
@@ -51,20 +53,20 @@ pub async fn publish(http: &reqwest::Client, share: &MeetingShare, note: &Meetin
     if body.len() > MAX_PAYLOAD {
         return Err(Error::message("This meeting is too large to share."));
     }
-    request(http, share, reqwest::Method::PUT, Some(body)).await
+    request(http, share, key, reqwest::Method::PUT, Some(body)).await
 }
 
-pub async fn revoke(http: &reqwest::Client, share: &MeetingShare) -> Result<()> {
-    request(http, share, reqwest::Method::DELETE, None).await
+pub async fn revoke(http: &reqwest::Client, share: &MeetingShare, key: &str) -> Result<()> {
+    request(http, share, key, reqwest::Method::DELETE, None).await
 }
 
-async fn request(http: &reqwest::Client, share: &MeetingShare, method: reqwest::Method, body: Option<Vec<u8>>) -> Result<()> {
+async fn request(http: &reqwest::Client, share: &MeetingShare, key: &str, method: reqwest::Method, body: Option<Vec<u8>>) -> Result<()> {
     // Always use our configured host; stored links cannot redirect upload credentials.
     let mut request = http
         .request(method, format!("{BASE_URL}/api/share"))
         .query(&[("id", &share.id)])
         .timeout(TIMEOUT)
-        .bearer_auth(keychain::sharing_key()?)
+        .bearer_auth(key)
         .header("Content-Type", "application/json");
     if let Some(body) = body {
         request = request.body(body);

@@ -10,6 +10,14 @@ import { api } from "./lib/api";
 import { connectToBackend, useStore } from "./lib/store";
 import "./styles.css";
 
+// Uncaught errors go to the backend, which reports them only when crash reports are on. Rejected
+// commands arrive as strings, not Errors, so their messages (which can name meetings) stay here.
+function reportError(error: unknown) {
+  if (error instanceof Error) void api.reportError(`${error.name}: ${error.message}`, error.stack ?? null).catch(() => undefined);
+}
+window.addEventListener("error", (event) => reportError(event.error));
+window.addEventListener("unhandledrejection", (event) => reportError(event.reason));
+
 function App() {
   const storageError = useStore((s) => s.app?.storageError);
 

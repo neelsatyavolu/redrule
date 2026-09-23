@@ -61,6 +61,12 @@ fi
 TAURI_SIGNING_PRIVATE_KEY="$(op read "$UPDATER_KEY/key")"
 TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$(op read "$UPDATER_KEY/password")"
 export TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+# Crash reports are compiled in from the environment; a build without the DSN never sends any.
+if [ -n "${REDRULE_SENTRY_DSN:-}" ]; then
+    export REDRULE_SENTRY_DSN
+else
+    echo "warning: REDRULE_SENTRY_DSN is not set, so this build can't send crash reports." >&2
+fi
 
 echo "Building, signing and notarizing Redrule $VERSION (this takes several minutes)…"
 rm -f "$TARBALL" "$TARBALL.sig" "$DMG"

@@ -1,20 +1,13 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
-import {
-  LOCAL_NOTES,
-  writesNotesLocally,
-  type LocalModel,
-  type Microphone,
-  type ModelOption,
-  type ProviderId,
-} from "../../lib/types";
-import { Dialog, Segmented, SettingRow, Switch } from "../ui";
+import { LOCAL_NOTES, writesNotesLocally, type Microphone, type ModelOption } from "../../lib/types";
+import { Button, Dialog, Segmented, SettingRow, Switch, TextArea } from "../ui";
+import { ApiKeyRows } from "./ApiKeyRows";
 import type { SettingsTab } from "./dialogState";
-import { AccountRows, PermissionRows } from "./SetupSections";
-import { ModelStatus, sizeLabel, TranscriptionSettings, useLocalModels } from "./TranscriptionSettings";
-
-const PROVIDER_NAMES: Record<ProviderId, string> = { codex: "ChatGPT", grok: "Grok" };
+import { ModelSelect, remoteDetail, SELECT } from "./ModelSelect";
+import { AccountRows, CalendarRow, CrashReportsRow, PermissionRows } from "./SetupSections";
+import { ModelStatus, TranscriptionSettings, useLocalModels } from "./TranscriptionSettings";
 
 export function SettingsDialog({ initialTab = "general", onClose }: { initialTab?: SettingsTab; onClose: () => void }) {
   const [tab, setTab] = useState<SettingsTab>(initialTab);
@@ -35,15 +28,23 @@ export function SettingsDialog({ initialTab = "general", onClose }: { initialTab
       <div className="min-h-[300px]">
         {tab === "general" && <GeneralSettings />}
         {tab === "transcription" && <TranscriptionSettings />}
-        {tab === "accounts" && <AccountRows />}
-        {tab === "permissions" && <PermissionRows />}
+        {tab === "accounts" && (
+          <>
+            <AccountRows />
+            <h3 className="mt-5 text-[11.5px] font-semibold text-graphite">API keys</h3>
+            <ApiKeyRows />
+          </>
+        )}
+        {tab === "permissions" && (
+          <div className="divide-y divide-rule">
+            <PermissionRows />
+            <CalendarRow />
+          </div>
+        )}
       </div>
     </Dialog>
   );
 }
-
-const SELECT =
-  "h-8 w-[220px] rounded-[7px] border border-rule bg-raised px-2 text-[13px] text-ink focus:border-focus focus:outline-none";
 
 function GeneralSettings() {
   const app = useStore((s) => s.app);
@@ -92,7 +93,7 @@ function GeneralSettings() {
               )}
             </>
           ) : (
-            "Uses the account connected under Accounts."
+            remoteDetail(settings.modelChoiceId)
           )
         }
       >
@@ -102,6 +103,8 @@ function GeneralSettings() {
           onChange={(modelChoiceId) => update({ modelChoiceId })}
           models={models}
           localModels={localModels?.notes ?? []}
+          connected={app.connected}
+          serverModel={settings.compatibleModel}
         />
       </SettingRow>
 
@@ -120,7 +123,7 @@ function GeneralSettings() {
               )}
             </>
           ) : (
-            "Uses the account connected under Accounts."
+            remoteDetail(settings.askModelChoiceId)
           )
         }
       >
@@ -130,9 +133,23 @@ function GeneralSettings() {
           onChange={(askModelChoiceId) => update({ askModelChoiceId })}
           models={models}
           localModels={localModels?.notes ?? []}
+          connected={app.connected}
+          serverModel={settings.compatibleModel}
           sameAsNotes
         />
       </SettingRow>
+
+      <SettingRow
+        title="Remind me to ask for consent"
+        detail="Many places require everyone on a call to agree to being recorded. When a call starts, Redrule reminds you and offers a notice to paste into the chat."
+      >
+        <Switch
+          label="Remind me to ask for consent"
+          checked={settings.consentReminder}
+          onChange={(consentReminder) => update({ consentReminder })}
+        />
+      </SettingRow>
+      {settings.consentReminder && <ConsentNoticeField saved={settings.consentNotice} onSave={(consentNotice) => update({ consentNotice })} />}
 
       <SettingRow
         title="Keep audio recordings"
@@ -140,44 +157,46 @@ function GeneralSettings() {
       >
         <Switch label="Keep audio recordings" checked={settings.keepAudio} onChange={(keepAudio) => update({ keepAudio })} />
       </SettingRow>
+
+      <SettingRow
+        title="Use calendar for titles and attendees"
+        detail={
+          app.permissions.calendar
+            ? "Names each recording after the calendar event happening when it starts, and gives the notes the attendees’ names. A title you type is never replaced."
+            : "Optional. Names each recording after the calendar event happening when it starts. Needs access to your calendars."
+        }
+      >
+        {app.permissions.calendar ? (
+          <Switch
+            label="Use calendar for titles and attendees"
+            checked={settings.useCalendar}
+            onChange={(useCalendar) => update({ useCalendar })}
+          />
+        ) : (
+          <Button size="sm" onClick={() => void attempt(api.requestCalendar)}>
+            Allow access
+          </Button>
+        )}
+      </SettingRow>
+      <CrashReportsRow />
     </div>
   );
 }
 
-interface ModelSelectProps {
-  label: string;
-  value: string;
-  onChange: (id: string) => void;
-  models: ModelOption[];
-  localModels: LocalModel[];
-  /** Offers following the notes model, stored as an empty choice. */
-  sameAsNotes?: boolean;
-}
-
-/** Account models by provider, then the models that run on this Mac. */
-function ModelSelect({ label, value, onChange, models, localModels, sameAsNotes }: ModelSelectProps) {
+/** The notice text, saved when the field loses focus. Clearing it restores the default wording. */
+function ConsentNoticeField({ saved, onSave }: { saved: string; onSave: (text: string) => void }) {
+  const [text, setText] = useState(saved);
+  useEffect(() => setText(saved), [saved]);
   return (
-    <select aria-label={label} className={SELECT} value={value} onChange={(e) => onChange(e.target.value)}>
-      {sameAsNotes && <option value="">Same as notes</option>}
-      {(["codex", "grok"] as ProviderId[]).map((provider) => (
-        <optgroup key={provider} label={PROVIDER_NAMES[provider]}>
-          {models
-            .filter((m) => m.provider === provider)
-            .map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.label}
-              </option>
-            ))}
-        </optgroup>
-      ))}
-      <optgroup label="On this Mac">
-        {localModels.map((model) => (
-          <option key={model.id} value={LOCAL_NOTES + model.id}>
-            {model.installed ? model.name : `${model.name} (${sizeLabel(model.sizeMb)} download)`}
-          </option>
-        ))}
-      </optgroup>
-    </select>
+    <div className="pb-3">
+      <TextArea
+        aria-label="Recording notice"
+        value={text}
+        maxLength={500}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => text !== saved && onSave(text)}
+      />
+    </div>
   );
 }
 

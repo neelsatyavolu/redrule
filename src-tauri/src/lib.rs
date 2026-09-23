@@ -5,6 +5,7 @@ mod commands;
 pub mod platform;
 pub mod providers;
 mod shell;
+mod telemetry;
 mod updates;
 
 use std::sync::Arc;
@@ -14,6 +15,8 @@ use tauri::{Manager, RunEvent, WindowEvent};
 use app::App;
 
 pub fn run() {
+    // First, so panics while starting up are reported too (only when the person opted in).
+    telemetry::configure(app::crash_reports_on());
     let app = tauri::Builder::default()
         // A second launch focuses the running copy instead of starting another recorder.
         .plugin(tauri_plugin_single_instance::init(|handle, _, _| shell::show_main(handle)))
@@ -63,6 +66,8 @@ pub fn run() {
             commands::stop_recording,
             commands::generate_notes,
             commands::ask_meeting,
+            commands::search_meetings,
+            commands::copy_consent_notice,
             commands::rename_meeting,
             commands::set_archived,
             commands::set_tags,
@@ -77,6 +82,7 @@ pub fn run() {
             commands::delete_meeting,
             commands::save_note,
             commands::copy_markdown,
+            commands::export_meeting,
             commands::rename_speaker,
             commands::publish_share,
             commands::revoke_share,
@@ -84,8 +90,11 @@ pub fn run() {
             commands::submit_pasted_code,
             commands::cancel_connecting,
             commands::disconnect,
+            commands::save_api_key,
+            commands::remove_api_key,
             commands::request_microphone,
             commands::request_screen_recording,
+            commands::request_calendar,
             commands::update_settings,
             commands::microphones,
             commands::model_choices,
@@ -97,6 +106,7 @@ pub fn run() {
             commands::show_main_window,
             commands::reveal_meeting,
             commands::restart_to_update,
+            commands::report_error,
         ])
         .build(tauri::generate_context!())
         .expect("Redrule could not start");

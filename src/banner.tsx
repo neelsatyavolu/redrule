@@ -1,6 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { CopyNoticeButton } from "./components/ConsentNotice";
 import { Button } from "./components/ui";
 import { api } from "./lib/api";
 import { APP_NAMES } from "./lib/format";
@@ -10,10 +11,15 @@ import "./styles.css";
 /** The floating call prompt. It lives in its own non-activating panel, so it never takes focus from the call. */
 function CallBanner() {
   const [banner, setBanner] = useState<Banner | null>(null);
+  const [remind, setRemind] = useState(false);
 
   useEffect(() => {
-    const stop = listen<AppState>("state", (event) => setBanner(event.payload.banner));
-    void api.getState().then((state) => setBanner(state.banner));
+    const apply = (state: AppState) => {
+      setBanner(state.banner);
+      setRemind(state.settings.consentReminder);
+    };
+    const stop = listen<AppState>("state", (event) => apply(event.payload));
+    void api.getState().then(apply);
     return () => void stop.then((unlisten) => unlisten());
   }, []);
 
@@ -29,7 +35,11 @@ function CallBanner() {
             {detected ? `You're in a ${APP_NAMES[banner.app]} call` : "The call looks finished"}
           </p>
           <p className="mt-0.5 text-[12px] text-graphite">
-            {detected ? "Redrule can record it and write up the notes." : "Stop recording and write the notes now?"}
+            {!detected
+              ? "Stop recording and write the notes now?"
+              : remind
+                ? "Tell everyone on the call before you record."
+                : "Redrule can record it and write up the notes."}
           </p>
           <div className="mt-3 flex gap-2">
             <Button
@@ -39,6 +49,7 @@ function CallBanner() {
             >
               {detected ? "Record" : "Stop and write notes"}
             </Button>
+            {detected && remind && <CopyNoticeButton />}
             <Button size="sm" variant="quiet" onClick={() => void api.dismissBanner()}>
               {detected ? "Not this one" : "Keep recording"}
             </Button>

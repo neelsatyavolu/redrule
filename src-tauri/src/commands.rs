@@ -4,15 +4,20 @@ use std::sync::Arc;
 use minutes_engine::Microphone;
 use serde::Serialize;
 use tauri::State;
+use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use crate::app::{App, LocalModels, MeetingDetail, ModelKind, Settings, SettingsPatch, State as Snapshot};
 use crate::core::Result;
+use crate::core::api_providers::ApiProvider;
 use crate::core::ask::Exchange;
+use crate::core::export::ExportFormat;
 use crate::core::models::{MeetingApp, MeetingNote};
 use crate::core::oauth::ProviderId;
-use crate::platform::permissions;
+use crate::core::search::SearchHit;
+use crate::platform::{calendar, permissions};
 use crate::providers::clients::{model_choices as available_models, refresh_model_choices, ModelChoice};
 use crate::shell;
+use crate::telemetry;
 use crate::updates;
 
 type AppState<'a> = State<'a, Arc<App>>;
@@ -67,6 +72,21 @@ pub async fn generate_notes(app: AppState<'_>, id: String) -> Result<()> {
 #[tauri::command]
 pub async fn ask_meeting(app: AppState<'_>, id: String, question: String, history: Vec<Exchange>) -> Result<String> {
     app.ask_meeting(&id, &question, &history).await
+}
+
+/// Blocking: the first search reads every meeting's notes and transcript from disk.
+#[tauri::command]
+pub async fn search_meetings(app: AppState<'_>, query: String) -> Result<Vec<SearchHit>> {
+    let app = Arc::clone(app.inner());
+    tauri::async_runtime::spawn_blocking(move || app.search_meetings(&query))
+        .await
+        .map_err(|error| crate::core::Error::message(error.to_string()))
+}
+
+#[tauri::command]
+pub fn copy_consent_notice(handle: tauri::AppHandle, app: AppState) -> Result<()> {
+    let notice = app.read(|state| state.settings.consent_notice.clone());
+    handle.clipboard().write_text(notice).map_err(|e| crate::core::Error::message(format!("The notice could not be copied. {e}")))
 }
 
 #[tauri::command]
@@ -140,6 +160,14 @@ pub fn copy_markdown(app: AppState, id: String) -> Result<()> {
 }
 
 #[tauri::command]
+pub async fn export_meeting(app: AppState<'_>, id: String, format: ExportFormat) -> Result<bool> {
+    let app = Arc::clone(app.inner());
+    tauri::async_runtime::spawn_blocking(move || app.export_meeting(&id, format))
+        .await
+        .map_err(|error| crate::core::Error::message(error.to_string()))?
+}
+
+#[tauri::command]
 pub fn rename_speaker(app: AppState, id: String, key: String, name: String) -> Result<()> {
     app.rename_speaker(&id, &key, &name)
 }
@@ -174,6 +202,17 @@ pub fn disconnect(app: AppState, provider: ProviderId) {
     app.disconnect(provider);
 }
 
+/// Checks the key with the provider before saving it. `base_url` and `model` are for a custom server.
+#[tauri::command]
+pub async fn save_api_key(app: AppState<'_>, provider: ApiProvider, key: String, base_url: String, model: String) -> Result<()> {
+    app.save_api_key(provider, &key, &base_url, &model).await
+}
+
+#[tauri::command]
+pub fn remove_api_key(app: AppState, provider: ApiProvider) -> Result<()> {
+    app.remove_api_key(provider)
+}
+
 #[tauri::command]
 pub async fn request_microphone(app: AppState<'_>) -> Result<()> {
     permissions::request_microphone().await;
@@ -187,6 +226,15 @@ pub fn request_screen_recording(app: AppState) {
     app.refresh_permissions();
 }
 
+/// Optional: lets recordings take their calendar event's title and attendees.
+#[tauri::command]
+pub async fn request_calendar(app: AppState<'_>) -> Result<()> {
+    // Waits for the person to answer the system prompt.
+    let _ = tauri::async_runtime::spawn_blocking(calendar::request).await;
+    app.refresh_permissions();
+    Ok(())
+}
+
 #[tauri::command]
 pub fn update_settings(handle: tauri::AppHandle, app: AppState, patch: SettingsPatch) -> Settings {
     let dock_changed = patch.show_in_dock.is_some();
@@ -195,7 +243,9 @@ pub fn update_settings(handle: tauri::AppHandle, app: AppState, patch: SettingsP
         crate::shell::sync_dock_visibility(&handle);
     }
     app.use_chosen_models();
-    app.read(|state| state.settings.clone())
+    let settings = app.read(|state| state.settings.clone());
+    telemetry::configure(settings.crash_reports);
+    settings
 }
 
 #[tauri::command]
@@ -253,4 +303,10 @@ pub fn reveal_meeting(app: AppState, id: String) -> Result<()> {
     let folder = app.store()?.folder(&id)?;
     std::process::Command::new("/usr/bin/open").arg(folder).spawn()?;
     Ok(())
+}
+
+/// An uncaught error in the webview, sent only when crash reports are on.
+#[tauri::command]
+pub fn report_error(message: String, stack: Option<String>) {
+    telemetry::report_webview_error(&message, stack.as_deref());
 }

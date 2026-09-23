@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   allTags,
+  attendeeSentence,
   clock,
   distinctSpeakers,
   groupByDay,
@@ -84,6 +85,11 @@ describe("matchesSearch", () => {
     expect(matchesSearch(meeting({}), "  ")).toBe(true);
     expect(matchesSearch(meeting({}), "budget")).toBe(false);
   });
+
+  it("includes meetings whose notes or transcript matched", () => {
+    expect(matchesSearch(meeting({}), "budget", new Map([["A", "…the budget moved…"]]))).toBe(true);
+    expect(matchesSearch(meeting({}), "budget", new Map([["B", null]]))).toBe(false);
+  });
 });
 
 describe("tags", () => {
@@ -95,5 +101,15 @@ describe("tags", () => {
   it("matches a tag regardless of case", () => {
     expect(hasTag(meeting({ tags: ["Acme"] }), "ACME")).toBe(true);
     expect(hasTag(meeting({}), "Acme")).toBe(false);
+  });
+});
+
+describe("attendeeSentence", () => {
+  it("names a few attendees and counts the rest", () => {
+    expect(attendeeSentence([])).toBe("");
+    expect(attendeeSentence(["Ada"])).toBe("With Ada");
+    expect(attendeeSentence(["Ada", "Grace", "Dana"])).toBe("With Ada, Grace and Dana");
+    expect(attendeeSentence(["A", "B", "C", "D", "E"])).toBe("With A, B, C, D and E");
+    expect(attendeeSentence(["A", "B", "C", "D", "E", "F", "G"])).toBe("With A, B, C, D and 3 others");
   });
 });

@@ -1,10 +1,24 @@
 import clsx from "clsx";
-import { Archive, ArchiveRestore, Copy, FilePenLine, FolderInput, FolderOpen, Pencil, Share, Tag, Trash2 } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Copy,
+  FileDown,
+  FilePenLine,
+  FileText,
+  FolderInput,
+  FolderOpen,
+  Pencil,
+  Share,
+  Tag,
+  Trash2,
+} from "lucide-react";
 import { ContextMenu, DropdownMenu } from "radix-ui";
 import type { ComponentType, ReactNode } from "react";
+import { toast } from "sonner";
 import { api } from "../lib/api";
 import { attempt, canEdit, useStore } from "../lib/store";
-import type { Meeting } from "../lib/types";
+import type { ExportFormat, Meeting } from "../lib/types";
 import { useDialogs } from "./dialogs/dialogState";
 
 interface Item {
@@ -28,8 +42,17 @@ function useMeetingItems(meeting: Meeting): Item[][] {
     onSelect: () => void attempt(() => api.copyMarkdown(meeting.id), "Copied as Markdown"),
     disabled: !done,
   };
+  const finished = done || meeting.status === "failed";
+  const save = (format: ExportFormat) => () =>
+    void attempt(async () => {
+      if (await api.exportMeeting(meeting.id, format)) toast.success("Saved");
+    });
+  const exports: Item[] = [
+    { label: "Export as Markdown…", icon: FileDown, onSelect: save("markdown"), disabled: !finished },
+    { label: "Export transcript…", icon: FileText, onSelect: save("text"), disabled: !finished },
+  ];
   // Someone else's meeting from a shared folder can only be read.
-  if (meeting.remote) return [[copy]];
+  if (meeting.remote) return [[copy, ...exports]];
   const move: Item[] = app?.folders.length
     ? [{ label: "Move to folder…", icon: FolderInput, onSelect: () => open({ kind: "move", meeting }), disabled: !editable }]
     : [];
@@ -43,6 +66,7 @@ function useMeetingItems(meeting: Meeting): Item[][] {
       ...move,
       { label: "Share…", icon: Share, onSelect: () => open({ kind: "share", meeting }), disabled: !done || busy },
       copy,
+      ...exports,
       { label: "Show in Finder", icon: FolderOpen, onSelect: () => void attempt(() => api.revealMeeting(meeting.id)) },
     ],
     [

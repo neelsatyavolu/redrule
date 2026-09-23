@@ -3,6 +3,10 @@ import type { Meeting, MeetingApp, TranscriptSegment } from "./types";
 export const APP_NAMES: Record<MeetingApp, string> = {
   zoom: "Zoom",
   googleMeet: "Google Meet",
+  teams: "Microsoft Teams",
+  slack: "Slack",
+  webex: "Webex",
+  faceTime: "FaceTime",
   manual: "Recording",
 };
 
@@ -51,6 +55,13 @@ export function meetingSentence(meeting: Meeting): string {
   const lengthPart = duration === null ? "" : `, ${length(duration)}`;
   const place = meeting.app === "manual" ? "" : ` on ${APP_NAMES[meeting.app]}`;
   return `${weekday.format(start)} at ${time.format(start)}${lengthPart}${place}`;
+}
+
+/** "With Ada, Grace and Dana"; past five names, "With Ada, Grace, Dana, Lee and 3 others". */
+export function attendeeSentence(names: string[], shown = 4): string {
+  if (names.length <= 1) return names.length === 1 ? `With ${names[0]}` : "";
+  if (names.length > shown + 1) return `With ${names.slice(0, shown).join(", ")} and ${names.length - shown} others`;
+  return `With ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
 export function sidebarSubtitle(meeting: Meeting): string {
@@ -131,7 +142,8 @@ export function allTags(meetings: Meeting[]): string[] {
 }
 
 /** Case-insensitive match on title, for the sidebar search. */
-export function matchesSearch(meeting: Meeting, query: string): boolean {
+/** Titles match as you type; `hits` adds meetings whose notes or transcript matched in the backend. */
+export function matchesSearch(meeting: Meeting, query: string, hits?: ReadonlyMap<string, string | null>): boolean {
   const needle = query.trim().toLowerCase();
-  return needle === "" || meeting.title.toLowerCase().includes(needle);
+  return needle === "" || meeting.title.toLowerCase().includes(needle) || Boolean(hits?.has(meeting.id));
 }

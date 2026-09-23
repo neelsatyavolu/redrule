@@ -191,6 +191,7 @@ mod tests {
             archived_at: None,
             tags: vec![],
             folder_id: None,
+            attendees: vec![],
         }
     }
 

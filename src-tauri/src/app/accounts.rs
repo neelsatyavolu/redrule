@@ -5,9 +5,9 @@ use tauri_plugin_opener::OpenerExt;
 
 use super::settings::SettingsPatch;
 use super::state::App;
+use crate::core::api_providers::Provider;
 use crate::core::oauth::{ProviderId, parse_callback};
 use crate::core::{Error, Result};
-use crate::providers::clients::ModelChoice;
 use crate::providers::oauth_service::OAuthService;
 
 impl App {
@@ -77,12 +77,20 @@ impl App {
             state.connection_error = error.as_ref().map(ToString::to_string);
         });
         self.refresh_connections();
-        // Switch the note writer to the new account if the chosen model's account is not connected.
-        // Notes written on this Mac stay that way.
+        if error.is_none() {
+            self.write_notes_with(Provider::Account(provider));
+        }
+    }
+
+    /// Switches the note writer to `provider` when the chosen model's provider is not set up.
+    /// Notes written on this Mac stay that way.
+    pub(super) fn write_notes_with(&self, provider: Provider) {
         let (settings, connected) = self.read(|state| (state.settings.clone(), state.connected.clone()));
-        let local = settings.local_note_model().is_some();
-        if error.is_none() && !local && !connected.contains(&settings.model_choice().provider) {
-            self.apply_settings(SettingsPatch { model_choice_id: Some(ModelChoice::default_for(provider).id()), ..Default::default() });
+        if settings.local_note_model().is_some() || connected.contains(&settings.model_choice().provider) {
+            return;
+        }
+        if let Some(choice) = settings.default_choice(provider) {
+            self.apply_settings(SettingsPatch { model_choice_id: Some(choice.id()), ..Default::default() });
         }
     }
 

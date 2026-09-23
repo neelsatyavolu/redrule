@@ -62,6 +62,12 @@ impl TranscriptSegment {
 pub enum MeetingApp {
     Zoom,
     GoogleMeet,
+    Teams,
+    Slack,
+    Webex,
+    FaceTime,
+    /// Also what an app added by a newer version reads as, so its meetings still load.
+    #[serde(other)]
     Manual,
 }
 
@@ -70,7 +76,19 @@ impl MeetingApp {
         match self {
             MeetingApp::Zoom => "Zoom",
             MeetingApp::GoogleMeet => "Google Meet",
+            MeetingApp::Teams => "Microsoft Teams",
+            MeetingApp::Slack => "Slack",
+            MeetingApp::Webex => "Webex",
+            MeetingApp::FaceTime => "FaceTime",
             MeetingApp::Manual => "Recording",
+        }
+    }
+
+    /// The title a meeting has until its calendar event or its notes name it.
+    pub fn default_title(self) -> String {
+        match self {
+            MeetingApp::Manual => "New meeting".to_string(),
+            app => format!("{} meeting", app.display_name()),
         }
     }
 }
@@ -107,9 +125,17 @@ pub struct Meeting {
     /// The shared folder this meeting belongs to, if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub folder_id: Option<String>,
+    /// Names from the calendar event, without the person recording. Omitted when empty, like `tags`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attendees: Vec<String>,
 }
 
 impl Meeting {
+    /// Still named generically, so a calendar event or the written notes may name it.
+    pub fn has_default_title(&self) -> bool {
+        self.title == self.app.default_title()
+    }
+
     pub fn is_archived(&self) -> bool {
         self.archived_at.is_some()
     }
@@ -137,6 +163,10 @@ impl Meeting {
 
     pub fn tagged(&self, tags: Vec<String>) -> Self {
         Self { tags, ..self.clone() }
+    }
+
+    pub fn with_attendees(&self, attendees: Vec<String>) -> Self {
+        Self { attendees, ..self.clone() }
     }
 
     pub fn in_folder(&self, folder_id: Option<String>) -> Self {
@@ -266,6 +296,19 @@ mod tests {
         assert!(!written.contains("endedAt"));
         assert!(meeting.tags.is_empty());
         assert!(!written.contains("tags"));
+        assert!(meeting.attendees.is_empty());
+        assert!(!written.contains("attendees"));
+    }
+
+    #[test]
+    fn apps_from_newer_versions_read_as_manual() {
+        let meeting: Meeting =
+            serde_json::from_str(r#"{"app":"someNewApp","id":"A","startedAt":"2026-09-21T14:05:00Z","status":"done","title":"T"}"#)
+                .unwrap();
+        assert_eq!(meeting.app, MeetingApp::Manual);
+        let teams: MeetingApp = serde_json::from_str(r#""teams""#).unwrap();
+        assert_eq!(teams, MeetingApp::Teams);
+        assert_eq!(serde_json::to_string(&MeetingApp::FaceTime).unwrap(), r#""faceTime""#);
     }
 
     #[test]
@@ -275,6 +318,22 @@ mod tests {
                 .unwrap();
         let retagged = meeting.tagged(vec!["Acme".into(), "Hiring".into()]);
         assert!(serde_json::to_string(&retagged).unwrap().contains(r#""tags":["Acme","Hiring"]"#));
+    }
+
+    #[test]
+    fn attendees_round_trip() {
+        let meeting: Meeting =
+            serde_json::from_str(r#"{"app":"zoom","id":"A","startedAt":"2026-09-21T14:05:00Z","status":"done","title":"T","attendees":["Ada"]}"#)
+                .unwrap();
+        assert_eq!(meeting.attendees, vec!["Ada"]);
+        let invited = meeting.with_attendees(vec!["Ada".into(), "Grace".into()]);
+        assert!(serde_json::to_string(&invited).unwrap().contains(r#""attendees":["Ada","Grace"]"#));
+    }
+
+    #[test]
+    fn default_titles_name_the_app() {
+        assert_eq!(MeetingApp::Manual.default_title(), "New meeting");
+        assert_eq!(MeetingApp::GoogleMeet.default_title(), "Google Meet meeting");
     }
 
     #[test]

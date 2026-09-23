@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { api } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
 import { LOCAL_NOTES, writesNotesLocally, type ProviderId } from "../../lib/types";
-import { Button, TextInput } from "../ui";
+import { Button, SettingRow, Switch, TextInput } from "../ui";
 import { ModelStatus, sizeLabel, useLocalModels } from "./TranscriptionSettings";
 
 const PROVIDERS: { id: ProviderId; name: string; detail: string }[] = [
@@ -26,7 +26,7 @@ function StatusMark({ done }: { done: boolean }) {
   );
 }
 
-function SetupRow({ title, detail, done, action, children }: { title: string; detail: string; done: boolean; action?: ReactNode; children?: ReactNode }) {
+export function SetupRow({ title, detail, done, action, children }: { title: string; detail: string; done: boolean; action?: ReactNode; children?: ReactNode }) {
   return (
     <div className="py-3.5">
       <div className="flex items-start gap-3">
@@ -62,6 +62,20 @@ export function PermissionRows() {
         }
       />
     </div>
+  );
+}
+
+/** Optional, so it is kept apart from the permissions recording needs. */
+export function CalendarRow() {
+  const granted = useStore((s) => s.app?.permissions.calendar);
+  if (granted === undefined) return null;
+  return (
+    <SetupRow
+      title="Calendar (optional)"
+      detail="Names each recording after the calendar event happening when it starts, and gives the notes the attendees’ names. Recording works without it."
+      done={granted}
+      action={!granted && <Button size="sm" onClick={() => void attempt(api.requestCalendar)}>Allow</Button>}
+    />
   );
 }
 
@@ -155,5 +169,24 @@ export function LocalNotesRow() {
     >
       {chosen && app.noteModel && <ModelStatus model={app.noteModel} onRetry={api.retryNoteModel} />}
     </SetupRow>
+  );
+}
+
+/** Opt-in crash reports, in setup and in General settings. */
+export function CrashReportsRow() {
+  const crashReports = useStore((s) => s.app?.settings.crashReports);
+  const available = useStore((s) => s.app?.crashReportsAvailable ?? false);
+  if (crashReports === undefined || !available) return null;
+  return (
+    <SettingRow
+      title="Send crash reports"
+      detail="Sends the error message, stack trace and app version when Redrule crashes, with your home folder name removed. Recordings, transcripts and notes are never sent."
+    >
+      <Switch
+        label="Send crash reports"
+        checked={crashReports}
+        onChange={(on) => void attempt(() => api.updateSettings({ crashReports: on }))}
+      />
+    </SettingRow>
   );
 }

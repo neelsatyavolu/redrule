@@ -7,12 +7,15 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri::async_runtime::JoinHandle;
 
 use super::folders::{FolderInfo, FolderMeeting, Folders};
+use super::search::SearchCache;
 use super::settings::Settings;
+use crate::core::api_providers::{ApiProvider, Provider};
 use crate::core::models::{Meeting, MeetingApp, MeetingStatus, TranscriptSegment};
 use crate::core::oauth::ProviderId;
 use crate::core::store::MeetingStore;
 use crate::core::transcript;
 use crate::platform::permissions::Permissions;
+use crate::providers::api_keys::ApiKeys;
 use crate::providers::oauth_service::OAuthService;
 use crate::shell::RecordItems;
 
@@ -68,7 +71,8 @@ pub struct State {
     /// The on-device model that answers questions; absent while an account answers them.
     pub ask_model: Option<SpeechModel>,
     pub notes_progress: Option<NotesProgress>,
-    pub connected: Vec<ProviderId>,
+    /// Signed-in accounts, then API providers with a saved key (or a custom server that is set up).
+    pub connected: Vec<Provider>,
     pub connecting: Option<ProviderId>,
     pub connection_error: Option<String>,
     pub permissions: Permissions,
@@ -83,6 +87,8 @@ pub struct State {
     pub folder_meetings: Vec<FolderMeeting>,
     /// Shown on meetings this Mac adds to folders.
     pub display_name: String,
+    /// The build has somewhere to send crash reports.
+    pub crash_reports_available: bool,
 }
 
 pub struct ActiveRecording {
@@ -95,6 +101,7 @@ pub struct App {
     pub store: Option<MeetingStore>,
     pub http: reqwest::Client,
     pub oauth: Arc<OAuthService>,
+    pub api_keys: ApiKeys,
     pub models_dir: std::path::PathBuf,
     /// Replaced when the user picks other models; a running recording keeps the one it started with.
     pub transcriber: Mutex<Arc<Transcriber>>,
@@ -109,6 +116,7 @@ pub struct App {
     /// Identifies the current banner, so a stale auto-dismiss timer does nothing.
     pub banner_generation: Mutex<u64>,
     pub folders: Folders,
+    pub search_cache: SearchCache,
 }
 
 impl App {
@@ -144,6 +152,7 @@ impl App {
             folders: Vec::new(),
             folder_meetings: Vec::new(),
             display_name: String::new(),
+            crash_reports_available: crate::telemetry::available(),
         };
         // Models live in the support folder, beside the shared folder files.
         let support = models_dir.parent().map(std::path::Path::to_path_buf).unwrap_or_default();
@@ -152,6 +161,7 @@ impl App {
             store,
             oauth: Arc::new(OAuthService::new(http.clone())),
             http,
+            api_keys: ApiKeys::default(),
             models_dir,
             transcriber: Mutex::new(Arc::new(transcriber)),
             state: Mutex::new(state),
@@ -161,6 +171,7 @@ impl App {
             local_notes: tokio::sync::Mutex::new(()),
             banner_generation: Mutex::new(0),
             folders: Folders::new(support),
+            search_cache: SearchCache::default(),
         }
     }
 
@@ -261,7 +272,14 @@ impl App {
     }
 
     pub fn refresh_connections(&self) {
-        let connected: Vec<ProviderId> = ProviderId::ALL.into_iter().filter(|p| self.oauth.is_connected(*p)).collect();
+        // A custom server may not need a key, so it counts once its address and model are saved.
+        let server = self.read(|state| !state.settings.compatible_url.is_empty() && !state.settings.compatible_model.is_empty());
+        let accounts = ProviderId::ALL.into_iter().filter(|p| self.oauth.is_connected(*p)).map(Provider::Account);
+        let keys = ApiProvider::ALL
+            .into_iter()
+            .filter(|p| if *p == ApiProvider::Compatible { server } else { self.api_keys.has(*p) })
+            .map(Provider::Api);
+        let connected: Vec<Provider> = accounts.chain(keys).collect();
         self.update(|state| state.connected = connected);
     }
 }
