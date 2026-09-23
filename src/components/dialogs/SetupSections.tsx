@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { api } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
 import { LOCAL_NOTES, writesNotesLocally, type ProviderId } from "../../lib/types";
-import { Button, TextInput } from "../ui";
+import { Button, SettingRow, Switch, TextInput } from "../ui";
 import { ModelStatus, sizeLabel, useLocalModels } from "./TranscriptionSettings";
 
 const PROVIDERS: { id: ProviderId; name: string; detail: string }[] = [
@@ -155,5 +155,23 @@ export function LocalNotesRow() {
     >
       {chosen && app.noteModel && <ModelStatus model={app.noteModel} onRetry={api.retryNoteModel} />}
     </SetupRow>
+  );
+}
+
+/** Opt-in crash reports, in setup and in General settings. */
+export function CrashReportsRow() {
+  const crashReports = useStore((s) => s.app?.settings.crashReports);
+  if (crashReports === undefined) return null;
+  return (
+    <SettingRow
+      title="Send crash reports"
+      detail="Crash reports include stack traces and the app version. Never your meetings, transcripts, or notes."
+    >
+      <Switch
+        label="Send crash reports"
+        checked={crashReports}
+        onChange={(on) => void attempt(() => api.updateSettings({ crashReports: on }))}
+      />
+    </SettingRow>
   );
 }

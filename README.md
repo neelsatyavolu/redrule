@@ -31,6 +31,8 @@ git commit -am "chore: release 0.2.2"
 
 The script publishes `Redrule.dmg`, the signed update archive and `latest.json` to the public repo [neelsatyavolu/redrule-releases](https://github.com/neelsatyavolu/redrule-releases). Installed copies check `latest.json` a minute after launch and every six hours, install the update in the background and offer to restart (never during a recording). **Check for Updates…** is in the Redrule menu and the menu bar. The key that signs updates is the 1Password item "Redrule Updater Signing Key" (Private vault). If it is lost, installed copies can't be updated, so never rotate it casually.
 
+Crash reports are opt-in ("Send crash reports" in setup and Settings, off by default) and go to Sentry only from builds compiled with `REDRULE_SENTRY_DSN` set. The release script takes it from the environment and prints a warning when it is missing; the build still succeeds and never reports. Dev builds and forks have no DSN. For example, with the DSN stored in 1Password: `REDRULE_SENTRY_DSN="op://<vault>/<item>/dsn" op run -- scripts/release.sh 0.2.5 "What changed"`. Reports carry panics, uncaught webview errors, stack traces, the app version and the OS and Mac model, with home folder names and token-like strings removed (see `src-tauri/src/telemetry.rs`). Turn on "Prevent storing of IP addresses" in the Sentry project's security settings.
+
 The landing page is `website/`, served with the sharing API by the Vercel project `redrule` (Git-connected to this repo). `/download` redirects to the newest `Redrule.dmg`.
 
 `preview.html` renders the interface in a browser with sample data (`pnpm dev`, then open `/preview.html?view=notes`), for design work without the backend.

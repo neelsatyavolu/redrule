@@ -11,7 +11,7 @@ import {
 } from "../../lib/types";
 import { Dialog, Segmented, SettingRow, Switch } from "../ui";
 import type { SettingsTab } from "./dialogState";
-import { AccountRows, PermissionRows } from "./SetupSections";
+import { AccountRows, CrashReportsRow, PermissionRows } from "./SetupSections";
 import { ModelStatus, sizeLabel, TranscriptionSettings, useLocalModels } from "./TranscriptionSettings";
 
 const PROVIDER_NAMES: Record<ProviderId, string> = { codex: "ChatGPT", grok: "Grok" };
@@ -136,6 +136,8 @@ function GeneralSettings() {
       >
         <Switch label="Keep audio recordings" checked={settings.keepAudio} onChange={(keepAudio) => update({ keepAudio })} />
       </SettingRow>
+
+      <CrashReportsRow />
     </div>
   );
 }

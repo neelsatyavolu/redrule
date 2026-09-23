@@ -98,6 +98,8 @@ export interface Settings {
   onboarded: boolean;
   speechModelId: string;
   speakerModelId: string;
+  /** Sends crash reports, when the build has somewhere to send them. Off by default. */
+  crashReports: boolean;
 }
 
 export type ModelKind = "speech" | "speaker" | "notes";

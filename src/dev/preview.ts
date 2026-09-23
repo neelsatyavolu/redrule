@@ -82,6 +82,7 @@ const state: AppState = {
     onboarded: view !== "onboarding",
     speechModelId: "parakeet-v3",
     speakerModelId: "accurate",
+    crashReports: false,
   },
   sharingBusy: false,
   revision: 1,

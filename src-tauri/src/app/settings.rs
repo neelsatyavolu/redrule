@@ -18,6 +18,7 @@ mod key {
     pub const ONBOARDED: &str = "onboarded";
     pub const SPEECH_MODEL: &str = "speechModel";
     pub const SPEAKER_MODEL: &str = "speakerModel";
+    pub const CRASH_REPORTS: &str = "crashReports";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -34,6 +35,8 @@ pub struct Settings {
     /// On-device model ids from `minutes_engine::catalog`.
     pub speech_model_id: String,
     pub speaker_model_id: String,
+    /// Sends crash reports when the build has a Sentry DSN. Off by default.
+    pub crash_reports: bool,
 }
 
 /// A partial update from the settings screen.
@@ -47,6 +50,7 @@ pub struct SettingsPatch {
     pub onboarded: Option<bool>,
     pub speech_model_id: Option<String>,
     pub speaker_model_id: Option<String>,
+    pub crash_reports: Option<bool>,
 }
 
 impl Settings {
@@ -89,6 +93,7 @@ impl Settings {
                 .speaker_model_id
                 .map(|id| catalog::speaker_option(&id).id.to_string())
                 .unwrap_or_else(|| self.speaker_model_id.clone()),
+            crash_reports: patch.crash_reports.unwrap_or(self.crash_reports),
         };
         next.save();
         next
@@ -108,6 +113,7 @@ impl Settings {
         set_text(key::SPEAKER_MODEL, &self.speaker_model_id);
         defaults.setBool_forKey(self.keep_audio, &NSString::from_str(key::KEEP_AUDIO));
         defaults.setBool_forKey(self.onboarded, &NSString::from_str(key::ONBOARDED));
+        defaults.setBool_forKey(self.crash_reports, &NSString::from_str(key::CRASH_REPORTS));
     }
 
     pub fn model_choice(&self) -> ModelChoice {
@@ -165,7 +171,13 @@ fn read(defaults: &NSUserDefaults) -> Settings {
         onboarded: flag(key::ONBOARDED),
         speech_model_id: catalog::speech_option(&text(key::SPEECH_MODEL).unwrap_or_else(|| speech.into())).id.into(),
         speaker_model_id: catalog::speaker_option(&text(key::SPEAKER_MODEL).unwrap_or_else(|| speaker.into())).id.into(),
+        crash_reports: flag(key::CRASH_REPORTS),
     }
+}
+
+/// Whether crash reports are on, read without loading or migrating the other settings.
+pub fn crash_reports_on() -> bool {
+    NSUserDefaults::standardUserDefaults().boolForKey(&NSString::from_str(key::CRASH_REPORTS))
 }
 
 #[cfg(test)]
@@ -188,6 +200,7 @@ mod tests {
             onboarded: true,
             speech_model_id: catalog::DEFAULT_SPEECH.into(),
             speaker_model_id: catalog::DEFAULT_SPEAKER.into(),
+            crash_reports: false,
         }
     }
 

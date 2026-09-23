@@ -5,6 +5,7 @@ mod commands;
 pub mod platform;
 pub mod providers;
 mod shell;
+mod telemetry;
 mod updates;
 
 use std::sync::Arc;
@@ -14,6 +15,8 @@ use tauri::{Manager, RunEvent, WindowEvent};
 use app::App;
 
 pub fn run() {
+    // First, so panics while starting up are reported too (only when the person opted in).
+    telemetry::configure(app::crash_reports_on());
     let app = tauri::Builder::default()
         // A second launch focuses the running copy instead of starting another recorder.
         .plugin(tauri_plugin_single_instance::init(|handle, _, _| shell::show_main(handle)))
@@ -97,6 +100,7 @@ pub fn run() {
             commands::show_main_window,
             commands::reveal_meeting,
             commands::restart_to_update,
+            commands::report_error,
         ])
         .build(tauri::generate_context!())
         .expect("Redrule could not start");
