@@ -1,4 +1,4 @@
-//! Full-text search over a meeting's title, tags, notes and transcript. Pure: callers supply the text.
+//! Full-text search over a meeting's title, tags, attendees, notes and transcript. Pure: callers supply the text.
 use serde::Serialize;
 
 use super::models::{Meeting, MeetingNote, TranscriptSegment};
@@ -27,6 +27,7 @@ impl SearchDocument {
     pub fn new(meeting: &Meeting, note: Option<&MeetingNote>, transcript: &[TranscriptSegment]) -> Self {
         let mut passages = vec![meeting.title.clone()];
         passages.extend(meeting.tags.iter().cloned());
+        passages.extend(meeting.attendees.iter().cloned());
         if let Some(note) = note {
             passages.push(note.tldr.clone());
             for section in &note.sections {
@@ -124,6 +125,12 @@ mod tests {
         assert_eq!(search(&document, "DECIDE").unwrap().snippet.as_deref(), Some("Them: What did we decide about pricing tiers?"));
         assert_eq!(search(&document, "ada design").unwrap().snippet.as_deref(), Some("Ada: Email the design partners"));
         assert!(search(&document, "pricing budget").is_none());
+    }
+
+    #[test]
+    fn finds_attendees() {
+        let document = SearchDocument::new(&meeting().with_attendees(vec!["Grace Hopper".into()]), None, &[]);
+        assert_eq!(search(&document, "grace").unwrap().snippet.as_deref(), Some("Grace Hopper"));
     }
 
     #[test]
