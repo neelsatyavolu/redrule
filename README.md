@@ -22,6 +22,17 @@ cd src-tauri && cargo test --workspace && cd .. && pnpm test
 | Accounts, Keychain, summary and sharing clients | `src-tauri/src/providers` |
 | Interface | `src` (React, Tailwind) |
 
+### Releases and updates
+
+```bash
+scripts/release.sh 0.2.2 "What changed"   # bump, build, sign, notarize, publish
+git commit -am "chore: release 0.2.2"
+```
+
+The script publishes `Redrule.dmg`, the signed update archive and `latest.json` to the public repo [neelsatyavolu/redrule-releases](https://github.com/neelsatyavolu/redrule-releases). Installed copies check `latest.json` a minute after launch and every six hours, install the update in the background and offer to restart (never during a recording). **Check for Updates…** is in the Redrule menu and the menu bar. The key that signs updates is the 1Password item "Redrule Updater Signing Key" (Private vault). If it is lost, installed copies can't be updated, so never rotate it casually.
+
+The landing page is `website/`, a static site on the Vercel project `redrule` (`cd website && vercel --prod`). `/download` redirects to the newest `Redrule.dmg`.
+
 `preview.html` renders the interface in a browser with sample data (`pnpm dev`, then open `/preview.html?view=notes`), for design work without the backend.
 
 ## Swift app (original, named Minutes)

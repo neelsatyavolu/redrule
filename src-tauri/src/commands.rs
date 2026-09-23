@@ -12,6 +12,7 @@ use crate::core::oauth::ProviderId;
 use crate::platform::permissions;
 use crate::providers::clients::{model_choices as available_models, refresh_model_choices, ModelChoice};
 use crate::shell;
+use crate::updates;
 
 type AppState<'a> = State<'a, Arc<App>>;
 
@@ -174,6 +175,12 @@ pub fn retry_speech_model(app: AppState) {
 #[tauri::command]
 pub fn dismiss_banner(app: AppState) {
     app.set_banner(None);
+}
+
+/// Restarts into the version the updater installed in the background.
+#[tauri::command]
+pub fn restart_to_update(handle: tauri::AppHandle) {
+    updates::restart(&handle);
 }
 
 #[tauri::command]

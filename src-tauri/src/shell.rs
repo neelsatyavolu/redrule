@@ -11,6 +11,7 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 use crate::app::App;
 use crate::core::models::MeetingApp;
+use crate::updates::{self, Updates};
 
 pub const MAIN: &str = "main";
 const BANNER: &str = "banner";
@@ -41,12 +42,14 @@ pub fn install(app: &AppHandle) -> tauri::Result<RecordItems> {
     let menu_record = MenuItem::with_id(app, "record", "Record Meeting", true, Some("CmdOrCtrl+Shift+R"))?;
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, Some("CmdOrCtrl+,"))?;
     let quit = MenuItem::with_id(app, "quit", "Quit Redrule", true, Some("CmdOrCtrl+Q"))?;
+    let menu_updates = updates::menu_item(app)?;
     let app_menu = Submenu::with_items(
         app,
         "Redrule",
         true,
         &[
             &PredefinedMenuItem::about(app, Some("About Redrule"), None)?,
+            &menu_updates,
             &PredefinedMenuItem::separator(app)?,
             &settings,
             &PredefinedMenuItem::separator(app)?,
@@ -81,6 +84,7 @@ pub fn install(app: &AppHandle) -> tauri::Result<RecordItems> {
     app.set_menu(Menu::with_items(app, &[&app_menu, &file, &edit, &window])?)?;
 
     let tray_record = MenuItem::with_id(app, "record", "Record meeting", true, None::<&str>)?;
+    let tray_updates = updates::menu_item(app)?;
     let tray_menu = Menu::with_items(
         app,
         &[
@@ -88,6 +92,7 @@ pub fn install(app: &AppHandle) -> tauri::Result<RecordItems> {
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "open", "Open Redrule", true, None::<&str>)?,
             &MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?,
+            &tray_updates,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "quit", "Quit Redrule", true, None::<&str>)?,
         ],
@@ -100,6 +105,7 @@ pub fn install(app: &AppHandle) -> tauri::Result<RecordItems> {
         .show_menu_on_left_click(true)
         .build(app)?;
 
+    app.manage(Updates::new(vec![menu_updates, tray_updates]));
     app.on_menu_event(|app, event| handle_menu(app, event.id.as_ref()));
     create_banner(app)?;
     Ok(RecordItems { menu: menu_record, tray: tray_record, tray_icon, showing_recording: AtomicBool::new(false) })
@@ -140,6 +146,7 @@ fn handle_menu(handle: &AppHandle, id: &str) {
             let _ = handle.emit_to(MAIN, OPEN_SETTINGS_EVENT, ());
         }
         "quit" => confirm_quit(handle),
+        updates::MENU_ID => updates::menu_clicked(handle),
         _ => {}
     }
 }

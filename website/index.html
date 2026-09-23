@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Redrule — meeting notes, written on your Mac</title>
+  <meta name="description" content="Redrule records your Zoom and Google Meet calls, transcribes them on your Mac, and writes up what was decided. No bot joins the call, and your audio never leaves your Mac.">
+  <meta property="og:title" content="Redrule — meeting notes, written on your Mac">
+  <meta property="og:description" content="Accurate notes from every call. Transcribed on your Mac and written by the ChatGPT or Grok plan you already have.">
+  <meta property="og:image" content="/icon.png">
+  <meta name="theme-color" content="#f7f8f4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#171c19" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="margin-rule" aria-hidden="true"></div>
+
+  <header class="top">
+    <a class="brand" href="/">
+      <img src="/icon.png" alt="" width="30" height="30">
+      <span>Redrule</span>
+    </a>
+    <a class="button small" href="/download">Download</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="kicker reveal" style="--i:0">For Mac · Zoom &amp; Google Meet</p>
+        <h1 class="reveal" style="--i:1">Accurate notes from every call. <em>Written on your Mac.</em></h1>
+        <p class="lede reveal" style="--i:2">
+          Redrule notices when a call starts, transcribes it on your Mac as people talk, and writes up
+          what was decided when you hang up, using the ChatGPT or Grok plan you already pay for. No bot joins
+          the call, and the audio never leaves your Mac.
+        </p>
+        <div class="cta reveal" style="--i:3">
+          <a class="button" href="/download">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Download for Mac
+          </a>
+          <p class="fine"><strong>Free.</strong> No new subscription, no API keys.<br>macOS 15 or later · Apple Silicon<span id="version"></span></p>
+        </div>
+      </div>
+
+      <figure class="pad" aria-label="A meeting being transcribed">
+        <div class="pad-binding" aria-hidden="true"></div>
+        <div class="pad-head">
+          <span class="rec"><i></i>Recording · Zoom</span>
+          <span class="mono">12:04</span>
+        </div>
+        <ol class="transcript">
+          <li style="--i:0"><span class="mono">00:02</span><b class="me">Me</b><p>I want to leave with a decision on whether export slips to January.</p></li>
+          <li style="--i:1"><span class="mono">00:15</span><b>Dana</b><p>We can make December if we ship CSV first and follow with PDF.</p></li>
+          <li style="--i:2"><span class="mono">00:42</span><b>Speaker 2</b><p>Support would rather have CSV anyway. That's most of the tickets.</p></li>
+          <li style="--i:3"><span class="mono">01:04</span><b class="me">Me</b><p>Then CSV in December. Dana, can you confirm the estimate by Friday?</p></li>
+        </ol>
+        <div class="notes">
+          <p class="written-by">Written with your ChatGPT plan</p>
+          <h3>Decided</h3>
+          <p>CSV export ships in December; PDF follows in January.</p>
+          <h3>To do</h3>
+          <label><input type="checkbox" checked disabled> Dana: confirm the estimate by Friday</label>
+          <label><input type="checkbox" disabled> Me: tell support the CSV timeline</label>
+        </div>
+      </figure>
+    </section>
+
+    <section class="byo" aria-labelledby="own-ai">
+      <div class="byo-head">
+        <p class="kicker">Bring your own AI</p>
+        <h2 id="own-ai">Use the subscription you already have. <em>Pay nothing extra.</em></h2>
+        <p>Most note takers charge a monthly fee to run AI you're already paying for. Redrule signs in to your
+          own ChatGPT or Grok account and writes the notes with it.</p>
+      </div>
+      <ul class="byo-points">
+        <li><h3>Sign in, nothing to paste</h3><p>Connect ChatGPT (through Codex) or Grok with your usual login. No API keys, no developer account.</p></li>
+        <li><h3>No second subscription</h3><p>Redrule is free. Notes come out of the plan you already use every day.</p></li>
+        <li><h3>Transcription costs nothing</h3><p>Speech is turned into text on your Mac, so there are no per-minute fees and no minute caps.</p></li>
+        <li><h3>Pick your model</h3><p>Choose which ChatGPT or Grok model writes your notes, and switch whenever you like.</p></li>
+      </ul>
+    </section>
+
+    <section class="steps" aria-labelledby="how">
+      <h2 id="how">How it works</h2>
+      <ol>
+        <li>
+          <span class="num">1</span>
+          <h3>Take the call as usual</h3>
+          <p>Redrule sits in the menu bar and offers to record when a Zoom or Google Meet call starts. For any other call, record it from the menu bar.</p>
+        </li>
+        <li>
+          <span class="num">2</span>
+          <h3>It writes as people talk</h3>
+          <p>Speech is transcribed live on your Mac by NVIDIA's Parakeet, one of the most accurate open speech models. Your microphone is always <em>Me</em>, and the other voices on the call are told apart.</p>
+        </li>
+        <li>
+          <span class="num">3</span>
+          <h3>Notes when you hang up</h3>
+          <p>A summary, the decisions and the action items, written by the ChatGPT or Grok account you connect. Tick items off, rename speakers, edit anything.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="ledger" aria-labelledby="privacy">
+      <h2 id="privacy">What stays on your Mac, and what leaves it</h2>
+      <div class="columns">
+        <div>
+          <h3>Stays on your Mac</h3>
+          <ul>
+            <li>The call's audio and your microphone</li>
+            <li>Transcription and telling voices apart</li>
+            <li>Your library of meetings and notes</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Leaves it, only for what you ask</h3>
+          <ul>
+            <li>The transcript goes to your own ChatGPT or Grok account to write the notes</li>
+            <li>A note you choose to share becomes a private link you can revoke</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="faq" aria-labelledby="questions">
+      <h2 id="questions">Questions</h2>
+      <details>
+        <summary>Does a bot join my meetings?</summary>
+        <p>No. Redrule records the call's sound on your Mac, the way you hear it. Nobody else sees anything join.</p>
+      </details>
+      <details>
+        <summary>Do I need another subscription or an API key?</summary>
+        <p>No. Redrule is free and uses the ChatGPT or Grok plan you already have: you sign in once in Settings. Transcription runs on your Mac and needs no account at all.</p>
+      </details>
+      <details>
+        <summary>How accurate is the transcript?</summary>
+        <p>Very good on clear audio. Parakeet ranks among the best open speech models on public benchmarks. Like any transcription it can mishear names, jargon, cross-talk and poor connections, so every transcript and note can be edited.</p>
+      </details>
+      <details>
+        <summary>Does it work offline?</summary>
+        <p>Recording and transcription do. Writing the notes needs your connected AI account, so notes are written once you're back online.</p>
+      </details>
+      <details>
+        <summary>What do I need?</summary>
+        <p>A Mac with Apple Silicon running macOS 15 or later. On first launch Redrule asks for microphone and system audio access and downloads its speech model once.</p>
+      </details>
+      <details>
+        <summary>How do updates work?</summary>
+        <p>Redrule checks for new versions in the background and installs them itself. It never restarts during a recording. You can also choose <em>Check for Updates…</em> from the menu.</p>
+      </details>
+    </section>
+
+    <section class="closing">
+      <h2>Your next call, written down.</h2>
+      <p class="closing-sub">Free, with the ChatGPT or Grok plan you already have.</p>
+      <a class="button" href="/download">Download for Mac</a>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>© 2026 Redrule</span>
+    <a href="https://github.com/neelsatyavolu/redrule-releases/releases">Release notes</a>
+  </footer>
+
+  <script>
+    // Shows the newest version next to the download button; the page reads fine without it.
+    fetch("https://api.github.com/repos/neelsatyavolu/redrule-releases/releases/latest")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((release) => {
+        const version = release?.tag_name?.replace(/^v/, "");
+        if (version) document.getElementById("version").textContent = ` · Version ${version}`;
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

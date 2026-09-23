@@ -5,6 +5,7 @@ mod commands;
 pub mod platform;
 pub mod providers;
 mod shell;
+mod updates;
 
 use std::sync::Arc;
 
@@ -20,6 +21,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_nspanel::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|tauri_app| {
             let handle = tauri_app.handle().clone();
             let support = core::store::support_folder().unwrap_or_else(|_| dirs::data_dir().unwrap_or_default().join("Redrule"));
@@ -28,6 +30,7 @@ pub fn run() {
             tauri_app.manage(Arc::clone(&app));
             tauri_app.manage(shell::install(&handle)?);
             app.start();
+            updates::check_in_background(&handle);
             // The page shows the window once it has painted; if it never does, show it anyway.
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_secs(4)).await;
@@ -82,6 +85,7 @@ pub fn run() {
             commands::dismiss_banner,
             commands::show_main_window,
             commands::reveal_meeting,
+            commands::restart_to_update,
         ])
         .build(tauri::generate_context!())
         .expect("Redrule could not start");

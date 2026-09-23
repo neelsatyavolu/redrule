@@ -23,10 +23,18 @@ function App() {
       requestAnimationFrame(() => void api.appReady());
     });
     const settings = listen("open-settings", () => useDialogs.getState().open({ kind: "settings" }));
+    const update = listen<string>("update-ready", (event) =>
+      toast(`Redrule ${event.payload} is ready`, {
+        description: "Restart to start using it.",
+        duration: Infinity,
+        action: { label: "Restart", onClick: () => void api.restartToUpdate() },
+      }),
+    );
     return () => {
       cancelled = true;
       disconnect?.();
       void settings.then((stop) => stop());
+      void update.then((stop) => stop());
     };
   }, []);
 

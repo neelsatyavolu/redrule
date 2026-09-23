@@ -43,6 +43,7 @@ export const api = {
   dismissBanner: () => invoke<void>("dismiss_banner"),
   showMainWindow: () => invoke<void>("show_main_window"),
   revealMeeting: (id: string) => invoke<void>("reveal_meeting", { id }),
+  restartToUpdate: () => invoke<void>("restart_to_update"),
 };
 
 /** Command errors arrive as their display string. */

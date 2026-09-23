@@ -46,7 +46,8 @@ fi
 echo "Building Redrule (release)…"
 pnpm install --frozen-lockfile >/dev/null
 # Sign below instead, so the identity's temporary keychain can be named explicitly.
-env -u APPLE_SIGNING_IDENTITY pnpm tauri build --bundles app
+# Update archives are only made by scripts/release.sh, which holds the key that signs them.
+env -u APPLE_SIGNING_IDENTITY pnpm tauri build --bundles app --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
 if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
     codesign --force --deep --timestamp --options runtime \
