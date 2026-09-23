@@ -98,6 +98,7 @@ const state: AppState = {
   folders: [{ id: FOLDER, name: "Acme team", owner: true, unavailable: false }],
   folderMeetings,
   displayName: "Neel",
+  crashReportsAvailable: true,
 };
 
 mockIPC((command, args) => {

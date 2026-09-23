@@ -5,6 +5,8 @@ use super::models::Meeting;
 
 /// How far before and after the start of a recording to look for its event.
 pub const WINDOW: TimeDelta = TimeDelta::minutes(10);
+/// A call that runs a little over still matches its event; one started after the event ended does not.
+pub const ENDED_GRACE: TimeDelta = TimeDelta::minutes(2);
 /// Attendees kept on a meeting; larger invites are mostly lists nobody reads.
 pub const MAX_ATTENDEES: usize = 20;
 const CALL_HOSTS: [&str; 4] = ["zoom.us", "meet.google.com", "teams.microsoft.com", "webex.com"];
@@ -78,7 +80,7 @@ fn mailto(url: &str) -> Option<&str> {
 pub fn current_event(events: &[CalendarEvent], now: DateTime<Utc>) -> Option<&CalendarEvent> {
     events
         .iter()
-        .filter(|e| !e.all_day && !e.declined() && e.start <= now + WINDOW && e.end > now - WINDOW)
+        .filter(|e| !e.all_day && !e.declined() && e.start <= now + WINDOW && e.end > now - ENDED_GRACE)
         .min_by_key(|e| (!e.in_progress(now), !e.has_call_link(), (e.start - now).abs()))
 }
 
@@ -124,6 +126,8 @@ mod tests {
     fn prefers_events_in_progress_over_ones_about_to_start() {
         assert_eq!(picked(&[event("Next", 5, 35), event("Now", -2, 28)]), Some("Now"));
         assert_eq!(picked(&[event("Just ended", -40, -5), event("Next", 5, 35)]), Some("Next"));
+        assert_eq!(picked(&[event("Ended five minutes ago", -40, -5)]), None);
+        assert_eq!(picked(&[event("Running over", -31, -1)]), Some("Running over"));
     }
 
     #[test]

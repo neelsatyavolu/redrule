@@ -27,6 +27,11 @@ fn should_report(dsn: Option<&str>, setting: bool) -> bool {
     setting && dsn.is_some_and(|dsn| !dsn.trim().is_empty())
 }
 
+/// Whether this build can send crash reports at all; the setting is hidden when it can't.
+pub fn available() -> bool {
+    should_report(DSN, true)
+}
+
 /// Applies the "Send crash reports" setting. The client starts the first time reports are turned
 /// on, and turning them off stops sending right away.
 pub fn configure(setting: bool) {

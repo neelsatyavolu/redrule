@@ -8,6 +8,7 @@ import { AccountRows, CrashReportsRow, LocalNotesRow, PermissionRows } from "./S
 /** First launch: the two permissions and a way to write notes, in the order they are needed. */
 export function Onboarding() {
   const app = useStore((s) => s.app);
+  const crashReportsAvailable = app?.crashReportsAvailable ?? false;
   if (!app || app.settings.onboarded) return null;
   const ready = app.permissions.microphone && app.permissions.screenRecording && canWriteNotes(app);
   const finish = () => void attempt(() => api.updateSettings({ onboarded: true }));
@@ -38,9 +39,11 @@ export function Onboarding() {
           <ApiKeyChoiceRow />
         </div>
       </Step>
-      <Step number={3} title="Help fix crashes (optional)">
-        <CrashReportsRow />
-      </Step>
+      {crashReportsAvailable && (
+        <Step number={3} title="Help fix crashes (optional)">
+          <CrashReportsRow />
+        </Step>
+      )}
     </Dialog>
   );
 }

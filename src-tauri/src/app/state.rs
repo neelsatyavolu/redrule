@@ -87,6 +87,8 @@ pub struct State {
     pub folder_meetings: Vec<FolderMeeting>,
     /// Shown on meetings this Mac adds to folders.
     pub display_name: String,
+    /// The build has somewhere to send crash reports.
+    pub crash_reports_available: bool,
 }
 
 pub struct ActiveRecording {
@@ -150,6 +152,7 @@ impl App {
             folders: Vec::new(),
             folder_meetings: Vec::new(),
             display_name: String::new(),
+            crash_reports_available: crate::telemetry::available(),
         };
         // Models live in the support folder, beside the shared folder files.
         let support = models_dir.parent().map(std::path::Path::to_path_buf).unwrap_or_default();

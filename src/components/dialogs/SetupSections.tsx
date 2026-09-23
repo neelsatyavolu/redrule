@@ -175,11 +175,12 @@ export function LocalNotesRow() {
 /** Opt-in crash reports, in setup and in General settings. */
 export function CrashReportsRow() {
   const crashReports = useStore((s) => s.app?.settings.crashReports);
-  if (crashReports === undefined) return null;
+  const available = useStore((s) => s.app?.crashReportsAvailable ?? false);
+  if (crashReports === undefined || !available) return null;
   return (
     <SettingRow
       title="Send crash reports"
-      detail="Crash reports include stack traces and the app version. Never your meetings, transcripts, or notes."
+      detail="Sends the error message, stack trace and app version when Redrule crashes, with your home folder name removed. Recordings, transcripts and notes are never sent."
     >
       <Switch
         label="Send crash reports"

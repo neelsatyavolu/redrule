@@ -181,6 +181,8 @@ export interface AppState {
   folderMeetings: Meeting[];
   /** Shown on meetings this Mac adds to shared folders. */
   displayName: string;
+  /** The build has somewhere to send crash reports; the setting is hidden otherwise. */
+  crashReportsAvailable: boolean;
 }
 
 /** Model choices that write notes on this Mac, as stored in `Settings.modelChoiceId`. */
