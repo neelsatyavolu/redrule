@@ -14,3 +14,7 @@ node_modules/
 dist/
 src-tauri/target/
 src-tauri/gen/
+
+# Agent memory and local agent worktrees
+.agmux/
+.claude/worktrees/

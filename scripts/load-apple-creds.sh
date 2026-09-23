@@ -4,11 +4,10 @@
 # Usage (source, do not execute):
 #   source scripts/load-apple-creds.sh
 #
-# Mirrors strix/scripts/load-apple-creds.sh: sources the shared loader (agmux), which reads
-# the certificate from 1Password, then imports the .p12 plus Apple's intermediate CAs into a
-# temporary keychain so codesign can build the chain.
-#
-# Shared human docs: ~/Documents/GitHub/APPLE_SIGNING.md
+# Sources the maintainer's shared loader (outside this repo), which reads the certificate from
+# 1Password, then imports the .p12 plus Apple's intermediate CAs into a temporary keychain so
+# codesign can build the chain. See docs/MAINTAINING.md. Contributors without the certificate
+# build with --adhoc instead (see CONTRIBUTING.md).
 #
 # After source, exports:
 #   APPLE_SIGNING_IDENTITY / APPLE_TEAM_ID
@@ -25,8 +24,8 @@ _DEFAULT_IDENTITY="Developer ID Application: Ramakrishna Satyavolu (VTQW687WBQ)"
 if [ ! -f "$_AGMUX_LOADER" ]; then
   echo "error: shared Apple creds loader not found at:" >&2
   echo "  $_AGMUX_LOADER" >&2
-  echo "Set AGMUX_APPLE_CREDS_LOADER or clone agmux next to this repo." >&2
-  echo "See ~/Documents/GitHub/APPLE_SIGNING.md" >&2
+  echo "Set AGMUX_APPLE_CREDS_LOADER to the loader's path (see docs/MAINTAINING.md)." >&2
+  echo "Without the maintainer's certificate, build with --adhoc instead." >&2
   return 1 2>/dev/null || exit 1
 fi
 

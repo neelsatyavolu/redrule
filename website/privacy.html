@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy policy · Redrule</title>
+  <meta name="description" content="What Redrule keeps on your Mac, what it sends, and where it goes.">
+  <meta name="theme-color" content="#f7f8f4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#171c19" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="margin-rule" aria-hidden="true"></div>
+
+  <header class="top">
+    <a class="brand" href="/">
+      <img src="/icon.png" alt="" width="30" height="30">
+      <span>Redrule</span>
+    </a>
+    <a class="button small" href="/download">Download</a>
+  </header>
+
+  <main>
+    <article class="legal">
+      <p class="kicker">Privacy</p>
+      <h1>Privacy policy</h1>
+      <p class="updated">Last updated September 23, 2026</p>
+      <p class="lede">Redrule records and transcribes meetings on your Mac. This page explains what stays on your Mac, what leaves it, and where it goes. Redrule has no accounts, ads or analytics.</p>
+
+      <section>
+        <h2>What stays on your Mac</h2>
+        <ul>
+          <li>Redrule records the call's audio and your microphone. It transcribes both on your Mac with NVIDIA Parakeet, run by sherpa-onnx. Speaker recognition also runs on your Mac.</li>
+          <li>Audio is not saved to disk unless you turn on <strong>Keep audio recordings</strong> in Settings.</li>
+          <li>Meetings, transcripts, notes and tags are plain files in <code>~/Library/Application Support/Redrule/meetings</code>. Deleting a meeting in Redrule deletes its folder.</li>
+          <li>Sign-in tokens and API keys are stored in your Mac's Keychain.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Note writing and questions</h2>
+        <p>You choose in Settings where notes are written and questions are answered.</p>
+        <ul>
+          <li><strong>On your Mac.</strong> A Qwen3.5 model runs locally. The transcript does not leave your Mac.</li>
+          <li><strong>With a provider you choose.</strong> You can sign in to ChatGPT (through Codex) or Grok, or add your own API key for OpenAI, Anthropic, Google Gemini or an OpenAI-compatible service. Redrule then sends the meeting's transcript, and for questions its notes and your question, from your Mac to that provider. There is no Redrule server in between. The provider's own terms and privacy policy apply to what it receives.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Calendar</h2>
+        <p>If you allow calendar access, Redrule reads the title and attendee names of the event that matches a meeting. It reads them on your Mac, to name the meeting and to give context when notes are written. They leave your Mac only as part of a note-writing request to the provider you chose. With the local model, they stay on your Mac.</p>
+      </section>
+
+      <section>
+        <h2>Sharing</h2>
+        <p>Nothing is shared unless you choose <strong>Share</strong> or add a meeting to a shared folder.</p>
+        <ul>
+          <li>Sharing uploads the note, and the transcript and speaker names if you include them, to Redrule's sharing service. The service runs on Vercel and stores shared meetings in Vercel Blob.</li>
+          <li>A shared folder also shows the meeting's title and time, and the name you chose to appear as its recorder.</li>
+          <li>Anyone with the link can read what you shared. Links are long and random, and shared pages ask search engines not to index them.</li>
+          <li><strong>Stop sharing</strong> deletes the hosted copy. So does removing a meeting from a shared folder or deleting the folder. Copies that others already saved cannot be recalled.</li>
+          <li>Audio is never uploaded.</li>
+          <li>To limit abuse, the service may process IP addresses, for example to rate-limit requests. Vercel also keeps standard request logs.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Crash reports</h2>
+        <p>Crash reports are off by default. If you turn them on in Settings, Redrule sends a report to Sentry when it crashes. A report contains the stack trace and the app version. Meeting content and paths to your home folder are removed before it is sent.</p>
+      </section>
+
+      <section>
+        <h2>Updates and downloads</h2>
+        <ul>
+          <li>A minute after launch, and then every six hours, Redrule checks GitHub for a newer version and downloads updates from there.</li>
+          <li>The speech models download from GitHub. The local notes models download from Hugging Face.</li>
+          <li>The list of available ChatGPT and Grok models is fetched from GitHub.</li>
+        </ul>
+        <p>These requests contain no meeting content. Like any web request, they reveal your IP address to the host.</p>
+      </section>
+
+      <section>
+        <h2>This website</h2>
+        <p>This website runs on Vercel, which keeps standard request logs. Pages load fonts from Google Fonts, and the home page asks GitHub for the latest version number. The site sets no cookies and uses no analytics.</p>
+      </section>
+
+      <section>
+        <h2>Changes and contact</h2>
+        <p>If this policy changes, the new version is posted here with a new date. Questions go to <!-- REPLACE-ME: the owner must set a real contact address. --><strong>privacy@REPLACE-ME</strong>.</p>
+      </section>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <span>© 2026 Redrule</span>
+    <nav aria-label="Site">
+      <a href="/privacy" aria-current="page">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="https://github.com/neelsatyavolu/redrule-releases/releases">Release notes</a>
+    </nav>
+  </footer>
+</body>
+</html>

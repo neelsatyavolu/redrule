@@ -2,6 +2,7 @@
 name = "minutes-core"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 description = "Pure Redrule logic: models, store, transcript merging, windowing, detection rules, OAuth and summary parsing."
 
 [dependencies]

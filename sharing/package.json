@@ -1,6 +1,7 @@
 {
   "name": "minutes-sharing",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "test": "node --experimental-test-module-mocks --test",

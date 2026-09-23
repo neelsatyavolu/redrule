@@ -1,7 +1,8 @@
 #!/bin/bash
 # Builds the Swift app and installs it to /Applications. Usage: ./install.sh [--open] [--adhoc]
-# Signs with the shared Developer ID certificate from 1Password (see ~/Documents/GitHub/APPLE_SIGNING.md).
-# --adhoc skips that; macOS then re-asks for Keychain and privacy permissions after every build.
+# Signs with the maintainer's Developer ID certificate from 1Password (see docs/MAINTAINING.md).
+# --adhoc skips that and needs no certificate; macOS then re-asks for Keychain and privacy permissions
+# after every build.
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -25,8 +26,8 @@ done
 
 if [ "$ADHOC" = 0 ]; then
     echo "Loading the Developer ID certificate from 1Password…"
-    # The shared loader does not pick an account. This is the user ID of the account that
-    # holds the certificate: two accounts share my.1password.com, and the email does not select one.
+    # The shared loader does not pick an account. This is the user ID of the account that holds the
+    # certificate: two accounts share my.1password.com, and the email does not select one.
     export OP_ACCOUNT="${OP_ACCOUNT:-YOUR_1PASSWORD_ACCOUNT}"
     # In that account the default vault is named "Private", not "Personal".
     export AGMUX_APPLE_SIGNING_VAULT="${AGMUX_APPLE_SIGNING_VAULT:-Private}"

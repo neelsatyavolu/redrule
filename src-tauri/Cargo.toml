@@ -6,6 +6,7 @@ resolver = "3"
 version = "0.2.4"
 edition = "2024"
 rust-version = "1.88"
+license = "MIT"
 
 [workspace.dependencies]
 minutes-core = { path = "crates/core" }
@@ -26,6 +27,7 @@ name = "minutes"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 description = "Records Zoom and Google Meet calls, transcribes them on this Mac, and writes the notes."
 
 [lib]
