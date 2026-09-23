@@ -23,6 +23,21 @@ export interface Meeting {
   status: MeetingStatus;
   errorMessage?: string;
   archivedAt?: string;
+  tags?: string[];
+  /** The shared folder the meeting is in. */
+  folderId?: string;
+  /** Set on other people's meetings from a shared folder, which are read-only. */
+  remote?: boolean;
+  recordedBy?: string;
+}
+
+export interface FolderInfo {
+  id: string;
+  name: string;
+  /** This Mac created the folder, so it can rename, reset or delete it. */
+  owner: boolean;
+  /** The link stopped working: the owner reset or deleted the folder. */
+  unavailable: boolean;
 }
 
 export interface ActionItem {
@@ -76,6 +91,8 @@ export interface Permissions {
 
 export interface Settings {
   modelChoiceId: string;
+  /** The model that answers questions about a meeting; empty to use the notes model. */
+  askModelChoiceId: string;
   keepAudio: boolean;
   microphoneId: string;
   onboarded: boolean;
@@ -118,6 +135,8 @@ export interface AppState {
   speechModel: SpeechModel;
   /** The on-device note model's download; null while notes are written with an account. */
   noteModel: SpeechModel | null;
+  /** The on-device model that answers questions; null while an account answers them. */
+  askModel: SpeechModel | null;
   notesProgress: NotesProgress | null;
   connected: ProviderId[];
   connecting: ProviderId | null;
@@ -127,6 +146,11 @@ export interface AppState {
   sharingBusy: boolean;
   revision: number;
   storageError: string | null;
+  folders: FolderInfo[];
+  /** Other people's meetings in shared folders. The store merges them into `meetings`. */
+  folderMeetings: Meeting[];
+  /** Shown on meetings this Mac adds to shared folders. */
+  displayName: string;
 }
 
 /** Model choices that write notes on this Mac, as stored in `Settings.modelChoiceId`. */
@@ -139,6 +163,12 @@ export function writesNotesLocally(settings: Settings): boolean {
 /** Notes can be written: an account is connected or an on-device model is chosen. */
 export function canWriteNotes(app: AppState): boolean {
   return app.connected.length > 0 || writesNotesLocally(app.settings);
+}
+
+/** An earlier question about a meeting and its answer. */
+export interface Exchange {
+  question: string;
+  answer: string;
 }
 
 export interface Microphone {

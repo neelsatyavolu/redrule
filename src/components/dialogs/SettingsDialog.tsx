@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
-import { LOCAL_NOTES, writesNotesLocally, type Microphone, type ModelOption, type ProviderId } from "../../lib/types";
+import {
+  LOCAL_NOTES,
+  writesNotesLocally,
+  type LocalModel,
+  type Microphone,
+  type ModelOption,
+  type ProviderId,
+} from "../../lib/types";
 import { Dialog, Segmented, SettingRow, Switch } from "../ui";
 import type { SettingsTab } from "./dialogState";
 import { AccountRows, PermissionRows } from "./SetupSections";
@@ -85,31 +92,42 @@ function GeneralSettings() {
           )
         }
       >
-        <select
-          aria-label="Model"
-          className={SELECT}
+        <ModelSelect
+          label="Model"
           value={settings.modelChoiceId}
-          onChange={(e) => update({ modelChoiceId: e.target.value })}
-        >
-          {(["codex", "grok"] as ProviderId[]).map((provider) => (
-            <optgroup key={provider} label={PROVIDER_NAMES[provider]}>
-              {models
-                .filter((m) => m.provider === provider)
-                .map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.label}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-          <optgroup label="On this Mac">
-            {localModels?.notes.map((model) => (
-              <option key={model.id} value={LOCAL_NOTES + model.id}>
-                {model.installed ? model.name : `${model.name} (${sizeLabel(model.sizeMb)} download)`}
-              </option>
-            ))}
-          </optgroup>
-        </select>
+          onChange={(modelChoiceId) => update({ modelChoiceId })}
+          models={models}
+          localModels={localModels?.notes ?? []}
+        />
+      </SettingRow>
+
+      <SettingRow
+        title="Answer questions with"
+        detail={
+          settings.askModelChoiceId === "" ? (
+            "Asks the model that writes the notes."
+          ) : settings.askModelChoiceId.startsWith(LOCAL_NOTES) ? (
+            <>
+              Runs on this Mac, so the meeting never leaves it. Slower than an account.
+              {app.askModel && app.askModel.state !== "ready" && (
+                <div className="mt-1.5">
+                  <ModelStatus model={app.askModel} onRetry={api.retryNoteModel} />
+                </div>
+              )}
+            </>
+          ) : (
+            "Uses the account connected under Accounts."
+          )
+        }
+      >
+        <ModelSelect
+          label="Model for questions"
+          value={settings.askModelChoiceId}
+          onChange={(askModelChoiceId) => update({ askModelChoiceId })}
+          models={models}
+          localModels={localModels?.notes ?? []}
+          sameAsNotes
+        />
       </SettingRow>
 
       <SettingRow
@@ -119,6 +137,43 @@ function GeneralSettings() {
         <Switch label="Keep audio recordings" checked={settings.keepAudio} onChange={(keepAudio) => update({ keepAudio })} />
       </SettingRow>
     </div>
+  );
+}
+
+interface ModelSelectProps {
+  label: string;
+  value: string;
+  onChange: (id: string) => void;
+  models: ModelOption[];
+  localModels: LocalModel[];
+  /** Offers following the notes model, stored as an empty choice. */
+  sameAsNotes?: boolean;
+}
+
+/** Account models by provider, then the models that run on this Mac. */
+function ModelSelect({ label, value, onChange, models, localModels, sameAsNotes }: ModelSelectProps) {
+  return (
+    <select aria-label={label} className={SELECT} value={value} onChange={(e) => onChange(e.target.value)}>
+      {sameAsNotes && <option value="">Same as notes</option>}
+      {(["codex", "grok"] as ProviderId[]).map((provider) => (
+        <optgroup key={provider} label={PROVIDER_NAMES[provider]}>
+          {models
+            .filter((m) => m.provider === provider)
+            .map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.label}
+              </option>
+            ))}
+        </optgroup>
+      ))}
+      <optgroup label="On this Mac">
+        {localModels.map((model) => (
+          <option key={model.id} value={LOCAL_NOTES + model.id}>
+            {model.installed ? model.name : `${model.name} (${sizeLabel(model.sizeMb)} download)`}
+          </option>
+        ))}
+      </optgroup>
+    </select>
   );
 }
 

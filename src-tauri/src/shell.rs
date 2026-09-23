@@ -136,7 +136,7 @@ fn handle_menu(handle: &AppHandle, id: &str) {
                 if app.is_recording() {
                     app.stop_recording().await;
                 } else {
-                    app.start_recording(MeetingApp::Manual).await;
+                    app.start_recording(MeetingApp::Manual, None).await;
                 }
             });
         }

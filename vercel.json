@@ -11,11 +11,20 @@
     }
   ],
   "rewrites": [
-    { "source": "/s/:id", "destination": "/api/note?id=:id" }
+    { "source": "/s/:id", "destination": "/api/note?id=:id" },
+    { "source": "/f/:id", "destination": "/api/folder-page?id=:id" },
+    { "source": "/f/:id/m/:meeting", "destination": "/api/folder-page?id=:id&meeting=:meeting" }
   ],
   "headers": [
     {
       "source": "/s/(.*)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "Referrer-Policy", "value": "no-referrer" }
+      ]
+    },
+    {
+      "source": "/f/(.*)",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
         { "key": "Referrer-Policy", "value": "no-referrer" }

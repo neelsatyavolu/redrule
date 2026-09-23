@@ -6,6 +6,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri::async_runtime::JoinHandle;
 
+use super::folders::{FolderInfo, FolderMeeting, Folders};
 use super::settings::Settings;
 use crate::core::models::{Meeting, MeetingApp, MeetingStatus, TranscriptSegment};
 use crate::core::oauth::ProviderId;
@@ -64,6 +65,8 @@ pub struct State {
     pub speech_model: SpeechModel,
     /// The on-device note model's download; absent while notes are written with an account.
     pub note_model: Option<SpeechModel>,
+    /// The on-device model that answers questions; absent while an account answers them.
+    pub ask_model: Option<SpeechModel>,
     pub notes_progress: Option<NotesProgress>,
     pub connected: Vec<ProviderId>,
     pub connecting: Option<ProviderId>,
@@ -74,6 +77,12 @@ pub struct State {
     /// Bumped whenever a meeting's stored content changes, so views reload it.
     pub revision: u64,
     pub storage_error: Option<String>,
+    /// Shared folders this Mac has joined.
+    pub folders: Vec<FolderInfo>,
+    /// Other people's meetings in those folders.
+    pub folder_meetings: Vec<FolderMeeting>,
+    /// Shown on meetings this Mac adds to folders.
+    pub display_name: String,
 }
 
 pub struct ActiveRecording {
@@ -93,12 +102,13 @@ pub struct App {
     /// Held while capture starts, so stopping waits for a start that is still in progress.
     pub recording: tokio::sync::Mutex<Option<ActiveRecording>>,
     pub connect_task: Mutex<Option<JoinHandle<()>>>,
-    /// The on-device note model being downloaded, by id.
-    pub note_download: Mutex<Option<(&'static str, JoinHandle<()>)>>,
-    /// One on-device note model in memory at a time, however many meetings want notes.
+    /// On-device note models being downloaded, by id.
+    pub note_downloads: Mutex<Vec<(&'static str, JoinHandle<()>)>>,
+    /// One on-device note model in memory at a time, for notes and questions alike.
     pub local_notes: tokio::sync::Mutex<()>,
     /// Identifies the current banner, so a stale auto-dismiss timer does nothing.
     pub banner_generation: Mutex<u64>,
+    pub folders: Folders,
 }
 
 impl App {
@@ -121,6 +131,7 @@ impl App {
             banner: None,
             speech_model: SpeechModel::Loading { progress: None },
             note_model: None,
+            ask_model: None,
             notes_progress: None,
             connected: Vec::new(),
             connecting: None,
@@ -130,7 +141,12 @@ impl App {
             sharing_busy: false,
             revision: 0,
             storage_error,
+            folders: Vec::new(),
+            folder_meetings: Vec::new(),
+            display_name: String::new(),
         };
+        // Models live in the support folder, beside the shared folder files.
+        let support = models_dir.parent().map(std::path::Path::to_path_buf).unwrap_or_default();
         Self {
             handle,
             store,
@@ -141,9 +157,10 @@ impl App {
             state: Mutex::new(state),
             recording: tokio::sync::Mutex::new(None),
             connect_task: Mutex::new(None),
-            note_download: Mutex::new(None),
+            note_downloads: Mutex::new(Vec::new()),
             local_notes: tokio::sync::Mutex::new(()),
             banner_generation: Mutex::new(0),
+            folders: Folders::new(support),
         }
     }
 
@@ -200,10 +217,13 @@ impl App {
     pub fn reload_meetings(&self) {
         let Some(store) = &self.store else { return };
         match store.list() {
-            Ok(meetings) => self.update(|state| {
-                state.meetings = meetings;
-                state.revision += 1;
-            }),
+            Ok(meetings) => {
+                self.update(|state| {
+                    state.meetings = meetings;
+                    state.revision += 1;
+                });
+                self.folders.nudge();
+            }
             Err(error) => self.report(format!("Meetings could not be loaded. {error}")),
         }
     }

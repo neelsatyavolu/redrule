@@ -2,6 +2,7 @@ import { Copy, Ellipsis, RefreshCw, Share } from "lucide-react";
 import { useState } from "react";
 import { api } from "../lib/api";
 import { attempt, useStore } from "../lib/store";
+import { AskBar } from "./AskBar";
 import type { Meeting } from "../lib/types";
 import { useMeetingDetail } from "../lib/useMeetingDetail";
 import { useDialogs } from "./dialogs/dialogState";
@@ -64,22 +65,25 @@ function SavedMeeting({ meeting, revision }: { meeting: Meeting; revision: numbe
 
   const { note, transcript } = detail.detail;
   const finished = meeting.status === "done" && note !== null;
+  // Someone else's meeting from a shared folder: read and copy only.
+  const own = !meeting.remote;
   const actions = (
     <>
       {finished && (
         <>
-          <IconButton label="Share" disabled={sharingBusy} onClick={() => openDialog({ kind: "share", meeting })}>
-            <Share size={15} />
-          </IconButton>
+          {own && (
+            <IconButton label="Share" disabled={sharingBusy} onClick={() => openDialog({ kind: "share", meeting })}>
+              <Share size={15} />
+            </IconButton>
+          )}
           <IconButton label="Copy as Markdown" onClick={() => void attempt(() => api.copyMarkdown(meeting.id), "Copied as Markdown")}>
             <Copy size={15} />
           </IconButton>
-          <IconButton
-            label="Rewrite notes from the transcript"
-            onClick={() => void attempt(() => api.generateNotes(meeting.id))}
-          >
-            <RefreshCw size={15} />
-          </IconButton>
+          {own && (
+            <IconButton label="Rewrite notes from the transcript" onClick={() => void attempt(() => api.generateNotes(meeting.id))}>
+              <RefreshCw size={15} />
+            </IconButton>
+          )}
         </>
       )}
       <MeetingDropdown meeting={meeting}>
@@ -121,6 +125,7 @@ function SavedMeeting({ meeting, revision }: { meeting: Meeting; revision: numbe
           <TranscriptView meeting={meeting} segments={transcript} title={note.title} />
         )}
       </div>
+      {own && <AskBar meetingId={meeting.id} />}
     </Chrome>
   );
 }
@@ -140,7 +145,7 @@ function Chrome({ center, actions, children }: ChromeProps) {
         <div className="flex justify-center">{center}</div>
         <div className="flex justify-end gap-0.5">{actions}</div>
       </header>
-      <div className="min-h-0 flex-1">{children}</div>
+      <div className="relative min-h-0 flex-1">{children}</div>
     </main>
   );
 }

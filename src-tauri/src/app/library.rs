@@ -11,6 +11,8 @@ use crate::core::transcript;
 use crate::core::{Error, Result};
 
 const MAX_TITLE: usize = 300;
+const MAX_TAG: usize = 40;
+const MAX_TAGS: usize = 20;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,6 +25,11 @@ pub struct MeetingDetail {
 
 impl App {
     pub fn meeting_detail(&self, id: &str) -> Result<MeetingDetail> {
+        if self.meeting(id).is_none()
+            && let Some(remote) = self.folder_meeting(id)
+        {
+            return Ok(MeetingDetail { transcript: remote.meeting.transcript, note: Some(remote.meeting.note), share: None });
+        }
         let store = self.store()?;
         Ok(MeetingDetail {
             transcript: transcript::merge(&store.transcript(id)?),
@@ -42,6 +49,12 @@ impl App {
     pub fn set_archived(&self, id: &str, archived: bool) -> Result<()> {
         let meeting = self.editable(id)?;
         self.persist(&meeting.archived(archived, Utc::now()));
+        Ok(())
+    }
+
+    pub fn set_tags(&self, id: &str, tags: Vec<String>) -> Result<()> {
+        let meeting = self.editable(id)?;
+        self.persist(&meeting.tagged(clean_tags(tags)));
         Ok(())
     }
 
@@ -68,7 +81,10 @@ impl App {
     }
 
     pub fn copy_markdown(&self, id: &str) -> Result<()> {
-        let note = self.store()?.note(id)?.ok_or_else(|| Error::message("This meeting has no notes yet."))?;
+        let note = match self.folder_meeting(id).filter(|_| self.meeting(id).is_none()) {
+            Some(remote) => remote.meeting.note,
+            None => self.store()?.note(id)?.ok_or_else(|| Error::message("This meeting has no notes yet."))?,
+        };
         self.handle.clipboard().write_text(note.markdown()).map_err(|e| Error::message(format!("The notes could not be copied. {e}")))
     }
 
@@ -77,6 +93,20 @@ impl App {
         self.reload_meetings();
         Ok(())
     }
+}
+
+/// Trims tags, drops a leading "#", and keeps the first spelling of each, ignoring case.
+fn clean_tags(tags: Vec<String>) -> Vec<String> {
+    let mut kept: Vec<String> = Vec::new();
+    for tag in tags {
+        let tag: String = tag.trim().trim_start_matches('#').split_whitespace().collect::<Vec<_>>().join(" ");
+        let tag: String = tag.chars().take(MAX_TAG).collect();
+        if !tag.is_empty() && !kept.iter().any(|k| k.to_lowercase() == tag.to_lowercase()) {
+            kept.push(tag);
+        }
+    }
+    kept.truncate(MAX_TAGS);
+    kept
 }
 
 /// Trims an edited note and drops empty entries, as the Swift editor did.
@@ -134,6 +164,13 @@ mod tests {
         assert_eq!(cleaned.sections, vec![NoteSection { heading: "A".into(), bullets: vec!["one".into()] }]);
         assert_eq!(cleaned.decisions, vec!["Ship".to_string()]);
         assert_eq!(cleaned.action_items, vec![ActionItem { owner: None, task: "Do it".into(), done: true }]);
+    }
+
+    #[test]
+    fn cleans_tags() {
+        let tags = vec![" #Acme ".into(), "acme".into(), "  ".into(), "Hiring   loop".into(), "x".repeat(50)];
+        assert_eq!(clean_tags(tags), vec!["Acme".to_string(), "Hiring loop".into(), "x".repeat(MAX_TAG)]);
+        assert_eq!(clean_tags((0..30).map(|n| n.to_string()).collect()).len(), MAX_TAGS);
     }
 
     #[test]

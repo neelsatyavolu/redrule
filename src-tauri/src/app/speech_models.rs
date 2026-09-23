@@ -2,13 +2,16 @@
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use tauri::async_runtime::JoinHandle;
+
 use minutes_engine::Transcriber;
 use minutes_engine::catalog::{self, Hardware};
 use objc2_foundation::NSLocale;
 use serde::{Deserialize, Serialize};
 
 use super::background::PROGRESS_INTERVAL;
-use super::state::{App, SpeechModel};
+use super::settings::Settings;
+use super::state::{App, SpeechModel, State};
 use crate::core::{Error, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -113,12 +116,12 @@ impl App {
     /// Deletes a downloaded model to free disk space. The chosen models cannot be removed.
     pub fn remove_local_model(&self, kind: ModelKind, id: &str) -> Result<()> {
         let (speech, speaker) = self.transcriber().choice();
-        let notes = self.read(|state| state.settings.local_note_model()).map(|option| option.id);
+        let notes = self.read(|state| Role::ALL.map(|role| role.chosen(&state.settings).map(|option| option.id)));
         let dir = &self.models_dir;
         let result = match kind {
             ModelKind::Speech if id == speech => return Err(in_use()),
             ModelKind::Speaker if id == speaker => return Err(in_use()),
-            ModelKind::Notes if Some(id) == notes => return Err(in_use()),
+            ModelKind::Notes if notes.contains(&Some(id)) => return Err(in_use()),
             ModelKind::Speech => catalog::speech_option(id).remove(dir),
             ModelKind::Speaker => catalog::speaker_option(id).remove(dir),
             ModelKind::Notes => catalog::note_option(id).remove(dir),
@@ -127,56 +130,97 @@ impl App {
     }
 }
 
+/// What an on-device note model is chosen for; each shows its own download progress.
+#[derive(Clone, Copy)]
+enum Role {
+    Notes,
+    Ask,
+}
+
+impl Role {
+    const ALL: [Role; 2] = [Role::Notes, Role::Ask];
+
+    fn chosen(self, settings: &Settings) -> Option<&'static catalog::NoteOption> {
+        match self {
+            Role::Notes => settings.local_note_model(),
+            Role::Ask => settings.local_ask_model(),
+        }
+    }
+
+    fn status(self, state: &mut State) -> &mut Option<SpeechModel> {
+        match self {
+            Role::Notes => &mut state.note_model,
+            Role::Ask => &mut state.ask_model,
+        }
+    }
+}
+
 impl App {
-    /// Downloads the chosen on-device note model in the background. Switching to another model or
-    /// to an account stops a download that is no longer needed.
+    /// Downloads the on-device models chosen for notes and for questions in the background, once
+    /// each. Switching away from a model stops a download that is no longer needed.
     pub fn prepare_note_model(self: &Arc<Self>) {
-        let option = self.read(|state| state.settings.local_note_model());
-        let mut download = self.note_download.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-        if let Some((id, task)) = download.as_ref() {
-            if Some(*id) == option.map(|option| option.id) && !task.inner().is_finished() {
-                return;
+        let chosen = self.read(|state| Role::ALL.map(|role| role.chosen(&state.settings)));
+        let mut downloads = self.note_downloads.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        // Keep downloads still running for a chosen model; a finished one is started again if it failed.
+        downloads.retain(|(id, task)| {
+            let keep = !task.inner().is_finished() && chosen.iter().flatten().any(|option| option.id == *id);
+            if !keep {
+                task.abort();
             }
-            task.abort();
+            keep
+        });
+        for (role, option) in Role::ALL.into_iter().zip(chosen) {
+            let status = match option {
+                None => None,
+                Some(option) if option.is_installed(&self.models_dir) => Some(SpeechModel::Ready),
+                Some(option) => {
+                    if !downloads.iter().any(|(id, _)| *id == option.id) {
+                        downloads.push((option.id, self.download_note_model(option)));
+                    }
+                    Some(SpeechModel::Loading { progress: None })
+                }
+            };
+            self.update(|state| *role.status(state) = status);
         }
-        *download = None;
-        let Some(option) = option else {
-            self.update(|state| state.note_model = None);
-            return;
-        };
-        if option.is_installed(&self.models_dir) {
-            self.update(|state| state.note_model = Some(SpeechModel::Ready));
-            return;
-        }
-        self.update(|state| state.note_model = Some(SpeechModel::Loading { progress: None }));
+    }
+
+    fn download_note_model(self: &Arc<Self>, option: &'static catalog::NoteOption) -> JoinHandle<()> {
         let (app, dir) = (Arc::clone(self), self.models_dir.clone());
-        let task = tauri::async_runtime::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             let reporter = Arc::clone(&app);
             let last = Mutex::new(Instant::now() - PROGRESS_INTERVAL);
             let result = option
                 .download(&dir, move |progress| {
                     let mut last = last.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-                    if last.elapsed() >= PROGRESS_INTERVAL && reporter.wants_note_model(option) {
+                    if last.elapsed() >= PROGRESS_INTERVAL {
                         *last = Instant::now();
-                        reporter.update(|state| state.note_model = Some(SpeechModel::Loading { progress: Some(progress) }));
+                        reporter.show_note_model(option, SpeechModel::Loading { progress: Some(progress) });
                     }
                 })
                 .await;
-            if !app.wants_note_model(option) {
-                return;
-            }
-            app.update(|state| {
-                state.note_model = Some(match result {
+            app.show_note_model(
+                option,
+                match result {
                     Ok(()) => SpeechModel::Ready,
                     Err(error) => SpeechModel::Failed { message: error.to_string() },
-                })
-            });
-        });
-        *download = Some((option.id, task));
+                },
+            );
+        })
     }
 
-    fn wants_note_model(&self, option: &catalog::NoteOption) -> bool {
-        self.read(|state| state.settings.local_note_model().map(|chosen| chosen.id)) == Some(option.id)
+    /// Shows a download's progress wherever that model is still chosen.
+    fn show_note_model(&self, option: &catalog::NoteOption, status: SpeechModel) {
+        let wanted = self.read(|state| Role::ALL.map(|role| role.chosen(&state.settings).is_some_and(|chosen| chosen.id == option.id)));
+        if !wanted.contains(&true) {
+            return;
+        }
+        self.update(|state| {
+            for (role, wanted) in Role::ALL.into_iter().zip(wanted) {
+                if wanted {
+                    *role.status(state) = Some(status.clone());
+                }
+            }
+        });
     }
 }
 

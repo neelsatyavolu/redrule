@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --experimental-test-module-mocks --test",
-    "build": "node --check api/share.js && node --check api/note.js"
+    "build": "node --check api/share.js && node --check api/note.js && node --check api/folder.js && node --check api/folder-meeting.js && node --check api/folder-reset.js && node --check api/folder-page.js && node --check lib/folders.js && node --check lib/folder-render.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.0.0"

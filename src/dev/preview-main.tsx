@@ -1,6 +1,6 @@
 // Dev-only entry: mocks the backend, then boots the real app and opens the requested dialog.
 import { useDialogs } from "../components/dialogs/dialogState";
-import { useStore } from "../lib/store";
+import { folderScope, useStore } from "../lib/store";
 import { previewView } from "./preview";
 
 await import("../main");
@@ -13,9 +13,16 @@ const whenLoaded = () =>
 
 await whenLoaded();
 const meeting = useStore.getState().app?.meetings.find((m) => m.id === "M1");
-if (previewView === "transcript") document.querySelectorAll<HTMLButtonElement>('[role="radio"]')[3]?.click();
+if (previewView === "transcript") document.querySelectorAll<HTMLButtonElement>('[aria-label="Meeting content"] [role="radio"]')[1]?.click();
 if (previewView === "failed") useStore.getState().select("M2");
 if (previewView === "settings") useDialogs.getState().open({ kind: "settings" });
 if (previewView === "transcription") useDialogs.getState().open({ kind: "settings", tab: "transcription" });
 if (previewView === "share" && meeting) useDialogs.getState().open({ kind: "share", meeting });
+if (previewView === "folder") {
+  useStore.getState().setLibrary(folderScope("f".repeat(64)));
+  useStore.getState().select("R1");
+}
+if (previewView === "newFolder") useDialogs.getState().open({ kind: "newFolder" });
+if (previewView === "move" && meeting) useDialogs.getState().open({ kind: "move", meeting });
+if (previewView === "tags" && meeting) useDialogs.getState().open({ kind: "tags", meeting });
 if (previewView === "edit" && meeting) useDialogs.getState().open({ kind: "edit", meeting });

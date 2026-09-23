@@ -1,5 +1,6 @@
 //! Accounts, the Keychain, and the network services Redrule talks to.
 pub mod clients;
+pub mod folder_client;
 pub mod keychain;
 pub mod loopback;
 pub mod oauth_service;

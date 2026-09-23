@@ -20,6 +20,7 @@ impl App {
         self.refresh_connections();
         self.prepare_speech_model();
         self.prepare_note_model();
+        self.start_folder_sync();
         let app = Arc::clone(self);
         tauri::async_runtime::spawn(async move { app.watch_for_calls().await });
     }

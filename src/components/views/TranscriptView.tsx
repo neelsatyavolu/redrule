@@ -23,12 +23,20 @@ export function TranscriptView({ meeting, segments, title }: { meeting: Meeting;
           <PadRow className="mt-6" label="Speakers">
             <div className="flex flex-wrap gap-1.5">
               {distinctSpeakers(segments).map((speaker) => (
-                <SpeakerChip key={speakerKey(speaker)} meetingId={meeting.id} speaker={speaker} color={colors.get(speakerKey(speaker))} />
+                <SpeakerChip
+                  key={speakerKey(speaker)}
+                  meetingId={meeting.id}
+                  speaker={speaker}
+                  color={colors.get(speakerKey(speaker))}
+                  readOnly={meeting.remote}
+                />
               ))}
             </div>
-            <p className="mt-2 text-[12px] text-graphite">
-              Speaker labels are estimated from voices. Select one to name that person throughout this meeting.
-            </p>
+            {!meeting.remote && (
+              <p className="mt-2 text-[12px] text-graphite">
+                Speaker labels are estimated from voices. Select one to name that person throughout this meeting.
+              </p>
+            )}
           </PadRow>
           <div className="mt-9">
             <TranscriptRows segments={segments} />
@@ -39,10 +47,27 @@ export function TranscriptView({ meeting, segments, title }: { meeting: Meeting;
   );
 }
 
-function SpeakerChip({ meetingId, speaker, color }: { meetingId: string; speaker: TranscriptSegment; color?: string }) {
+interface SpeakerChipProps {
+  meetingId: string;
+  speaker: TranscriptSegment;
+  color?: string;
+  readOnly?: boolean;
+}
+
+const CHIP = "inline-flex h-7 items-center gap-1.5 rounded-full border border-rule bg-raised px-3 text-[12.5px] font-medium text-ink";
+
+function SpeakerChip({ meetingId, speaker, color, readOnly }: SpeakerChipProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(speaker.speakerName ?? "");
   const label = speakerLabel(speaker);
+  if (readOnly) {
+    return (
+      <span className={CHIP}>
+        <SpeakerSwatch color={color} />
+        {label}
+      </span>
+    );
+  }
 
   const save = async () => {
     if (await attempt(() => api.renameSpeaker(meetingId, speakerKey(speaker), name))) setOpen(false);
@@ -60,7 +85,7 @@ function SpeakerChip({ meetingId, speaker, color }: { meetingId: string; speaker
         <button
           type="button"
           title={`Rename ${label}`}
-          className="inline-flex h-7 items-center gap-1.5 rounded-full border border-rule bg-raised px-3 text-[12.5px] font-medium text-ink transition-colors hover:border-faint data-[state=open]:border-focus"
+          className={`${CHIP} transition-colors hover:border-faint data-[state=open]:border-focus`}
         >
           <SpeakerSwatch color={color} />
           {label}

@@ -141,18 +141,18 @@ fn adopt_legacy_folder(legacy: &Path, current: &Path) -> Result<PathBuf> {
     Ok(current.to_path_buf())
 }
 
-fn read<T: DeserializeOwned>(path: &Path) -> Result<T> {
+pub(crate) fn read<T: DeserializeOwned>(path: &Path) -> Result<T> {
     Ok(serde_json::from_slice(&fs::read(path)?)?)
 }
 
-fn read_optional<T: DeserializeOwned>(path: &Path) -> Result<Option<T>> {
+pub(crate) fn read_optional<T: DeserializeOwned>(path: &Path) -> Result<Option<T>> {
     if !path.exists() {
         return Ok(None);
     }
     read(path).map(Some)
 }
 
-fn write<T: Serialize + ?Sized>(path: &Path, value: &T) -> Result<()> {
+pub(crate) fn write<T: Serialize + ?Sized>(path: &Path, value: &T) -> Result<()> {
     write_bytes(path, &serde_json::to_vec_pretty(value)?)
 }
 
@@ -189,6 +189,8 @@ mod tests {
             status,
             error_message: None,
             archived_at: None,
+            tags: vec![],
+            folder_id: None,
         }
     }
 

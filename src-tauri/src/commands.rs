@@ -7,6 +7,7 @@ use tauri::State;
 
 use crate::app::{App, LocalModels, MeetingDetail, ModelKind, Settings, SettingsPatch, State as Snapshot};
 use crate::core::Result;
+use crate::core::ask::Exchange;
 use crate::core::models::{MeetingApp, MeetingNote};
 use crate::core::oauth::ProviderId;
 use crate::platform::permissions;
@@ -42,8 +43,8 @@ pub fn meeting_detail(app: AppState, id: String) -> Result<MeetingDetail> {
 }
 
 #[tauri::command]
-pub async fn start_recording(app: AppState<'_>, source: Option<MeetingApp>) -> Result<()> {
-    app.start_recording(source.unwrap_or(MeetingApp::Manual)).await;
+pub async fn start_recording(app: AppState<'_>, source: Option<MeetingApp>, folder: Option<String>) -> Result<()> {
+    app.start_recording(source.unwrap_or(MeetingApp::Manual), folder).await;
     Ok(())
 }
 
@@ -64,6 +65,11 @@ pub async fn generate_notes(app: AppState<'_>, id: String) -> Result<()> {
 }
 
 #[tauri::command]
+pub async fn ask_meeting(app: AppState<'_>, id: String, question: String, history: Vec<Exchange>) -> Result<String> {
+    app.ask_meeting(&id, &question, &history).await
+}
+
+#[tauri::command]
 pub fn rename_meeting(app: AppState, id: String, title: String) -> Result<()> {
     app.rename_meeting(&id, &title)
 }
@@ -71,6 +77,51 @@ pub fn rename_meeting(app: AppState, id: String, title: String) -> Result<()> {
 #[tauri::command]
 pub fn set_archived(app: AppState, id: String, archived: bool) -> Result<()> {
     app.set_archived(&id, archived)
+}
+
+#[tauri::command]
+pub fn set_tags(app: AppState, id: String, tags: Vec<String>) -> Result<()> {
+    app.set_tags(&id, tags)
+}
+
+#[tauri::command]
+pub fn set_meeting_folder(app: AppState, id: String, folder_id: Option<String>) -> Result<()> {
+    app.set_meeting_folder(&id, folder_id)
+}
+
+#[tauri::command]
+pub async fn create_folder(app: AppState<'_>, name: String, your_name: String) -> Result<String> {
+    app.create_folder(&name, &your_name).await
+}
+
+#[tauri::command]
+pub async fn join_folder(app: AppState<'_>, link: String, your_name: String) -> Result<String> {
+    app.join_folder(&link, &your_name).await
+}
+
+#[tauri::command]
+pub async fn rename_folder(app: AppState<'_>, id: String, name: String) -> Result<()> {
+    app.rename_folder(&id, &name).await
+}
+
+#[tauri::command]
+pub async fn reset_folder_link(app: AppState<'_>, id: String) -> Result<String> {
+    app.reset_folder_link(&id).await
+}
+
+#[tauri::command]
+pub async fn delete_folder(app: AppState<'_>, id: String) -> Result<()> {
+    app.delete_folder(&id).await
+}
+
+#[tauri::command]
+pub async fn leave_folder(app: AppState<'_>, id: String) -> Result<()> {
+    app.leave_folder(&id).await
+}
+
+#[tauri::command]
+pub fn copy_folder_link(app: AppState, id: String) -> Result<()> {
+    app.copy_folder_link(&id)
 }
 
 #[tauri::command]

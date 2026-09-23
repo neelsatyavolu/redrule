@@ -101,6 +101,12 @@ pub struct Meeting {
     pub error_message: Option<String>,
     #[serde(with = "iso8601::option", default, skip_serializing_if = "Option::is_none")]
     pub archived_at: Option<DateTime<Utc>>,
+    /// Labels for organizing meetings. Omitted when empty, so untagged meetings read and write unchanged.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    /// The shared folder this meeting belongs to, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folder_id: Option<String>,
 }
 
 impl Meeting {
@@ -127,6 +133,14 @@ impl Meeting {
 
     pub fn titled(&self, title: impl Into<String>) -> Self {
         Self { title: title.into(), ..self.clone() }
+    }
+
+    pub fn tagged(&self, tags: Vec<String>) -> Self {
+        Self { tags, ..self.clone() }
+    }
+
+    pub fn in_folder(&self, folder_id: Option<String>) -> Self {
+        Self { folder_id, ..self.clone() }
     }
 
     pub fn archived(&self, archived: bool, now: DateTime<Utc>) -> Self {
@@ -250,6 +264,17 @@ mod tests {
         let written = serde_json::to_string(&meeting).unwrap();
         assert!(written.contains(r#""startedAt":"2026-09-21T14:05:00Z""#));
         assert!(!written.contains("endedAt"));
+        assert!(meeting.tags.is_empty());
+        assert!(!written.contains("tags"));
+    }
+
+    #[test]
+    fn tags_round_trip() {
+        let meeting: Meeting =
+            serde_json::from_str(r#"{"app":"manual","id":"A","startedAt":"2026-09-21T14:05:00Z","status":"done","title":"T","tags":["Acme"]}"#)
+                .unwrap();
+        let retagged = meeting.tagged(vec!["Acme".into(), "Hiring".into()]);
+        assert!(serde_json::to_string(&retagged).unwrap().contains(r#""tags":["Acme","Hiring"]"#));
     }
 
     #[test]

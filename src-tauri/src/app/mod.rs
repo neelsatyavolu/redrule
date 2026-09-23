@@ -1,6 +1,9 @@
 //! App state and behavior, ported from the Swift `AppModel`.
 mod accounts;
+mod ask;
 mod background;
+mod folder_sync;
+mod folders;
 mod library;
 mod recording;
 mod settings;

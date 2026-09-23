@@ -11,7 +11,8 @@ use crate::core::{Error, Result};
 use crate::providers::clients::{ModelChoice, SummaryClient};
 
 impl App {
-    pub async fn start_recording(self: &Arc<Self>, app: MeetingApp) {
+    /// Records into `folder` when given, one of the shared folders this Mac has joined.
+    pub async fn start_recording(self: &Arc<Self>, app: MeetingApp, folder: Option<String>) {
         if self.read(|state| state.recording_id.is_some()) || self.store.is_none() {
             return;
         }
@@ -34,6 +35,8 @@ impl App {
             status: MeetingStatus::Recording,
             error_message: None,
             archived_at: None,
+            tags: vec![],
+            folder_id: folder.filter(|id| self.folders.accepts(id)),
         };
         self.persist(&meeting);
         self.update(|state| state.recording_id = Some(meeting.id.clone()));
@@ -103,7 +106,10 @@ impl App {
                 self.update(|state| state.notes_progress = None);
                 written?
             }
-            None => summarize(&self.summary_client()?, meeting, &segments, CHUNK_BUDGET).await?,
+            None => {
+                let preferred = self.read(|state| state.settings.model_choice());
+                summarize(&self.account_client(preferred)?, meeting, &segments, CHUNK_BUDGET).await?
+            }
         };
         store.save_note(&note, &meeting.id)?;
         Ok(note.title)
@@ -124,9 +130,10 @@ impl App {
         })
     }
 
-    fn summary_client(&self) -> Result<SummaryClient> {
+    /// A client for `preferred`, or for another connected account when that one is not connected.
+    pub(super) fn account_client(&self, preferred: ModelChoice) -> Result<SummaryClient> {
         self.refresh_connections();
-        let (preferred, connected) = self.read(|state| (state.settings.model_choice(), state.connected.clone()));
+        let connected = self.read(|state| state.connected.clone());
         let choice = if connected.contains(&preferred.provider) {
             preferred
         } else {

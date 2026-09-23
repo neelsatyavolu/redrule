@@ -69,5 +69,7 @@ fn meeting() -> Meeting {
         status: MeetingStatus::Summarizing,
         error_message: None,
         archived_at: None,
+        tags: vec![],
+        folder_id: None,
     }
 }

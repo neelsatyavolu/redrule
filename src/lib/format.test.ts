@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  allTags,
   clock,
   distinctSpeakers,
   groupByDay,
+  hasTag,
   length,
   matchesSearch,
   meetingSentence,
@@ -81,5 +83,17 @@ describe("matchesSearch", () => {
     expect(matchesSearch(meeting({ title: "Roadmap review" }), "ROAD")).toBe(true);
     expect(matchesSearch(meeting({}), "  ")).toBe(true);
     expect(matchesSearch(meeting({}), "budget")).toBe(false);
+  });
+});
+
+describe("tags", () => {
+  it("lists each tag once, ignoring case, in alphabetical order", () => {
+    const meetings = [meeting({ tags: ["hiring", "Acme"] }), meeting({ tags: ["acme"] }), meeting({})];
+    expect(allTags(meetings)).toEqual(["Acme", "hiring"]);
+  });
+
+  it("matches a tag regardless of case", () => {
+    expect(hasTag(meeting({ tags: ["Acme"] }), "ACME")).toBe(true);
+    expect(hasTag(meeting({}), "Acme")).toBe(false);
   });
 });

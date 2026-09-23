@@ -113,6 +113,23 @@ export function bytes(count: number): string {
   return `${Math.round(count / (1024 * 1024))} MB`;
 }
 
+export function sameTag(a: string, b: string): boolean {
+  return a.localeCompare(b, undefined, { sensitivity: "base" }) === 0;
+}
+
+export function hasTag(meeting: Meeting, tag: string): boolean {
+  return (meeting.tags ?? []).some((t) => sameTag(t, tag));
+}
+
+/** Every tag in use, once each (first spelling wins), in alphabetical order. */
+export function allTags(meetings: Meeting[]): string[] {
+  const tags: string[] = [];
+  for (const tag of meetings.flatMap((m) => m.tags ?? [])) {
+    if (!tags.some((t) => sameTag(t, tag))) tags.push(tag);
+  }
+  return tags.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+}
+
 /** Case-insensitive match on title, for the sidebar search. */
 export function matchesSearch(meeting: Meeting, query: string): boolean {
   const needle = query.trim().toLowerCase();

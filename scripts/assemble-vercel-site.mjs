@@ -9,3 +9,5 @@ cpSync("website", "public", {
     return base !== ".vercel" && base !== ".gitignore" && base !== "vercel.json";
   },
 });
+// Shared notes and folders (/s/, /f/) link to /style.css.
+cpSync("sharing/public/style.css", "public/style.css");

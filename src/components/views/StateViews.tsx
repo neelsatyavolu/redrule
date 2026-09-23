@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { APP_NAMES, clock } from "../../lib/format";
-import { attempt, useStore } from "../../lib/store";
+import { attempt, scopeFolder, useStore } from "../../lib/store";
 import { canWriteNotes, type Meeting, type SpeechModel, type TranscriptSegment } from "../../lib/types";
 import { useDialogs } from "../dialogs/dialogState";
 import { PadPage, PadRow } from "../Pad";
@@ -126,6 +126,8 @@ function NotesStatus({ meetingId }: { meetingId: string }) {
 export function EmptyView() {
   const app = useStore((s) => s.app);
   const openDialog = useDialogs((s) => s.open);
+  // With a shared folder open, the recording goes into it.
+  const folder = useStore((s) => scopeFolder(s.library));
   const needsSetup = app && (!app.permissions.microphone || !app.permissions.screenRecording || !canWriteNotes(app));
 
   return (
@@ -141,7 +143,7 @@ export function EmptyView() {
       </PadRow>
       <PadRow className="mt-6">
         <div className="flex flex-wrap gap-2">
-          <Button variant="primary" onClick={() => void attempt(() => api.startRecording())}>
+          <Button variant="primary" onClick={() => void attempt(() => api.startRecording("manual", folder ?? undefined))}>
             Record now
           </Button>
           {needsSetup && <Button onClick={() => openDialog({ kind: "settings", tab: "permissions" })}>Finish setup</Button>}

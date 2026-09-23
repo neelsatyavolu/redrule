@@ -1,5 +1,5 @@
 // Dev-only: runs the UI in a plain browser against sample data, for design review.
-// Open http://localhost:1420/preview.html?view=notes (notes | transcript | live | loading | writing | failed | empty | settings | transcription | onboarding | share)
+// Open http://localhost:1420/preview.html?view=notes (notes | transcript | live | loading | writing | failed | empty | settings | transcription | onboarding | share | tags | folder | newFolder | move)
 import { mockIPC } from "@tauri-apps/api/mocks";
 import type { AppState, Meeting, MeetingDetail } from "../lib/types";
 
@@ -16,13 +16,20 @@ const at = (daysAgo: number, hour: number, minute = 0) => {
 };
 const plus = (iso: string, minutes: number) => new Date(Date.parse(iso) + minutes * 60_000).toISOString();
 
+const FOLDER = "f".repeat(64);
+
 const meetings: Meeting[] = [
-  { id: "M1", title: "Q4 roadmap review", app: "zoom", startedAt: at(0, 14, 5), endedAt: plus(at(0, 14, 5), 42), status: writingNotes ? "summarizing" : "done" },
+  { id: "M1", title: "Q4 roadmap review", app: "zoom", startedAt: at(0, 14, 5), endedAt: plus(at(0, 14, 5), 42), status: writingNotes ? "summarizing" : "done", tags: ["Product", "Planning"], folderId: FOLDER },
   { id: "M2", title: "Pricing page copy", app: "googleMeet", startedAt: at(0, 10, 30), endedAt: plus(at(0, 10, 30), 18), status: view === "failed" ? "failed" : "done", errorMessage: "Connect ChatGPT or Grok in Settings to generate notes." },
-  { id: "M3", title: "Hiring sync with Priya", app: "zoom", startedAt: at(1, 16), endedAt: plus(at(1, 16), 27), status: "done" },
+  { id: "M3", title: "Hiring sync with Priya", app: "zoom", startedAt: at(1, 16), endedAt: plus(at(1, 16), 27), status: "done", tags: ["Hiring"] },
   { id: "M4", title: "Weekly design critique", app: "googleMeet", startedAt: at(1, 11), endedAt: plus(at(1, 11), 55), status: "done" },
   { id: "M5", title: "Vendor contract call", app: "manual", startedAt: at(3, 9, 15), endedAt: plus(at(3, 9, 15), 71), status: "done" },
-  { id: "M6", title: "Onboarding interview 3", app: "zoom", startedAt: at(4, 15), endedAt: plus(at(4, 15), 33), status: "done" },
+  { id: "M6", title: "Onboarding interview 3", app: "zoom", startedAt: at(4, 15), endedAt: plus(at(4, 15), 33), status: "done", tags: ["Hiring"] },
+];
+
+const folderMeetings: Meeting[] = [
+  { id: "R1", title: "Acme onboarding kickoff", app: "zoom", startedAt: at(0, 11, 15), endedAt: plus(at(0, 11, 15), 36), status: "done", folderId: FOLDER, remote: true, recordedBy: "Dana" },
+  { id: "R2", title: "Acme security review", app: "googleMeet", startedAt: at(2, 15), endedAt: plus(at(2, 15), 48), status: "done", folderId: FOLDER, remote: true, recordedBy: "Priya" },
 ];
 
 const live: Meeting = { id: "LIVE", title: "New meeting", app: "manual", startedAt: new Date(Date.now() - 754_000).toISOString(), status: "recording" };
@@ -61,6 +68,7 @@ const state: AppState = {
   banner: null,
   speechModel: view === "live" ? { state: "ready" } : { state: "loading", progress: { downloadedBytes: 214_000_000, totalBytes: 487_000_000, stage: "Downloading speech model" } },
   noteModel: null,
+  askModel: null,
   notesProgress: writingNotes ? { meetingId: "M1", stage: view === "loading" ? "loading" : "writing", percent: view === "loading" ? 63 : 42 } : null,
   connected: view === "failed" ? [] : ["codex"],
   connecting: null,
@@ -68,6 +76,7 @@ const state: AppState = {
   permissions: { microphone: view !== "onboarding", screenRecording: true },
   settings: {
     modelChoiceId: "codex:gpt-6-astra",
+    askModelChoiceId: "",
     keepAudio: false,
     microphoneId: "",
     onboarded: view !== "onboarding",
@@ -77,6 +86,9 @@ const state: AppState = {
   sharingBusy: false,
   revision: 1,
   storageError: null,
+  folders: [{ id: FOLDER, name: "Acme team", owner: true, unavailable: false }],
+  folderMeetings,
+  displayName: "Neel",
 };
 
 mockIPC((command) => {
@@ -85,6 +97,16 @@ mockIPC((command) => {
       return state;
     case "meeting_detail":
       return view === "failed" || writingNotes ? { ...detail, note: null } : detail;
+    case "ask_meeting":
+      return new Promise((resolve) =>
+        setTimeout(
+          () =>
+            resolve(
+              "CSV export ships in December and PDF follows in January [01:04].\n\n- Dana confirms the estimate by Friday.\n- The pricing experiment waits until export is out.",
+            ),
+          1200,
+        ),
+      );
     case "model_choices":
       return [
         { id: "codex:gpt-6-astra", provider: "codex", model: "gpt-6-astra", label: "GPT-6 Astra", effort: "low" },

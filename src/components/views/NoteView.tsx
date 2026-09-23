@@ -68,6 +68,7 @@ export function NoteView({ meeting, note }: { meeting: Meeting; note: MeetingNot
                       role="checkbox"
                       aria-checked={!!item.done}
                       aria-label={item.done ? "Mark as not done" : "Mark as done"}
+                      disabled={meeting.remote}
                       onClick={() => toggle(index)}
                       className={`mt-[5px] grid size-3.5 shrink-0 cursor-default place-items-center rounded-[4px] border-[1.5px] transition-colors ${
                         item.done ? "border-focus bg-focus text-paper" : "border-faint hover:border-graphite"
@@ -94,7 +95,10 @@ export function MeetingHeading({ meeting, title }: { meeting: Meeting; title: st
         <h1 className="font-serif text-[30px] leading-[1.15] font-semibold tracking-[-0.01em] text-ink text-balance">{title}</h1>
       </PadRow>
       <PadRow className="mt-2">
-        <p className="text-[13px] text-graphite">{meetingSentence(meeting)}</p>
+        <p className="text-[13px] text-graphite">
+          {meetingSentence(meeting)}
+          {meeting.recordedBy && `. Recorded by ${meeting.recordedBy}`}
+        </p>
       </PadRow>
     </>
   );
