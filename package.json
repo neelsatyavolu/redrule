@@ -1,6 +1,7 @@
 {
   "name": "redrule",
   "private": true,
+  "license": "MIT",
   "version": "0.2.3",
   "type": "module",
   "scripts": {
