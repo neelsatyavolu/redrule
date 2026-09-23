@@ -5,7 +5,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use super::share_client::BASE_URL;
-use super::{NetResult, keychain};
+use super::NetResult;
 use crate::core::folders::{RemoteMeeting, SharedMeeting};
 use crate::core::{Error, Result};
 
@@ -66,10 +66,9 @@ pub struct FolderClient<'a> {
 }
 
 impl FolderClient<'_> {
+    /// Anyone can create a folder; the keys in the answer are the only way to use it.
     pub async fn create(&self, name: &str) -> Result<Created> {
-        let key = keychain::sharing_key()
-            .map_err(|_| Error::message("Folders can only be created on the Mac that runs the Redrule sharing service."))?;
-        self.send(reqwest::Method::POST, "folder", &[], Auth::Bearer(&key), Some(&Named { name })).await?.ok_or_else(gone)
+        self.send(reqwest::Method::POST, "folder", &[], Auth::None, Some(&Named { name })).await?.ok_or_else(gone)
     }
 
     /// The folder's name and meetings, or None when its link no longer works.

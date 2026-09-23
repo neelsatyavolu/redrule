@@ -1,5 +1,6 @@
 import { renderFolder, renderFolderMeeting } from '../lib/folder-render.js';
 import { validID, validMeetingID, readFolder, readMeeting, meetingSummaries } from '../lib/folders.js';
+import { limited, tooMany } from '../lib/limit.js';
 
 const html = (res, body) => res.status(200).setHeader('Content-Type', 'text/html; charset=utf-8').send(body);
 
@@ -11,6 +12,9 @@ export default async function handler(req, res) {
   res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
   if (req.method!=='GET' && req.method!=='HEAD') return res.status(405).end();
   const {id, meeting} = req.query;
+  // The folder view lists every meeting and reads each summary, so it has a tighter limit than one meeting's page.
+  const wait = limited(req, meeting === undefined ? 'page' : 'read');
+  if (wait) return tooMany(res, wait, false);
   try {
     const folder = validID(id) ? await readFolder(id) : null;
     if (!folder) return res.status(404).send('This shared folder is unavailable. Its owner may have reset its link or deleted it.');

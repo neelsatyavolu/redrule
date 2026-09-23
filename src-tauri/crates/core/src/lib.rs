@@ -5,6 +5,7 @@ pub mod error;
 pub mod folders;
 pub mod models;
 pub mod oauth;
+pub mod sharing;
 pub mod store;
 pub mod summary;
 pub mod transcript;

@@ -80,6 +80,21 @@ Completed meetings have **Notes** and **Transcript** tabs. The transcript includ
 
 Choose **Share** to create or update a copyable link. The summary is shared by default; the transcript and speaker names are optional. Audio is never uploaded. Shared pages require no recipient login. Edits remain local until **Update & copy link**. **Stop sharing** removes the hosted copy; deleting a shared meeting first revokes its link and requires connectivity. Copies already saved by recipients cannot be recalled.
 
-The service lives in `sharing/` and uses private Vercel Blob storage. The marketing site and the sharing API are one Vercel project, `redrule`, connected to this repo. The app uses `https://redrule.vercel.app`. Uploads and revocation require a dedicated `MINUTES_SHARE_KEY` environment secret and the same credential in this Mac's Keychain (service `Redrule`, account `sharing`); no service credential is embedded in the app. After connecting the private Blob store, run `swift scripts/setup-sharing.swift` from the repository root to provision this Mac, then redeploy. This setup is for a personal installation; other Macs must be provisioned with the same service credential rather than independently rotating it.
+The service lives in `sharing/` and uses private Vercel Blob storage. The marketing site and the sharing API are one Vercel project, `redrule`, connected to this repo. The app uses `https://redrule.vercel.app`. Sharing and shared folders need no setup on any Mac. Each link gets its own random owner key, kept in this Mac's Keychain (service `Redrule`, account `share:<link id>`); the link's id is the SHA-256 of that key, so only the Mac that shared a link can update or remove it, and the service stores no key. Folders work the same way with their own owner and member keys.
+
+`swift scripts/setup-sharing.swift` is only for the legacy `MINUTES_SHARE_KEY` service credential (Vercel environment secret plus Keychain account `sharing`). Links published by Redrule 0.2.4 and earlier have random ids and can only be updated or removed with that credential, so keep it on the Mac that made them; the service still accepts it for every link.
+
+The API limits each client IP in memory per function instance (creating or resetting a folder 20 per hour; publishing or removing links 60, folder writes 600 and folder pages 30 per 10 minutes) and caps each folder at 500 meetings and 200 MB. Those in-memory limits only stop bursts. For limits that hold across instances and regions, add Vercel WAF rules once from the repository root (`vercel link --cwd sharing` first; Hobby includes rate limiting). Start them in `log` mode, check **Firewall → Traffic**, then change the action to `rate_limit`:
+
+```bash
+vercel firewall rules add "Sharing writes" --cwd sharing \
+  --condition '{"type":"path","op":"pre","value":"/api/"}' \
+  --condition '{"type":"method","op":"inc","value":["POST","PUT","PATCH","DELETE"]}' \
+  --action rate_limit --rate-limit-window 600 --rate-limit-requests 600 --rate-limit-keys ip --rate-limit-action log --yes
+vercel firewall rules add "Folder pages" --cwd sharing \
+  --condition '{"type":"path","op":"re","value":"^/f/[a-f0-9]{64}/?$"}' \
+  --action rate_limit --rate-limit-window 600 --rate-limit-requests 60 --rate-limit-keys ip --rate-limit-action log --yes
+vercel firewall diff --cwd sharing && vercel firewall publish --cwd sharing --yes
+```
 
 Web checks: `cd sharing && npm ci && npm test && npm run build`. After provisioning, `python3 scripts/test-sharing.py` (from the repository root) checks the live service with synthetic content and deletes the test share afterward.
