@@ -16,7 +16,7 @@ Decided with the user on 2026-09-22.
 
 ## Link and keys
 
-Link: `https://redrule.vercel.app/f/<folderId>#<memberKey>`. Both values are 64 lowercase hex characters.
+Link: `https://redrule.n3el.dev/f/<folderId>#<memberKey>`. Both values are 64 lowercase hex characters.
 
 | Secret | Who has it | What it allows |
 |---|---|---|

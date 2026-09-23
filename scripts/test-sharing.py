@@ -6,7 +6,7 @@ import subprocess
 import urllib.error
 import urllib.request
 
-BASE = "https://redrule.vercel.app"
+BASE = "https://redrule.n3el.dev"
 def sharing_key():
     for service in ("Redrule", "Minutes"):
         found = subprocess.run(

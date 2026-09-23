@@ -3,7 +3,7 @@ import MinutesCore
 import Security
 
 struct ShareClient {
-    static let baseURL = URL(string: "https://redrule.vercel.app")!
+    static let baseURL = URL(string: "https://redrule.n3el.dev")!
 
     private struct Payload: Encodable {
         struct Segment: Encodable {

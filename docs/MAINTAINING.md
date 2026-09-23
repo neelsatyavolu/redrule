@@ -31,7 +31,7 @@ The landing page is `website/`. One Vercel project, connected to this repo, serv
 
 ## Sharing service
 
-The service lives in `sharing/` and stores shared meetings in private Vercel Blob storage. The app uses `https://redrule.vercel.app`.
+The service lives in `sharing/` and stores shared meetings in private Vercel Blob storage. The app uses `https://redrule.n3el.dev`.
 
 Sharing and shared folders need no setup on any Mac. Each link gets its own random owner key, kept in this Mac's Keychain (service `Redrule`, account `share:<link id>`); the link's id is the SHA-256 of that key, so only the Mac that shared a link can update or remove it, and the service stores no key. Folders work the same way with their own owner and member keys.
 

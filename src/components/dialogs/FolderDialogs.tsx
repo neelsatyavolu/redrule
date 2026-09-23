@@ -136,7 +136,7 @@ export function JoinFolderDialog({ onClose }: { onClose: () => void }) {
       }}
     >
       <Field label="Folder link">
-        <TextInput data-autofocus value={link} placeholder="https://redrule.vercel.app/f/…" onChange={(e) => setLink(e.target.value)} />
+        <TextInput data-autofocus value={link} placeholder="https://redrule.n3el.dev/f/…" onChange={(e) => setLink(e.target.value)} />
       </Field>
       <Field label="Your name, shown on meetings you add">
         <TextInput value={yourName} maxLength={MAX_DISPLAY_NAME} onChange={(e) => setYourName(e.target.value)} />

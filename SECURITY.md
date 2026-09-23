@@ -14,7 +14,7 @@ Include what you found, how to reproduce it, and the Redrule version. We'll repl
 In scope:
 
 - The Redrule Mac app in `src-tauri/` and `src/`
-- The sharing service in `sharing/` and the shared pages at `redrule.vercel.app/s/` and `/f/`
+- The sharing service in `sharing/` and the shared pages at `redrule.n3el.dev/s/` and `/f/`
 - The update feed and how the app verifies updates
 - How the app stores tokens and API keys, and what it sends to note-writing providers
 
