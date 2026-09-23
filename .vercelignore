@@ -6,7 +6,7 @@ src-tauri/gen
 .build
 build
 dist
-public
+/public
 .DS_Store
 *.xcodeproj
 .swiftpm
