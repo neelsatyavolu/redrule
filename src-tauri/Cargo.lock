@@ -2872,7 +2872,7 @@ dependencies = [
 
 [[package]]
 name = "minutes"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "block2",
  "chrono",
@@ -2908,7 +2908,7 @@ dependencies = [
 
 [[package]]
 name = "minutes-core"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -2927,7 +2927,7 @@ dependencies = [
 
 [[package]]
 name = "minutes-engine"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "bzip2 0.6.1",
  "chrono",
