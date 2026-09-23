@@ -9,9 +9,9 @@ import {
   type ModelOption,
   type ProviderId,
 } from "../../lib/types";
-import { Dialog, Segmented, SettingRow, Switch } from "../ui";
+import { Button, Dialog, Segmented, SettingRow, Switch } from "../ui";
 import type { SettingsTab } from "./dialogState";
-import { AccountRows, PermissionRows } from "./SetupSections";
+import { AccountRows, CalendarRow, PermissionRows } from "./SetupSections";
 import { ModelStatus, sizeLabel, TranscriptionSettings, useLocalModels } from "./TranscriptionSettings";
 
 const PROVIDER_NAMES: Record<ProviderId, string> = { codex: "ChatGPT", grok: "Grok" };
@@ -36,7 +36,12 @@ export function SettingsDialog({ initialTab = "general", onClose }: { initialTab
         {tab === "general" && <GeneralSettings />}
         {tab === "transcription" && <TranscriptionSettings />}
         {tab === "accounts" && <AccountRows />}
-        {tab === "permissions" && <PermissionRows />}
+        {tab === "permissions" && (
+          <div className="divide-y divide-rule">
+            <PermissionRows />
+            <CalendarRow />
+          </div>
+        )}
       </div>
     </Dialog>
   );
@@ -135,6 +140,27 @@ function GeneralSettings() {
         detail="Off by default: audio is transcribed as the meeting runs and never written to disk. Turn this on to keep a WAV file of each side next to the notes."
       >
         <Switch label="Keep audio recordings" checked={settings.keepAudio} onChange={(keepAudio) => update({ keepAudio })} />
+      </SettingRow>
+
+      <SettingRow
+        title="Use calendar for titles and attendees"
+        detail={
+          app.permissions.calendar
+            ? "Names each recording after the calendar event happening when it starts, and gives the notes the attendees’ names. A title you type is never replaced."
+            : "Optional. Names each recording after the calendar event happening when it starts. Needs access to your calendars."
+        }
+      >
+        {app.permissions.calendar ? (
+          <Switch
+            label="Use calendar for titles and attendees"
+            checked={settings.useCalendar}
+            onChange={(useCalendar) => update({ useCalendar })}
+          />
+        ) : (
+          <Button size="sm" onClick={() => void attempt(api.requestCalendar)}>
+            Allow access
+          </Button>
+        )}
       </SettingRow>
     </div>
   );

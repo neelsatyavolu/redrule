@@ -26,6 +26,8 @@ export interface Meeting {
   tags?: string[];
   /** The shared folder the meeting is in. */
   folderId?: string;
+  /** Names from the calendar event, without the person recording. */
+  attendees?: string[];
   /** Set on other people's meetings from a shared folder, which are read-only. */
   remote?: boolean;
   recordedBy?: string;
@@ -87,6 +89,8 @@ export type SpeechModel =
 export interface Permissions {
   microphone: boolean;
   screenRecording: boolean;
+  /** Optional: only names meetings, never needed to record. */
+  calendar: boolean;
 }
 
 export interface Settings {
@@ -98,6 +102,8 @@ export interface Settings {
   onboarded: boolean;
   speechModelId: string;
   speakerModelId: string;
+  /** Takes titles and attendees from the calendar, once access is allowed. */
+  useCalendar: boolean;
 }
 
 export type ModelKind = "speech" | "speaker" | "notes";

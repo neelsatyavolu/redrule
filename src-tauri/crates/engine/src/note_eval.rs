@@ -62,7 +62,7 @@ async fn note_eval() {
 fn meeting() -> Meeting {
     Meeting {
         id: "EVAL".into(),
-        title: "New meeting".into(),
+        title: MeetingApp::Zoom.default_title(),
         app: MeetingApp::Zoom,
         started_at: Utc::now(),
         ended_at: None,
@@ -71,5 +71,6 @@ fn meeting() -> Meeting {
         archived_at: None,
         tags: vec![],
         folder_id: None,
+        attendees: vec![],
     }
 }

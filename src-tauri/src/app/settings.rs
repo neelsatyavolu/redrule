@@ -18,6 +18,7 @@ mod key {
     pub const ONBOARDED: &str = "onboarded";
     pub const SPEECH_MODEL: &str = "speechModel";
     pub const SPEAKER_MODEL: &str = "speakerModel";
+    pub const USE_CALENDAR: &str = "useCalendar";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -34,6 +35,9 @@ pub struct Settings {
     /// On-device model ids from `minutes_engine::catalog`.
     pub speech_model_id: String,
     pub speaker_model_id: String,
+    /// Names meetings and lists attendees from the calendar. On by default, but it does nothing
+    /// until the person allows calendar access, which Redrule only asks for when they choose to.
+    pub use_calendar: bool,
 }
 
 /// A partial update from the settings screen.
@@ -47,6 +51,7 @@ pub struct SettingsPatch {
     pub onboarded: Option<bool>,
     pub speech_model_id: Option<String>,
     pub speaker_model_id: Option<String>,
+    pub use_calendar: Option<bool>,
 }
 
 impl Settings {
@@ -89,6 +94,7 @@ impl Settings {
                 .speaker_model_id
                 .map(|id| catalog::speaker_option(&id).id.to_string())
                 .unwrap_or_else(|| self.speaker_model_id.clone()),
+            use_calendar: patch.use_calendar.unwrap_or(self.use_calendar),
         };
         next.save();
         next
@@ -108,6 +114,7 @@ impl Settings {
         set_text(key::SPEAKER_MODEL, &self.speaker_model_id);
         defaults.setBool_forKey(self.keep_audio, &NSString::from_str(key::KEEP_AUDIO));
         defaults.setBool_forKey(self.onboarded, &NSString::from_str(key::ONBOARDED));
+        defaults.setBool_forKey(self.use_calendar, &NSString::from_str(key::USE_CALENDAR));
     }
 
     pub fn model_choice(&self) -> ModelChoice {
@@ -149,6 +156,7 @@ fn has_settings(defaults: &NSUserDefaults) -> bool {
 fn read(defaults: &NSUserDefaults) -> Settings {
     let text = |key: &str| defaults.stringForKey(&NSString::from_str(key)).map(|s| s.to_string());
     let flag = |key: &str| defaults.boolForKey(&NSString::from_str(key));
+    let unset = |key: &str| defaults.objectForKey(&NSString::from_str(key)).is_none();
     // New users start on the models that suit their Mac. Earlier users keep the speech model they
     // already downloaded and move to the default speaker model, a small download that fixes split voices.
     let (speech, speaker) = if flag(key::ONBOARDED) {
@@ -165,6 +173,7 @@ fn read(defaults: &NSUserDefaults) -> Settings {
         onboarded: flag(key::ONBOARDED),
         speech_model_id: catalog::speech_option(&text(key::SPEECH_MODEL).unwrap_or_else(|| speech.into())).id.into(),
         speaker_model_id: catalog::speaker_option(&text(key::SPEAKER_MODEL).unwrap_or_else(|| speaker.into())).id.into(),
+        use_calendar: unset(key::USE_CALENDAR) || flag(key::USE_CALENDAR),
     }
 }
 
@@ -188,6 +197,7 @@ mod tests {
             onboarded: true,
             speech_model_id: catalog::DEFAULT_SPEECH.into(),
             speaker_model_id: catalog::DEFAULT_SPEAKER.into(),
+            use_calendar: true,
         }
     }
 

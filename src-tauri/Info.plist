@@ -6,5 +6,9 @@
     <string>Redrule records your microphone so your side of the meeting is included in the notes.</string>
     <key>NSAudioCaptureUsageDescription</key>
     <string>Redrule records the call's audio so it can transcribe the meeting on this Mac.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Redrule names each recording after the calendar event happening when it starts, and gives the notes the attendees' names so they are spelled correctly.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Redrule names each recording after the calendar event happening when it starts, and gives the notes the attendees' names so they are spelled correctly.</string>
 </dict>
 </plist>

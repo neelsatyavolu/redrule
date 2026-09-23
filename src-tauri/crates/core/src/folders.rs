@@ -191,6 +191,7 @@ impl RemoteMeeting {
             archived_at: None,
             tags: vec![],
             folder_id: Some(folder_id.to_string()),
+            attendees: vec![],
         }
     }
 }
