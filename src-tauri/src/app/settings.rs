@@ -14,6 +14,7 @@ mod key {
     pub const MODEL_CHOICE: &str = "modelChoice";
     pub const ASK_MODEL_CHOICE: &str = "askModelChoice";
     pub const KEEP_AUDIO: &str = "keepAudio";
+    pub const SHOW_IN_DOCK: &str = "showInDock";
     pub const MICROPHONE: &str = "microphoneUID";
     pub const ONBOARDED: &str = "onboarded";
     pub const SPEECH_MODEL: &str = "speechModel";
@@ -28,6 +29,7 @@ pub struct Settings {
     /// Empty to use the notes model.
     pub ask_model_choice_id: String,
     pub keep_audio: bool,
+    pub show_in_dock: bool,
     /// CoreAudio device UID, or empty for the system default.
     pub microphone_id: String,
     pub onboarded: bool,
@@ -43,6 +45,7 @@ pub struct SettingsPatch {
     pub model_choice_id: Option<String>,
     pub ask_model_choice_id: Option<String>,
     pub keep_audio: Option<bool>,
+    pub show_in_dock: Option<bool>,
     pub microphone_id: Option<String>,
     pub onboarded: Option<bool>,
     pub speech_model_id: Option<String>,
@@ -79,6 +82,7 @@ impl Settings {
                 .map(|id| if id.is_empty() { id } else { known_choice(&id) })
                 .unwrap_or_else(|| self.ask_model_choice_id.clone()),
             keep_audio: patch.keep_audio.unwrap_or(self.keep_audio),
+            show_in_dock: patch.show_in_dock.unwrap_or(self.show_in_dock),
             microphone_id: patch.microphone_id.unwrap_or_else(|| self.microphone_id.clone()),
             onboarded: patch.onboarded.unwrap_or(self.onboarded),
             speech_model_id: patch
@@ -106,6 +110,7 @@ impl Settings {
         set_text(key::MICROPHONE, &self.microphone_id);
         set_text(key::SPEECH_MODEL, &self.speech_model_id);
         set_text(key::SPEAKER_MODEL, &self.speaker_model_id);
+        defaults.setBool_forKey(self.show_in_dock, &NSString::from_str(key::SHOW_IN_DOCK));
         defaults.setBool_forKey(self.keep_audio, &NSString::from_str(key::KEEP_AUDIO));
         defaults.setBool_forKey(self.onboarded, &NSString::from_str(key::ONBOARDED));
     }
@@ -161,6 +166,7 @@ fn read(defaults: &NSUserDefaults) -> Settings {
             .unwrap_or_else(|| ModelChoice::default_for(crate::core::oauth::ProviderId::Codex).id()),
         ask_model_choice_id: text(key::ASK_MODEL_CHOICE).map(|id| if id.is_empty() { id } else { known_choice(&id) }).unwrap_or_default(),
         keep_audio: flag(key::KEEP_AUDIO),
+        show_in_dock: defaults.objectForKey(&NSString::from_str(key::SHOW_IN_DOCK)).is_none() || flag(key::SHOW_IN_DOCK),
         microphone_id: text(key::MICROPHONE).unwrap_or_default(),
         onboarded: flag(key::ONBOARDED),
         speech_model_id: catalog::speech_option(&text(key::SPEECH_MODEL).unwrap_or_else(|| speech.into())).id.into(),
@@ -184,6 +190,7 @@ mod tests {
             model_choice_id: notes.into(),
             ask_model_choice_id: ask.into(),
             keep_audio: false,
+            show_in_dock: true,
             microphone_id: String::new(),
             onboarded: true,
             speech_model_id: catalog::DEFAULT_SPEECH.into(),

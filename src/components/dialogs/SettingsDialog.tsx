@@ -58,6 +58,10 @@ function GeneralSettings() {
 
   return (
     <div className="divide-y divide-rule">
+      <SettingRow title="Show in Dock" detail="When off, open Redrule from its menu bar icon. Closing the window keeps Redrule running in the menu bar.">
+        <Switch label="Show in Dock" checked={settings.showInDock} onChange={(showInDock) => update({ showInDock })} />
+      </SettingRow>
+
       <SettingRow title="Microphone" detail="Changes apply to the next recording.">
         <select
           aria-label="Microphone"

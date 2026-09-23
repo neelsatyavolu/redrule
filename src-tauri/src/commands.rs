@@ -188,8 +188,12 @@ pub fn request_screen_recording(app: AppState) {
 }
 
 #[tauri::command]
-pub fn update_settings(app: AppState, patch: SettingsPatch) -> Settings {
+pub fn update_settings(handle: tauri::AppHandle, app: AppState, patch: SettingsPatch) -> Settings {
+    let dock_changed = patch.show_in_dock.is_some();
     app.apply_settings(patch);
+    if dock_changed {
+        crate::shell::sync_dock_visibility(&handle);
+    }
     app.use_chosen_models();
     app.read(|state| state.settings.clone())
 }

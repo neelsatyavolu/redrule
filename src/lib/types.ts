@@ -94,6 +94,7 @@ export interface Settings {
   /** The model that answers questions about a meeting; empty to use the notes model. */
   askModelChoiceId: string;
   keepAudio: boolean;
+  showInDock: boolean;
   microphoneId: string;
   onboarded: boolean;
   speechModelId: string;

@@ -53,7 +53,7 @@ pub fn install(app: &AppHandle) -> tauri::Result<RecordItems> {
             &PredefinedMenuItem::separator(app)?,
             &settings,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::hide(app, None)?,
+            &MenuItem::with_id(app, "hide", "Hide to Menu Bar", true, Some("CmdOrCtrl+H"))?,
             &PredefinedMenuItem::hide_others(app, None)?,
             &PredefinedMenuItem::show_all(app, None)?,
             &PredefinedMenuItem::separator(app)?,
@@ -91,6 +91,7 @@ pub fn install(app: &AppHandle) -> tauri::Result<RecordItems> {
             &tray_record,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "open", "Open Redrule", true, None::<&str>)?,
+            &MenuItem::with_id(app, "hide", "Hide to Menu Bar", true, None::<&str>)?,
             &MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?,
             &tray_updates,
             &PredefinedMenuItem::separator(app)?,
@@ -141,6 +142,7 @@ fn handle_menu(handle: &AppHandle, id: &str) {
             });
         }
         "open" => show_main(handle),
+        "hide" => hide_to_menu_bar(handle),
         "settings" => {
             show_main(handle);
             let _ = handle.emit_to(MAIN, OPEN_SETTINGS_EVENT, ());
@@ -151,14 +153,24 @@ fn handle_menu(handle: &AppHandle, id: &str) {
     }
 }
 
-/// Brings the window back, and the Dock icon with it.
+/// Brings the window back while respecting the Dock preference.
 pub fn show_main(handle: &AppHandle) {
-    let _ = handle.set_activation_policy(ActivationPolicy::Regular);
+    let show_in_dock = handle.state::<Arc<App>>().read(|state| state.settings.show_in_dock);
+    let policy = if show_in_dock { ActivationPolicy::Regular } else { ActivationPolicy::Accessory };
+    let _ = handle.set_activation_policy(policy);
     if let Some(window) = handle.get_webview_window(MAIN) {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
     }
+}
+
+/// Apply preference changes without reopening a window hidden to the menu bar.
+pub fn sync_dock_visibility(handle: &AppHandle) {
+    let visible = handle.get_webview_window(MAIN).is_some_and(|window| window.is_visible().unwrap_or(false));
+    let show_in_dock = handle.state::<Arc<App>>().read(|state| state.settings.show_in_dock);
+    let policy = if visible && show_in_dock { ActivationPolicy::Regular } else { ActivationPolicy::Accessory };
+    let _ = handle.set_activation_policy(policy);
 }
 
 /// Closing the window leaves Redrule running in the menu bar only: it keeps watching for calls,

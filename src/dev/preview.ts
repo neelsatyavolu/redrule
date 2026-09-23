@@ -78,6 +78,7 @@ const state: AppState = {
     modelChoiceId: "codex:gpt-6-astra",
     askModelChoiceId: "",
     keepAudio: false,
+    showInDock: true,
     microphoneId: "",
     onboarded: view !== "onboarding",
     speechModelId: "parakeet-v3",

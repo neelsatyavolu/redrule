@@ -36,7 +36,7 @@ if gh release view "v$VERSION" -R "$REPO" >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "Setting the version to $VERSION…"
+echo "Setting the version to ${VERSION}…"
 perl -0pi -e "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json package.json
 perl -0pi -e "s/(\[workspace\.package\]\nversion = )\"[^\"]*\"/\${1}\"$VERSION\"/" src-tauri/Cargo.toml
 
@@ -93,7 +93,7 @@ jq -n \
     '{version: $version, notes: $notes, pub_date: $date,
       platforms: {"darwin-aarch64": {signature: $signature, url: $url}}}' >"$STAGE/latest.json"
 
-echo "Publishing v$VERSION to $REPO…"
+echo "Publishing v$VERSION to ${REPO}…"
 gh release create "v$VERSION" -R "$REPO" --latest \
     --title "Redrule $VERSION" --notes "${NOTES:-Redrule $VERSION}" "$STAGE"/*
 
