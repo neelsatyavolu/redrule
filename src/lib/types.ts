@@ -103,6 +103,8 @@ export interface Settings {
   consentReminder: boolean;
   /** What "Copy notice" puts on the clipboard. */
   consentNotice: string;
+  /** Sends crash reports, when the build has somewhere to send them. Off by default. */
+  crashReports: boolean;
 }
 
 /** A meeting whose title, tags, notes or transcript hold every word searched for. */

@@ -16,6 +16,7 @@ use crate::core::search::SearchHit;
 use crate::platform::permissions;
 use crate::providers::clients::{model_choices as available_models, refresh_model_choices, ModelChoice};
 use crate::shell;
+use crate::telemetry;
 use crate::updates;
 
 type AppState<'a> = State<'a, Arc<App>>;
@@ -221,7 +222,9 @@ pub fn update_settings(handle: tauri::AppHandle, app: AppState, patch: SettingsP
         crate::shell::sync_dock_visibility(&handle);
     }
     app.use_chosen_models();
-    app.read(|state| state.settings.clone())
+    let settings = app.read(|state| state.settings.clone());
+    telemetry::configure(settings.crash_reports);
+    settings
 }
 
 #[tauri::command]
@@ -279,4 +282,10 @@ pub fn reveal_meeting(app: AppState, id: String) -> Result<()> {
     let folder = app.store()?.folder(&id)?;
     std::process::Command::new("/usr/bin/open").arg(folder).spawn()?;
     Ok(())
+}
+
+/// An uncaught error in the webview, sent only when crash reports are on.
+#[tauri::command]
+pub fn report_error(message: String, stack: Option<String>) {
+    telemetry::report_webview_error(&message, stack.as_deref());
 }

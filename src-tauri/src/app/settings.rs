@@ -25,6 +25,7 @@ mod key {
     pub const SPEAKER_MODEL: &str = "speakerModel";
     pub const CONSENT_REMINDER: &str = "consentReminder";
     pub const CONSENT_NOTICE: &str = "consentNotice";
+    pub const CRASH_REPORTS: &str = "crashReports";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -46,6 +47,8 @@ pub struct Settings {
     pub consent_reminder: bool,
     /// The message "Copy notice" puts on the clipboard.
     pub consent_notice: String,
+    /// Sends crash reports when the build has a Sentry DSN. Off by default.
+    pub crash_reports: bool,
 }
 
 /// A partial update from the settings screen.
@@ -62,6 +65,7 @@ pub struct SettingsPatch {
     pub speaker_model_id: Option<String>,
     pub consent_reminder: Option<bool>,
     pub consent_notice: Option<String>,
+    pub crash_reports: Option<bool>,
 }
 
 impl Settings {
@@ -107,6 +111,7 @@ impl Settings {
                 .unwrap_or_else(|| self.speaker_model_id.clone()),
             consent_reminder: patch.consent_reminder.unwrap_or(self.consent_reminder),
             consent_notice: patch.consent_notice.map(|notice| consent_notice(&notice)).unwrap_or_else(|| self.consent_notice.clone()),
+            crash_reports: patch.crash_reports.unwrap_or(self.crash_reports),
         };
         next.save();
         next
@@ -129,6 +134,7 @@ impl Settings {
         defaults.setBool_forKey(self.show_in_dock, &NSString::from_str(key::SHOW_IN_DOCK));
         defaults.setBool_forKey(self.keep_audio, &NSString::from_str(key::KEEP_AUDIO));
         defaults.setBool_forKey(self.onboarded, &NSString::from_str(key::ONBOARDED));
+        defaults.setBool_forKey(self.crash_reports, &NSString::from_str(key::CRASH_REPORTS));
     }
 
     pub fn model_choice(&self) -> ModelChoice {
@@ -195,7 +201,13 @@ fn read(defaults: &NSUserDefaults) -> Settings {
         speaker_model_id: catalog::speaker_option(&text(key::SPEAKER_MODEL).unwrap_or_else(|| speaker.into())).id.into(),
         consent_reminder: defaults.objectForKey(&NSString::from_str(key::CONSENT_REMINDER)).is_none() || flag(key::CONSENT_REMINDER),
         consent_notice: consent_notice(&text(key::CONSENT_NOTICE).unwrap_or_default()),
+        crash_reports: flag(key::CRASH_REPORTS),
     }
+}
+
+/// Whether crash reports are on, read without loading or migrating the other settings.
+pub fn crash_reports_on() -> bool {
+    NSUserDefaults::standardUserDefaults().boolForKey(&NSString::from_str(key::CRASH_REPORTS))
 }
 
 #[cfg(test)]
@@ -221,6 +233,7 @@ mod tests {
             speaker_model_id: catalog::DEFAULT_SPEAKER.into(),
             consent_reminder: true,
             consent_notice: DEFAULT_CONSENT_NOTICE.into(),
+            crash_reports: false,
         }
     }
 

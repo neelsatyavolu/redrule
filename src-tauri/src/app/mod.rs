@@ -13,6 +13,6 @@ mod speech_models;
 mod state;
 
 pub use library::MeetingDetail;
-pub use settings::{Settings, SettingsPatch};
+pub use settings::{crash_reports_on, Settings, SettingsPatch};
 pub use speech_models::{LocalModels, ModelKind};
 pub use state::{App, State};

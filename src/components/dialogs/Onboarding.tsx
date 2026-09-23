@@ -2,7 +2,7 @@ import { api } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
 import { canWriteNotes } from "../../lib/types";
 import { Button, Dialog } from "../ui";
-import { AccountRows, LocalNotesRow, PermissionRows } from "./SetupSections";
+import { AccountRows, CrashReportsRow, LocalNotesRow, PermissionRows } from "./SetupSections";
 
 /** First launch: the two permissions and a way to write notes, in the order they are needed. */
 export function Onboarding() {
@@ -35,6 +35,9 @@ export function Onboarding() {
         <div className="border-t border-rule">
           <LocalNotesRow />
         </div>
+      </Step>
+      <Step number={3} title="Help fix crashes (optional)">
+        <CrashReportsRow />
       </Step>
     </Dialog>
   );

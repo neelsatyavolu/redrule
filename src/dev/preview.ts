@@ -85,6 +85,7 @@ const state: AppState = {
     speakerModelId: "accurate",
     consentReminder: true,
     consentNotice: "Heads up: I'm recording this call to take notes. Let me know if you'd rather I didn't.",
+    crashReports: false,
   },
   sharingBusy: false,
   revision: 1,

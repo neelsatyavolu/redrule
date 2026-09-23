@@ -23,6 +23,8 @@ The script publishes `Redrule.dmg`, the signed update archive and `latest.json` 
 
 `release.sh` reads the Developer ID, the notary API key and the updater signing key from 1Password (see `UPDATER_KEY` in the script). The updater key's public half is in `src-tauri/tauri.conf.json`. If the private key is lost, installed copies can't be updated, so never rotate it casually.
 
+Crash reports are opt-in ("Send crash reports" in setup and Settings, off by default) and go to Sentry only from builds compiled with `REDRULE_SENTRY_DSN` set. The release script takes it from the environment and prints a warning when it is missing; the build still succeeds and never reports. Dev builds and forks have no DSN. For example, with the DSN stored in 1Password: `REDRULE_SENTRY_DSN="op://<vault>/<item>/dsn" op run -- scripts/release.sh 0.2.5 "What changed"`. Reports carry panics, uncaught webview errors, stack traces, the app version and the OS and Mac model, with home folder names and token-like strings removed (see `src-tauri/src/telemetry.rs`). Turn on "Prevent storing of IP addresses" in the Sentry project's security settings.
+
 ## Website and hosting
 
 The landing page is `website/`. One Vercel project, connected to this repo, serves it together with the sharing API: `scripts/assemble-vercel-site.mjs` copies `website/` into `public/`, and `vercel.json` adds clean URLs (`/privacy`, `/terms`), the `/download` redirect to the newest `Redrule.dmg`, and the `/s/` and `/f/` rewrites for shared pages.

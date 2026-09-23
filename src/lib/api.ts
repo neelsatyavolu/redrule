@@ -63,6 +63,7 @@ export const api = {
   showMainWindow: () => invoke<void>("show_main_window"),
   revealMeeting: (id: string) => invoke<void>("reveal_meeting", { id }),
   restartToUpdate: () => invoke<void>("restart_to_update"),
+  reportError: (message: string, stack: string | null) => invoke<void>("report_error", { message, stack }),
 };
 
 /** Command errors arrive as their display string. */
