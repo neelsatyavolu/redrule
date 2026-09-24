@@ -11,6 +11,7 @@ use crate::core::models::{ActionItem, MeetingNote, MeetingShare, NoteSection, Tr
 use crate::core::export::{self, ExportFormat};
 use crate::core::transcript;
 use crate::core::{Error, Result};
+use crate::providers::share_client;
 
 const MAX_TITLE: usize = 300;
 const MAX_TAG: usize = 40;
@@ -36,7 +37,8 @@ impl App {
         Ok(MeetingDetail {
             transcript: transcript::merge(&store.transcript(id)?),
             note: store.note(id)?,
-            share: store.share(id)?,
+            // Rebuilt from the id: meetings shared before the move to n3el.dev saved the old host.
+            share: store.share(id)?.map(|share| MeetingShare { url: share_client::share_url(&share.id), ..share }),
         })
     }
 
