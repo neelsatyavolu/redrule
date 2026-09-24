@@ -15,7 +15,7 @@ use objc2_core_graphics::{CGWindowListCopyWindowInfo, CGWindowListOption, kCGNul
 use crate::core::detector_logic::DetectionSnapshot;
 
 const BROWSER_NAMES: &[&str] =
-    &["Google Chrome", "Safari", "Arc", "Dia", "Microsoft Edge", "Brave Browser", "Firefox", "Vivaldi"];
+    &["Google Chrome", "Safari", "Arc", "Dia", "Microsoft Edge", "Brave Browser", "Firefox", "Vivaldi", "Aside"];
 
 pub fn snapshot() -> DetectionSnapshot {
     DetectionSnapshot {

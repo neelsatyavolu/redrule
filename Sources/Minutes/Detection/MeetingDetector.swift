@@ -8,7 +8,7 @@ import MinutesCore
 final class MeetingDetector {
     private static let pollInterval: Duration = .seconds(3)
     private nonisolated static let browserNames: Set<String> = [
-        "Google Chrome", "Safari", "Arc", "Dia", "Microsoft Edge", "Brave Browser", "Firefox", "Vivaldi",
+        "Google Chrome", "Safari", "Arc", "Dia", "Microsoft Edge", "Brave Browser", "Firefox", "Vivaldi", "Aside",
     ]
 
     private var logic = MeetingDetectorLogic()

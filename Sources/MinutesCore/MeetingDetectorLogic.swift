@@ -24,6 +24,7 @@ public struct MeetingDetectorLogic: Equatable, Sendable {
     public static let browserBundlePrefixes = [
         "com.google.Chrome", "com.apple.Safari", "com.apple.WebKit", "company.thebrowser",
         "com.microsoft.edgemac", "com.brave.Browser", "org.mozilla.firefox", "com.vivaldi.Vivaldi",
+        "at.studio.AsideBrowser",
     ]
     /// Zoom only runs this helper while a meeting is in progress.
     static let zoomMeetingProcess = "CptHost"

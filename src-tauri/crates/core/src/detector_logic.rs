@@ -12,6 +12,7 @@ pub const BROWSER_BUNDLE_PREFIXES: &[&str] = &[
     "com.brave.Browser",
     "org.mozilla.firefox",
     "com.vivaldi.Vivaldi",
+    "at.studio.AsideBrowser",
 ];
 /// Zoom only runs this helper while a meeting is in progress.
 const ZOOM_MEETING_PROCESS: &str = "CptHost";
@@ -190,6 +191,16 @@ mod tests {
             run(&[meet("Meet - abc-defg-hij"), meet("Meet - abc-defg-hij")])[1],
             Some(DetectionEvent::Detected(MeetingApp::GoogleMeet))
         );
+    }
+
+    #[test]
+    fn detects_meet_in_aside() {
+        let aside = DetectionSnapshot {
+            mic_user_bundle_ids: ["at.studio.AsideBrowser.helper".to_string()].into(),
+            browser_window_titles: vec!["Meet - abc-defg-hij".to_string()],
+            ..Default::default()
+        };
+        assert_eq!(run(&[aside.clone(), aside])[1], Some(DetectionEvent::Detected(MeetingApp::GoogleMeet)));
     }
 
     fn mic(bundle_id: &str) -> DetectionSnapshot {
