@@ -184,6 +184,12 @@ function GeneralSettings() {
         <CalendarChoices ignored={settings.ignoredCalendars} onChange={(ignoredCalendars) => update({ ignoredCalendars })} />
       )}
       <CrashReportsRow />
+      <SettingRow
+        title="Share anonymous usage stats"
+        detail="Sends a daily ping with a random install ID, the app version and your macOS version. No meeting content or personal data."
+      >
+        <Switch label="Share anonymous usage stats" checked={settings.usageStats} onChange={(usageStats) => update({ usageStats })} />
+      </SettingRow>
       <UpdatesRow />
     </div>
   );

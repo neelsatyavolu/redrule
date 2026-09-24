@@ -15,6 +15,8 @@ mod speech_models;
 mod state;
 
 pub use library::MeetingDetail;
-pub use settings::{crash_reports_on, Settings, SettingsPatch};
+pub use settings::{
+    crash_reports_on, set_usage_last_sent_day, usage_install_id, usage_last_sent_day, usage_stats_on, Settings, SettingsPatch,
+};
 pub use speech_models::{LocalModels, ModelKind};
 pub use state::{App, State};

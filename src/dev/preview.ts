@@ -88,6 +88,7 @@ const state: AppState = {
     consentReminder: true,
     consentNotice: "Heads up: I'm recording this call to take notes. Let me know if you'd rather I didn't.",
     crashReports: false,
+    usageStats: true,
     useCalendar: true,
     ignoredCalendars: ["birthdays"],
     compatibleUrl: withKeys ? "http://localhost:11434/v1" : "",

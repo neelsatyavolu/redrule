@@ -113,6 +113,8 @@ export interface Settings {
   consentNotice: string;
   /** Sends crash reports, when the build has somewhere to send them. Off by default. */
   crashReports: boolean;
+  /** Sends a daily anonymous ping with a random install ID, app version and macOS version. On by default. */
+  usageStats: boolean;
   /** Takes titles and attendees from the calendar, once access is allowed. */
   useCalendar: boolean;
   /** Identifiers of calendars whose events never name a recording. */

@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://analytics.n3el.dev/p.js"></script>
 </head>
 <body>
   <div class="margin-rule" aria-hidden="true"></div>
@@ -30,7 +31,7 @@
       <p class="kicker">Privacy</p>
       <h1>Privacy policy</h1>
       <p class="updated">Last updated September 23, 2026</p>
-      <p class="lede">Redrule records and transcribes meetings on your Mac. This page explains what stays on your Mac, what leaves it, and where it goes. Redrule has no accounts, ads or analytics.</p>
+      <p class="lede">Redrule records and transcribes meetings on your Mac. This page explains what stays on your Mac, what leaves it, and where it goes. Redrule has no accounts or ads. It sends one anonymous usage ping a day, which you can turn off.</p>
 
       <section>
         <h2>What stays on your Mac</h2>
@@ -75,18 +76,24 @@
       </section>
 
       <section>
+        <h2>Usage stats</h2>
+        <p>Once a day, Redrule sends an anonymous ping to <code>analytics.n3el.dev</code>, a service the developer runs to count how many copies are in use. The ping contains a random install ID made on your Mac, the app version, the macOS version and whether the Mac has an Apple or Intel chip. The service notes the country the request came from but does not store your IP address. The ping never includes meeting content, names, emails, file paths or account details. To stop it, turn off <strong>Share anonymous usage stats</strong> in Settings.</p>
+      </section>
+
+      <section>
         <h2>Updates and downloads</h2>
         <ul>
           <li>A minute after launch, and then every six hours, Redrule checks GitHub for a newer version and downloads updates from there.</li>
           <li>The speech models download from GitHub. The local notes models download from Hugging Face.</li>
           <li>The list of available ChatGPT and Grok models is fetched from GitHub.</li>
+          <li>Once a day, unless you turn it off, the usage ping described above.</li>
         </ul>
         <p>These requests contain no meeting content. Like any web request, they reveal your IP address to the host.</p>
       </section>
 
       <section>
         <h2>This website</h2>
-        <p>This website runs on Vercel, which keeps standard request logs. Pages load fonts from Google Fonts, and the home page asks GitHub for the latest version number. The site sets no cookies and uses no analytics.</p>
+        <p>This website runs on Vercel, which keeps standard request logs. Pages load fonts from Google Fonts, and the home page asks GitHub for the latest version number. The home, privacy and terms pages count visits with <code>analytics.n3el.dev</code>: the page address, the referring site, your country, a rough browser and device type, and clicks on the download link. It sets no cookies and stores no IP address, and it can't follow you from one day to the next. Shared meeting pages are not counted.</p>
       </section>
 
       <section>

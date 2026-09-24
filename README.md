@@ -15,11 +15,13 @@ Redrule is a free macOS app that notices when you are in a Zoom or Google Meet c
 
 ## Privacy
 
-Recording and transcription happen on your Mac. Meetings are plain files in `~/Library/Application Support/Redrule/meetings`, and audio isn't saved unless you turn on **Keep audio recordings**. The transcript leaves your Mac only if you choose a provider to write notes, or share a meeting. Redrule has no accounts, ads or analytics. The [privacy policy](https://redrule.n3el.dev/privacy) has the details.
+Recording and transcription happen on your Mac. Meetings are plain files in `~/Library/Application Support/Redrule/meetings`, and audio isn't saved unless you turn on **Keep audio recordings**. The transcript leaves your Mac only if you choose a provider to write notes, or share a meeting. Redrule has no accounts or ads.
+
+Once a day Redrule sends an anonymous usage ping to `analytics.n3el.dev`, run by the developer: a random install ID, the app version, the macOS version and the chip type. It carries no meeting content, names, emails or file paths, and no IP address is stored. Turn off **Share anonymous usage stats** in Settings to stop it. The website counts visits without cookies. The [privacy policy](https://redrule.n3el.dev/privacy) has the details.
 
 ## Note-writing providers
 
-- **On your Mac**: a local Qwen3.5 model. Nothing leaves your Mac, and it works offline.
+- **On your Mac**: a local Qwen3.5 model. The transcript stays on your Mac, and it works offline.
 - **API key**: your own OpenAI, Anthropic, Google Gemini or OpenAI-compatible key.
 - **ChatGPT (Codex) or Grok sign-in**: these sign-ins reuse the OAuth clients of the providers' official command-line tools. They could stop working if a provider changes those clients. API keys and the local model are the stable options.
 

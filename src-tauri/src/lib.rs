@@ -7,6 +7,7 @@ pub mod providers;
 mod shell;
 mod telemetry;
 mod updates;
+mod usage_ping;
 
 use std::sync::Arc;
 
@@ -34,6 +35,7 @@ pub fn run() {
             tauri_app.manage(shell::install(&handle)?);
             app.start();
             updates::check_in_background(&handle);
+            usage_ping::start();
             // The page shows the window once it has painted; if it never does, show it anyway.
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_secs(4)).await;

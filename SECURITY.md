@@ -17,6 +17,7 @@ In scope:
 - The sharing service in `sharing/` and the shared pages at `redrule.n3el.dev/s/` and `/f/`
 - The update feed and how the app verifies updates
 - How the app stores tokens and API keys, and what it sends to note-writing providers
+- The daily usage ping (`src-tauri/src/usage_ping.rs`) and what it sends
 
 Out of scope:
 

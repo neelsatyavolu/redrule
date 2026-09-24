@@ -27,6 +27,9 @@ mod key {
     pub const CONSENT_REMINDER: &str = "consentReminder";
     pub const CONSENT_NOTICE: &str = "consentNotice";
     pub const CRASH_REPORTS: &str = "crashReports";
+    pub const USAGE_STATS: &str = "usageStats";
+    pub const USAGE_INSTALL_ID: &str = "usageInstallID";
+    pub const USAGE_LAST_SENT_DAY: &str = "usageLastSentDay";
     pub const USE_CALENDAR: &str = "useCalendar";
     pub const IGNORED_CALENDARS: &str = "ignoredCalendars";
     pub const COMPATIBLE_URL: &str = "compatibleURL";
@@ -54,6 +57,8 @@ pub struct Settings {
     pub consent_notice: String,
     /// Sends crash reports when the build has a Sentry DSN. Off by default.
     pub crash_reports: bool,
+    /// Sends a daily anonymous ping (random install id, app and macOS version). On by default.
+    pub usage_stats: bool,
     /// Names meetings and lists attendees from the calendar. On by default, but it does nothing
     /// until the person allows calendar access, which Redrule only asks for when they choose to.
     pub use_calendar: bool,
@@ -80,6 +85,7 @@ pub struct SettingsPatch {
     pub consent_reminder: Option<bool>,
     pub consent_notice: Option<String>,
     pub crash_reports: Option<bool>,
+    pub usage_stats: Option<bool>,
     pub use_calendar: Option<bool>,
     pub ignored_calendars: Option<Vec<String>>,
     /// Set only after the server has been checked, so not from the webview.
@@ -136,6 +142,7 @@ impl Settings {
             consent_reminder: patch.consent_reminder.unwrap_or(self.consent_reminder),
             consent_notice: patch.consent_notice.map(|notice| consent_notice(&notice)).unwrap_or_else(|| self.consent_notice.clone()),
             crash_reports: patch.crash_reports.unwrap_or(self.crash_reports),
+            usage_stats: patch.usage_stats.unwrap_or(self.usage_stats),
             use_calendar: patch.use_calendar.unwrap_or(self.use_calendar),
             ignored_calendars: patch.ignored_calendars.map(|ids| calendar_ids(ids.iter().map(String::as_str))).unwrap_or_else(|| self.ignored_calendars.clone()),
             compatible_url: patch.compatible_url.unwrap_or_else(|| self.compatible_url.clone()),
@@ -166,6 +173,7 @@ impl Settings {
         defaults.setBool_forKey(self.keep_audio, &NSString::from_str(key::KEEP_AUDIO));
         defaults.setBool_forKey(self.onboarded, &NSString::from_str(key::ONBOARDED));
         defaults.setBool_forKey(self.crash_reports, &NSString::from_str(key::CRASH_REPORTS));
+        defaults.setBool_forKey(self.usage_stats, &NSString::from_str(key::USAGE_STATS));
         defaults.setBool_forKey(self.use_calendar, &NSString::from_str(key::USE_CALENDAR));
     }
 
@@ -266,6 +274,7 @@ fn read(defaults: &NSUserDefaults) -> Settings {
         consent_reminder: defaults.objectForKey(&NSString::from_str(key::CONSENT_REMINDER)).is_none() || flag(key::CONSENT_REMINDER),
         consent_notice: consent_notice(&text(key::CONSENT_NOTICE).unwrap_or_default()),
         crash_reports: flag(key::CRASH_REPORTS),
+        usage_stats: unset(key::USAGE_STATS) || flag(key::USAGE_STATS),
         use_calendar: unset(key::USE_CALENDAR) || flag(key::USE_CALENDAR),
         ignored_calendars: calendar_ids(text(key::IGNORED_CALENDARS).unwrap_or_default().lines()),
         compatible_url: text(key::COMPATIBLE_URL).unwrap_or_default(),
@@ -276,6 +285,39 @@ fn read(defaults: &NSUserDefaults) -> Settings {
 /// Whether crash reports are on, read without loading or migrating the other settings.
 pub fn crash_reports_on() -> bool {
     NSUserDefaults::standardUserDefaults().boolForKey(&NSString::from_str(key::CRASH_REPORTS))
+}
+
+/// Whether the daily usage ping is on, read without loading the other settings. On until turned off.
+pub fn usage_stats_on() -> bool {
+    let defaults = NSUserDefaults::standardUserDefaults();
+    let key = NSString::from_str(key::USAGE_STATS);
+    defaults.objectForKey(&key).is_none() || defaults.boolForKey(&key)
+}
+
+/// The random id the usage ping carries, made the first time it is needed.
+pub fn usage_install_id() -> String {
+    let defaults = NSUserDefaults::standardUserDefaults();
+    let key = NSString::from_str(key::USAGE_INSTALL_ID);
+    if let Some(id) = defaults.stringForKey(&key).map(|id| id.to_string()).filter(|id| uuid::Uuid::parse_str(id).is_ok()) {
+        return id;
+    }
+    let id = uuid::Uuid::new_v4().to_string();
+    // SAFETY: an NSString is a valid property-list object.
+    unsafe { defaults.setObject_forKey(Some(&NSString::from_str(&id)), &key) };
+    id
+}
+
+/// The UTC day ("2026-09-23") the usage ping last went out.
+pub fn usage_last_sent_day() -> Option<String> {
+    NSUserDefaults::standardUserDefaults().stringForKey(&NSString::from_str(key::USAGE_LAST_SENT_DAY)).map(|day| day.to_string())
+}
+
+pub fn set_usage_last_sent_day(day: &str) {
+    // SAFETY: an NSString is a valid property-list object.
+    unsafe {
+        NSUserDefaults::standardUserDefaults()
+            .setObject_forKey(Some(&NSString::from_str(day)), &NSString::from_str(key::USAGE_LAST_SENT_DAY))
+    };
 }
 
 #[cfg(test)]
@@ -325,6 +367,7 @@ mod tests {
             consent_reminder: true,
             consent_notice: DEFAULT_CONSENT_NOTICE.into(),
             crash_reports: false,
+            usage_stats: true,
             use_calendar: true,
             ignored_calendars: Vec::new(),
             compatible_url: String::new(),
