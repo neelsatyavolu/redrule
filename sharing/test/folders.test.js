@@ -183,7 +183,11 @@ test('folder and meeting pages have Markdown versions for AI agents', async () =
   assert.equal(res.body, `# Planning notes\n\nRecorded by Dana · 1 Sep 2026 · From the shared folder [Team](https://share.example/f/${f.id}.md)\n\n## Summary\n\nWe planned.\n\n## Scope\n\n- Ship folders\n\n## Decisions\n\n- Go\n\n## Action items\n\n- [x] **Sam:** Write spec\n- [ ] Review\n\n## Transcript\n\n**Dana** [00:00]: Hello\n\n**Lee** [01:15]: Hi\n`);
   res = await get({id:f.id, meeting:M1});
   assert.ok(res.body.includes(`<link rel="alternate" type="text/markdown" href="/f/${f.id}/m/${M1}.md">`));
-  assert.equal((await get({id:f.id, meeting:'11111111-0000-0000-0000-000000000000.md'})).code, 404);
+  res = await get({id:f.id, meeting:'11111111-0000-0000-0000-000000000000.md'});
+  assert.equal(res.code, 404);
+  assert.match(res.headers['Content-Type'], /^text\/markdown/);
+  assert.ok(res.body.startsWith('# Not found\n\nThis meeting is no longer in the shared folder.') && res.body.includes('https://share.example/llms.txt'));
+  assert.equal((await get({id:'d'.repeat(64)}, {accept:'text/markdown'})).headers['Content-Type'], 'text/markdown; charset=utf-8');
 });
 
 test('folder and meeting pages render escaped, dated and linked', async () => {

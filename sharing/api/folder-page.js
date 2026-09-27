@@ -1,7 +1,7 @@
 import { renderFolder, renderFolderMeeting, folderMarkdown, folderMeetingMarkdown } from '../lib/folder-render.js';
 import { validID, validMeetingID, readFolder, readMeeting, meetingSummaries } from '../lib/folders.js';
 import { limited, tooMany } from '../lib/limit.js';
-import { MARKDOWN, markdownPath, wantsMarkdown, origin } from '../lib/markdown.js';
+import { MARKDOWN, markdownPath, wantsMarkdown, origin, sendError } from '../lib/markdown.js';
 
 const html = (res, body) => res.status(200).setHeader('Content-Type', 'text/html; charset=utf-8').send(body);
 const markdown = (res, body) => res.status(200).setHeader('Content-Type', MARKDOWN).send(body);
@@ -22,13 +22,13 @@ export default async function handler(req, res) {
   if (wait) return tooMany(res, wait, false);
   try {
     const folder = validID(id) ? await readFolder(id) : null;
-    if (!folder) return res.status(404).send('This shared folder is unavailable. Its owner may have reset its link or deleted it.');
+    if (!folder) return sendError(req, res, 404, 'This shared folder is unavailable. Its owner may have reset its link or deleted it.', asMarkdown);
     if (meeting === undefined) {
       const meetings = await meetingSummaries(id);
       return asMarkdown ? markdown(res, folderMarkdown(id, folder, meetings, origin(req))) : html(res, renderFolder(id, folder, meetings));
     }
     const found = validMeetingID(meeting) ? await readMeeting(id, meeting) : null;
-    if (!found) return res.status(404).send('This meeting is no longer in the shared folder.');
+    if (!found) return sendError(req, res, 404, 'This meeting is no longer in the shared folder.', asMarkdown);
     return asMarkdown ? markdown(res, folderMeetingMarkdown(id, folder, found.meeting, origin(req))) : html(res, renderFolderMeeting(id, folder, found.meeting));
-  } catch { return res.status(503).send('This folder could not be loaded. Please try again shortly.'); }
+  } catch { return sendError(req, res, 503, 'This folder could not be loaded. Please try again shortly.', asMarkdown); }
 }

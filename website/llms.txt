@@ -1,0 +1,18 @@
+# Redrule
+
+> Redrule is a free, open-source Mac app that transcribes Zoom and Google Meet calls on the Mac and writes a summary with decisions and action items. People share those notes as secret links on this site.
+
+## Reading shared notes
+
+- A shared meeting is at `/s/<id>`. A shared folder is at `/f/<id>`, and each meeting in it at `/f/<id>/m/<meeting>`.
+- Add `.md` to any of these URLs, or request it with `Accept: text/markdown`, to get the page as Markdown.
+- A meeting's Markdown has the title, summary, sections, decisions, action items (`[x]` when done) and, when the sharer included it, the full transcript as `**Speaker** [mm:ss]: text`.
+- A folder's Markdown lists its meetings, newest first, each with a link to that meeting's Markdown.
+- A 404 means the owner stopped sharing the link, reset it, or removed the meeting.
+- Shared links are private to the people they were sent to. Don't index, cache or republish them.
+
+## More
+
+- [Source code](https://github.com/neelsatyavolu/redrule): MIT licensed
+- [Download for Mac](https://redrule.n3el.dev/download)
+- [Privacy policy](https://redrule.n3el.dev/privacy)

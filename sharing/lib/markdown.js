@@ -11,6 +11,13 @@ export const wantsMarkdown = (req, suffix) => suffix || /\btext\/markdown\b/i.te
 // The https origin the request came to, so links in the Markdown work outside a browser. Empty without a Host header.
 export const origin = req => req.headers?.host ? `https://${req.headers.host}` : '';
 
+// Sends an error page: Markdown when the request wants it, so an agent learns what happened and where to read more.
+export function sendError(req, res, status, message, suffix) {
+  if (!wantsMarkdown(req, suffix)) return res.status(status).send(message);
+  const title = status === 404 ? 'Not found' : 'Temporarily unavailable';
+  return res.status(status).setHeader('Content-Type', MARKDOWN).send(`# ${title}\n\n${message}\n\nHow Redrule share links work: ${origin(req)}/llms.txt\n`);
+}
+
 export const oneLine = value => String(value).replace(/\s+/g, ' ').trim();
 export const linkText = value => oneLine(value).replace(/[[\]]/g, '\\$&');
 // Indents continuation lines so text with line breaks stays inside its list item.

@@ -72,7 +72,10 @@ test('a shared note has a Markdown version for AI agents',async()=>{
  res=await get({id},{accept:'text/html,application/xhtml+xml,*/*;q=0.8'});assert.match(res.headers['Content-Type'],/^text\/html/);
  assert.ok(res.body.includes(`<link rel="alternate" type="text/markdown" href="/s/${id}.md">`));
  assert.ok(res.body.includes(`href="/s/${id}.md"`) && res.body.includes('Alice <time>00:01</time>'));
- assert.equal((await get({id:`${'b'.repeat(64)}.md`})).code,404);
+ res=await get({id:`${'b'.repeat(64)}.md`},{host:'share.example'});
+ assert.equal(res.code,404);assert.match(res.headers['Content-Type'],/^text\/markdown/);
+ assert.equal(res.body,'# Not found\n\nThis shared note is unavailable. Its owner may have stopped sharing it.\n\nHow Redrule share links work: https://share.example/llms.txt\n');
+ res=await get({id:'b'.repeat(64)});assert.equal(res.code,404);assert.equal(res.headers['Content-Type'],undefined);
  assert.equal((await get({id:`${id}.txt`})).code,404);
  notes.clear();
 });
