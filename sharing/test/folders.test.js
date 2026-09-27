@@ -164,6 +164,28 @@ test('the owner renames, resets and deletes the folder', async () => {
   assert.equal((await put(moved, M1, editA)).code, 404);
 });
 
+test('folder and meeting pages have Markdown versions for AI agents', async () => {
+  const f = await newFolder('Team');
+  await put(f, M1, editA, meeting({title:'Older', startedAt:'2026-09-01T12:00:00Z'}));
+  await put(f, M2, editB, meeting({title:'Newer [draft]'}));
+  const get = async (query, headers = {}) => { const res = response(); await pageAPI({method:'GET', query, headers:{host:'share.example', ...headers}}, res); return res; };
+  let res = await get({id:`${f.id}.md`});
+  assert.equal(res.code, 200);
+  assert.match(res.headers['Content-Type'], /^text\/markdown/);
+  assert.equal(res.body, `# Team\n\nShared folder with 2 meetings. Each link below has one meeting’s notes and transcript.\n\n- [Newer \\[draft\\]](https://share.example/f/${f.id}/m/${M2}.md) · 22 Sep 2026 · Recorded by Dana\n- [Older](https://share.example/f/${f.id}/m/${M1}.md) · 1 Sep 2026 · Recorded by Dana\n`);
+  res = await get({id:f.id}, {accept:'text/markdown'});
+  assert.match(res.headers['Content-Type'], /^text\/markdown/);
+  res = await get({id:f.id});
+  assert.ok(res.body.includes(`<link rel="alternate" type="text/markdown" href="/f/${f.id}.md">`));
+
+  res = await get({id:f.id, meeting:`${M1}.md`});
+  assert.equal(res.code, 200);
+  assert.equal(res.body, `# Planning notes\n\nRecorded by Dana · 1 Sep 2026 · From the shared folder [Team](https://share.example/f/${f.id}.md)\n\n## Summary\n\nWe planned.\n\n## Scope\n\n- Ship folders\n\n## Decisions\n\n- Go\n\n## Action items\n\n- [x] **Sam:** Write spec\n- [ ] Review\n\n## Transcript\n\n**Dana** [00:00]: Hello\n\n**Lee** [01:15]: Hi\n`);
+  res = await get({id:f.id, meeting:M1});
+  assert.ok(res.body.includes(`<link rel="alternate" type="text/markdown" href="/f/${f.id}/m/${M1}.md">`));
+  assert.equal((await get({id:f.id, meeting:'11111111-0000-0000-0000-000000000000.md'})).code, 404);
+});
+
 test('folder and meeting pages render escaped, dated and linked', async () => {
   const f = await newFolder('<b>Team</b>');
   await put(f, M1, editA, meeting({title:'Older <script>', startedAt:'2026-09-01T12:00:00Z'}));
@@ -188,8 +210,8 @@ test('folder and meeting pages render escaped, dated and linked', async () => {
   assert.ok(res.body.includes(`<a href="/f/${f.id}">← &lt;b&gt;Team&lt;/b&gt;</a>`));
   assert.ok(res.body.includes('Recorded by &lt;i&gt;Eve&lt;/i&gt; · 23 Sep 2026'));
   assert.ok(res.body.includes('&lt;script&gt;alert(1)&lt;/script&gt;') && !res.body.includes('<script>') && !res.body.includes('<img'));
-  assert.ok(res.body.includes('&lt;i&gt;Eve&lt;/i&gt;<time>01:15</time>'));
-  assert.ok(res.body.includes('Speaker 2<time>60:00</time>'));
+  assert.ok(res.body.includes('&lt;i&gt;Eve&lt;/i&gt; <time>01:15</time>'));
+  assert.ok(res.body.includes('Speaker 2 <time>60:00</time>'));
 
   for (const query of [{id:f.id, meeting:M2.toLowerCase()}, {id:f.id, meeting:'11111111-0000-0000-0000-000000000000'}, {id:'d'.repeat(64)}, {id:'nope'}]) {
     res = response(); await pageAPI({method:'GET', query}, res);

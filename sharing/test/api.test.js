@@ -62,3 +62,17 @@ test('share writes are rate limited per client',async()=>{
  assert.equal(res.code,429);assert.equal(typeof res.body.error,'string');assert.equal(notes.size,0);
  assert.equal((await call('PUT',{auth:`Bearer ${ownerKey}`,ip:'203.0.113.10',payload:body})).code,200);
 });
+test('a shared note has a Markdown version for AI agents',async()=>{
+ notes.set(id,{note:{title:'Test meeting',tldr:'Summary',sections:[{heading:'Scope',bullets:['One\nline two']}],decisions:['Go'],actionItems:[{owner:'Sam',task:'Write spec'},{owner:null,task:'Review'}]},transcript:[{speaker:'Alice',time:'00:01',text:'Hello'}]});
+ const get=async(query,headers={})=>{const res=response();await page({method:'GET',query,headers},res);return res};
+ let res=await get({id:`${id}.md`});
+ assert.equal(res.code,200);assert.match(res.headers['Content-Type'],/^text\/markdown/);assert.match(res.headers['Cache-Control'],/no-store/);
+ assert.equal(res.body,'# Test meeting\n\n## Summary\n\nSummary\n\n## Scope\n\n- One\n  line two\n\n## Decisions\n\n- Go\n\n## Action items\n\n- [ ] **Sam:** Write spec\n- [ ] Review\n\n## Transcript\n\n**Alice** [00:01]: Hello\n');
+ res=await get({id},{accept:'text/markdown, text/html, */*'});assert.match(res.headers['Content-Type'],/^text\/markdown/);assert.equal(res.headers.Vary,'Accept');
+ res=await get({id},{accept:'text/html,application/xhtml+xml,*/*;q=0.8'});assert.match(res.headers['Content-Type'],/^text\/html/);
+ assert.ok(res.body.includes(`<link rel="alternate" type="text/markdown" href="/s/${id}.md">`));
+ assert.ok(res.body.includes(`href="/s/${id}.md"`) && res.body.includes('Alice <time>00:01</time>'));
+ assert.equal((await get({id:`${'b'.repeat(64)}.md`})).code,404);
+ assert.equal((await get({id:`${id}.txt`})).code,404);
+ notes.clear();
+});
