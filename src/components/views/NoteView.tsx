@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { beginCheck, finishCheck, type CheckSave } from "../../lib/actionChecks";
 import { api } from "../../lib/api";
 import { attendeeSentence, meetingSentence, shortDate } from "../../lib/format";
 import { attempt } from "../../lib/store";
@@ -113,19 +114,52 @@ export function MeetingHeading({ meeting, title }: { meeting: Meeting; title: st
 
 /** Action items that check off at once and save in the background, reverting if the save fails. */
 function useCheckedItems(id: string, note: MeetingNote): [ActionItem[], (index: number) => void] {
-  const [items, setItems] = useState(note.actionItems);
+  const [book, setBook] = useState<CheckSave<ActionItem[]>>({ shown: note.actionItems, saved: note.actionItems });
+  const bookRef = useRef(book);
+  const noteRef = useRef(note);
+  const chain = useRef(Promise.resolve());
+  const alive = useRef(true);
+  noteRef.current = note;
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
   const [shownNote, setShownNote] = useState(note);
   if (shownNote !== note) {
     setShownNote(note);
-    setItems(note.actionItems);
+    // A refresh from a save replaces the list once nothing newer is waiting to be saved.
+    if (bookRef.current.shown === bookRef.current.saved) {
+      const next = { shown: note.actionItems, saved: note.actionItems };
+      bookRef.current = next;
+      setBook(next);
+    }
   }
 
   const toggle = (index: number) => {
-    const next = items.map((item, i) => (i === index ? { ...item, done: !item.done } : item));
-    setItems(next);
-    void attempt(() => api.saveNote(id, { ...note, actionItems: next })).then((saved) => saved || setItems(items));
+    const next = beginCheck(
+      bookRef.current,
+      bookRef.current.shown.map((item, i) => (i === index ? { ...item, done: !item.done } : item)),
+    );
+    bookRef.current = next;
+    setBook(next);
+    // Saves run one at a time and write the list as it is when each one starts, so a slow
+    // response cannot overwrite a check the person made after it.
+    chain.current = chain.current
+      .then(async () => {
+        const attempted = bookRef.current.shown;
+        if (attempted === bookRef.current.saved) return;
+        const ok = await attempt(() => api.saveNote(id, { ...noteRef.current, actionItems: attempted }));
+        if (!alive.current) return;
+        const finished = finishCheck(bookRef.current, attempted, ok);
+        bookRef.current = finished;
+        setBook(finished);
+      })
+      .catch(() => undefined);
   };
-  return [items, toggle];
+  return [book.shown, toggle];
 }
 
 function SectionHeading({ children }: { children: ReactNode }) {

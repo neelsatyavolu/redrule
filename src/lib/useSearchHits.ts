@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
+import { applicableHits, type SearchResult } from "./searchHits";
 import { useStore } from "./store";
 
 /** Waits for typing to pause before searching notes and transcripts. */
@@ -9,20 +10,20 @@ const DEBOUNCE_MS = 150;
 export function useSearchHits(query: string): ReadonlyMap<string, string | null> | null {
   // A changed meeting can change what matches, so search again when the library changes.
   const revision = useStore((s) => s.app?.revision ?? 0);
-  const [hits, setHits] = useState<ReadonlyMap<string, string | null> | null>(null);
+  const [result, setResult] = useState<SearchResult | null>(null);
   const trimmed = query.trim();
 
   useEffect(() => {
     if (trimmed === "") {
-      setHits(null);
+      setResult(null);
       return;
     }
     let current = true;
     const timer = window.setTimeout(() => {
       api
         .searchMeetings(trimmed)
-        .then((found) => current && setHits(new Map(found.map((hit) => [hit.id, hit.snippet]))))
-        .catch(() => current && setHits(new Map()));
+        .then((found) => current && setResult({ query: trimmed, hits: new Map(found.map((hit) => [hit.id, hit.snippet])) }))
+        .catch(() => current && setResult({ query: trimmed, hits: new Map() }));
     }, DEBOUNCE_MS);
     return () => {
       current = false;
@@ -30,5 +31,5 @@ export function useSearchHits(query: string): ReadonlyMap<string, string | null>
     };
   }, [trimmed, revision]);
 
-  return trimmed === "" ? null : hits;
+  return applicableHits(query, result);
 }

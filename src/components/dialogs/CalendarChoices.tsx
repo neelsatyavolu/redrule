@@ -1,18 +1,23 @@
 import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { api, errorMessage } from "../../lib/api";
 import type { Calendar } from "../../lib/types";
 import { Switch } from "../ui";
 
 /** The calendars whose events may name a recording, grouped by account. New calendars start on. */
 export function CalendarChoices({ ignored, onChange }: { ignored: string[]; onChange: (ignored: string[]) => void }) {
   const [calendars, setCalendars] = useState<Calendar[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let current = true;
-    void api.calendars().then((list) => current && setCalendars(list));
+    api
+      .calendars()
+      .then((list) => current && setCalendars(list))
+      .catch((failure) => current && setError(errorMessage(failure)));
     return () => {
       current = false;
     };
   }, []);
+  if (error) return <p className="pb-3 text-[12px] text-margin">Calendars could not be loaded. {error}</p>;
   if (!calendars) return null;
   if (calendars.length === 0) {
     return <p className="pb-3 text-[12px] text-graphite">This Mac has no calendars yet.</p>;

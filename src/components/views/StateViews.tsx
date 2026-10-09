@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { APP_NAMES, clock } from "../../lib/format";
+import { emptyLibraryMessage } from "../../lib/library";
 import { attempt, scopeFolder, useStore } from "../../lib/store";
 import { canWriteNotes, type Meeting, type SpeechModel, type TranscriptSegment } from "../../lib/types";
 import { CopyNoticeButton } from "../ConsentNotice";
@@ -134,29 +135,33 @@ function NotesStatus({ meetingId }: { meetingId: string }) {
 export function EmptyView() {
   const app = useStore((s) => s.app);
   const openDialog = useDialogs((s) => s.open);
+  const library = useStore((s) => s.library);
+  const searching = useStore((s) => s.search.trim() !== "");
   // With a shared folder open, the recording goes into it.
-  const folder = useStore((s) => scopeFolder(s.library));
+  const folder = scopeFolder(library);
   const needsSetup = app && (!app.permissions.microphone || !app.permissions.screenRecording || !canWriteNotes(app));
+  const message = emptyLibraryMessage(library, searching);
 
   return (
     <PadPage className="pt-[14vh]">
       <PadRow>
-        <h1 className="font-serif text-[30px] leading-tight font-semibold text-ink">No meetings yet</h1>
+        <h1 className="font-serif text-[30px] leading-tight font-semibold text-ink">{message.title}</h1>
       </PadRow>
       <PadRow className="mt-4">
-        <p className="max-w-[54ch] font-serif text-[16px] leading-[1.65] text-ink">
-          Join a Zoom or Google Meet call and Redrule offers to take notes. It listens to the call and your microphone,
-          transcribes on this Mac, and writes up the meeting when it ends.
-        </p>
+        <p className="max-w-[54ch] font-serif text-[16px] leading-[1.65] text-ink">{message.detail}</p>
       </PadRow>
-      <PadRow className="mt-6">
-        <div className="flex flex-wrap gap-2">
-          <Button variant="primary" onClick={() => void attempt(() => api.startRecording("manual", folder ?? undefined))}>
-            Record now
-          </Button>
-          {needsSetup && <Button onClick={() => openDialog({ kind: "settings", tab: "permissions" })}>Finish setup</Button>}
-        </div>
-      </PadRow>
+      {(message.record || needsSetup) && (
+        <PadRow className="mt-6">
+          <div className="flex flex-wrap gap-2">
+            {message.record && (
+              <Button variant="primary" onClick={() => void attempt(() => api.startRecording("manual", folder ?? undefined))}>
+                Record now
+              </Button>
+            )}
+            {needsSetup && <Button onClick={() => openDialog({ kind: "settings", tab: "permissions" })}>Finish setup</Button>}
+          </div>
+        </PadRow>
+      )}
     </PadPage>
   );
 }

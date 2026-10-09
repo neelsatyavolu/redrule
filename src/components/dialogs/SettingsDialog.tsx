@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { api, errorMessage } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
 import { LOCAL_NOTES, writesNotesLocally, type Microphone, type ModelOption } from "../../lib/types";
 import { Button, Dialog, Segmented, SettingRow, Switch, TextArea } from "../ui";
@@ -52,8 +52,18 @@ function GeneralSettings() {
   const app = useStore((s) => s.app);
   const microphones = useMicrophones();
   const [models, setModels] = useState<ModelOption[]>([]);
+  const [modelsError, setModelsError] = useState<string | null>(null);
   const [localModels] = useLocalModels();
-  useEffect(() => void api.modelChoices().then(setModels), []);
+  useEffect(() => {
+    let current = true;
+    api
+      .modelChoices()
+      .then((list) => current && setModels(list))
+      .catch((error) => current && setModelsError(errorMessage(error)));
+    return () => {
+      current = false;
+    };
+  }, []);
   if (!app) return null;
   const { settings } = app;
   const update = (patch: Parameters<typeof api.updateSettings>[0]) => void attempt(() => api.updateSettings(patch));
@@ -140,6 +150,7 @@ function GeneralSettings() {
           sameAsNotes
         />
       </SettingRow>
+      {modelsError && <p className="pb-3 text-[12px] text-margin">Models could not be loaded. {modelsError}</p>}
 
       <SettingRow
         title="Remind me to ask for consent"
@@ -217,7 +228,11 @@ function useMicrophones(): Microphone[] {
   const [microphones, setMicrophones] = useState<Microphone[]>([]);
   useEffect(() => {
     let current = true;
-    const load = () => api.microphones().then((list) => current && setMicrophones(list));
+    const load = () =>
+      api
+        .microphones()
+        .then((list) => current && setMicrophones(list))
+        .catch(() => undefined);
     void load();
     const timer = window.setInterval(load, 2000);
     return () => {

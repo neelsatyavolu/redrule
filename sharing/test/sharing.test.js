@@ -8,6 +8,10 @@ test('validates and projects only public note fields', () => {
  assert.equal(JSON.stringify(result).includes('hidden'),false);
  assert.throws(()=>validateNote({note:{...note,title:42}}));
  assert.throws(()=>validateNote({note,transcript:'wrong'}));
+ const checked = validateNote({note:{...note,actionItems:[{owner:'Sam',task:'Write spec',done:true},{task:'Review',done:false}]}});
+ assert.deepEqual(checked.note.actionItems[0], {owner:'Sam', task:'Write spec', done:true});
+ assert.deepEqual(checked.note.actionItems[1], {owner:null, task:'Review'});
+ assert.throws(()=>validateNote({note:{...note,actionItems:[{task:'Nope',done:'yes'}]}}));
 });
 test('write authorization requires configured credential',()=>{
  assert.equal(authorized(undefined,undefined),false);

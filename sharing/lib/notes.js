@@ -21,7 +21,12 @@ export function validateNote(input) {
     title: text(n.title, 1000), tldr: text(n.tldr),
     sections: array(n.sections, s => ({heading:text(s.heading,1000), bullets:array(s.bullets,b=>text(b))}),100),
     decisions: array(n.decisions,d=>text(d)),
-    actionItems: array(n.actionItems,a=>({owner:a.owner == null ? null : text(a.owner,200),task:text(a.task)}))
+    // `done` is optional. Checked items stay checked on the shared page; a non-boolean is rejected.
+    actionItems: array(n.actionItems,a=>{
+      if (a?.done !== undefined && typeof a.done !== 'boolean') throw new Error('Invalid done');
+      const item = {owner:a.owner == null ? null : text(a.owner,200), task:text(a.task)};
+      return a?.done === true ? {...item, done:true} : item;
+    })
   };
   const result = {note};
   if (input.transcript != null) result.transcript = array(input.transcript,s=>({speaker:text(s.speaker,200),time:text(s.time,30),text:text(s.text)}),20000);
@@ -34,6 +39,7 @@ export const escape = value => String(value).replace(/[&<>"']/g, c=>({'&':'&amp;
 export const renderPage = (title, body, markdown) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>${escape(title)} · Redrule</title><link rel="stylesheet" href="/style.css"><link rel="alternate" type="text/markdown" href="${escape(markdown)}"></head><body><main><header><a href="/">Redrule</a><span>Shared meeting notes</span></header>${body}<footer>Shared with Redrule · Anyone with this link can read this page. · AI agents can read it as <a href="${escape(markdown)}">Markdown</a>.</footer></main></body></html>`;
 export function renderArticle({note:n,transcript}, {eyebrow='ON THE RECORD', byline=''}={}) {
   const list = values => `<ul>${values.map(v=>`<li>${escape(v)}</li>`).join('')}</ul>`;
-  return `<article><p class="eyebrow">${eyebrow}</p><h1>${escape(n.title)}</h1>${byline}<p class="summary">${escape(n.tldr)}</p>${n.sections.map(s=>`<section><h2>${escape(s.heading)}</h2>${list(s.bullets)}</section>`).join('')}${n.decisions.length?`<section><h2>Decisions</h2>${list(n.decisions)}</section>`:''}${n.actionItems.length?`<section><h2>Action items</h2><ul class="actions">${n.actionItems.map(a=>`<li>${a.owner?`<span class="owner">${escape(a.owner)}</span>`:''}${escape(a.task)}</li>`).join('')}</ul></section>`:''}${transcript?`<details><summary>Transcript <span>${transcript.length} passages</span></summary>${transcript.map(s=>`<div class="passage"><div class="speaker">${escape(s.speaker)} <time>${escape(s.time)}</time></div><p>${escape(s.text)}</p></div>`).join('')}</details>`:''}</article>`;
+  const action = a => `<li${a.done ? ' class="done"' : ''}>${a.done ? '<span class="sr">Done. </span>' : ''}${a.owner ? `<span class="owner">${escape(a.owner)}</span>` : ''}${escape(a.task)}</li>`;
+  return `<article><p class="eyebrow">${eyebrow}</p><h1>${escape(n.title)}</h1>${byline}<p class="summary">${escape(n.tldr)}</p>${n.sections.map(s=>`<section><h2>${escape(s.heading)}</h2>${list(s.bullets)}</section>`).join('')}${n.decisions.length?`<section><h2>Decisions</h2>${list(n.decisions)}</section>`:''}${n.actionItems.length?`<section><h2>Action items</h2><ul class="actions">${n.actionItems.map(action).join('')}</ul></section>`:''}${transcript?`<details><summary>Transcript <span>${transcript.length} passages</span></summary>${transcript.map(s=>`<div class="passage"><div class="speaker">${escape(s.speaker)} <time>${escape(s.time)}</time></div><p>${escape(s.text)}</p></div>`).join('')}</details>`:''}</article>`;
 }
 export const renderNote = (data, markdown) => renderPage(data.note.title, renderArticle(data), markdown);

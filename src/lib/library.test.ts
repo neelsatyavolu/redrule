@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { folderScope, keptTag, scopeFolder, visibleMeetings, withFolderMeetings } from "./library";
+import { emptyLibraryMessage, folderScope, keptTag, scopeFolder, visibleMeetings, withFolderMeetings } from "./library";
 import type { AppState, Meeting } from "./types";
 
 const FOLDER = "f".repeat(64);
@@ -29,6 +29,13 @@ describe("library scopes", () => {
     expect(ids(visibleMeetings(app, "meetings"))).toEqual(["mine", "shared"]);
     expect(ids(visibleMeetings(app, "archive"))).toEqual(["old"]);
     expect(ids(visibleMeetings(app, folderScope(FOLDER)))).toEqual(["shared", "theirs"]);
+  });
+
+  it("describes an empty archive, folder or search instead of a brand-new library", () => {
+    expect(emptyLibraryMessage("meetings", false).title).toBe("No meetings yet");
+    expect(emptyLibraryMessage("archive", false)).toMatchObject({ title: "Nothing archived", record: false });
+    expect(emptyLibraryMessage(folderScope(FOLDER), false)).toMatchObject({ title: "No meetings in this folder", record: true });
+    expect(emptyLibraryMessage("meetings", true)).toMatchObject({ title: "No meetings match", record: false });
   });
 
   it("filters by tag within the scope and drops a tag no meeting there has", () => {

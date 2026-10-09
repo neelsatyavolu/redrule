@@ -31,3 +31,30 @@ export function visibleMeetings(app: AppState | null, library: Library, tag: str
 export function keptTag(app: AppState | null, library: Library, tag: string | null): string | null {
   return tag !== null && visibleMeetings(app, library, tag).length > 0 ? tag : null;
 }
+
+/** What the detail pane says when the current list has nothing selected. */
+export function emptyLibraryMessage(library: Library, searching: boolean): { title: string; detail: string; record: boolean } {
+  if (searching) {
+    return { title: "No meetings match", detail: "Try a different word, or clear the search.", record: false };
+  }
+  if (scopeFolder(library) !== null) {
+    return {
+      title: "No meetings in this folder",
+      detail: "Record with the folder open, or move a meeting here from its menu.",
+      record: true,
+    };
+  }
+  if (library === "archive") {
+    return {
+      title: "Nothing archived",
+      detail: "Archive a meeting from its menu when you're done with it.",
+      record: false,
+    };
+  }
+  return {
+    title: "No meetings yet",
+    detail:
+      "Join a Zoom or Google Meet call and Redrule offers to take notes. It listens to the call and your microphone, transcribes on this Mac, and writes up the meeting when it ends.",
+    record: true,
+  };
+}

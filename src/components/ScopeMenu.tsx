@@ -68,17 +68,24 @@ export function ScopeMenu({ value, folders, onChange }: { value: Library; folder
 /** Copying the link, and the owner's rename, reset and delete; others can leave. */
 export function FolderActions({ folder }: { folder: FolderInfo }) {
   const open = useDialogs((s) => s.open);
+  // A dead link still belongs to its owner: Delete removes the local copy (and the remote one, if any
+  // remains). Rename and reset need a working link. Everyone else can only leave.
+  const manage = folder.owner
+    ? [
+        ...(!folder.unavailable
+          ? [
+              { label: "Rename…", icon: Pencil, onSelect: () => open({ kind: "renameFolder", folder }) },
+              { label: "Reset link…", icon: RotateCcw, onSelect: () => open({ kind: "resetFolder", folder }) },
+            ]
+          : []),
+        { label: "Delete folder…", icon: Trash2, onSelect: () => open({ kind: "deleteFolder", folder }), destructive: true as const },
+      ]
+    : [{ label: "Leave folder…", icon: LogOut, onSelect: () => open({ kind: "leaveFolder", folder }), destructive: true as const }];
   const items: { label: string; icon: Icon; onSelect: () => void; destructive?: boolean }[] = [
-    ...(folder.unavailable
-      ? []
-      : [{ label: "Copy link", icon: Link, onSelect: () => void attempt(() => api.copyFolderLink(folder.id), "Folder link copied") }]),
-    ...(folder.owner && !folder.unavailable
-      ? [
-          { label: "Rename…", icon: Pencil, onSelect: () => open({ kind: "renameFolder", folder }) },
-          { label: "Reset link…", icon: RotateCcw, onSelect: () => open({ kind: "resetFolder", folder }) },
-          { label: "Delete folder…", icon: Trash2, onSelect: () => open({ kind: "deleteFolder", folder }), destructive: true },
-        ]
-      : [{ label: "Leave folder…", icon: LogOut, onSelect: () => open({ kind: "leaveFolder", folder }), destructive: true }]),
+    ...(!folder.unavailable
+      ? [{ label: "Copy link", icon: Link, onSelect: () => void attempt(() => api.copyFolderLink(folder.id), "Folder link copied") }]
+      : []),
+    ...manage,
   ];
   return (
     <DropdownMenu.Root>
