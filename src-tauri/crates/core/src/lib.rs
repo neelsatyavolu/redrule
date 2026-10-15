@@ -7,6 +7,7 @@ pub mod detector_logic;
 pub mod error;
 pub mod export;
 pub mod folders;
+pub mod mcp;
 pub mod models;
 pub mod oauth;
 pub mod search;

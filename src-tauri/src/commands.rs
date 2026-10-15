@@ -53,6 +53,20 @@ pub fn set_open_at_login(handle: tauri::AppHandle, enabled: bool) -> Result<bool
     changed.and_then(|()| login.is_enabled()).map_err(|error| crate::core::Error::message(error.to_string()))
 }
 
+/// Which coding agents on this Mac can read Redrule's notes.
+#[tauri::command]
+pub fn agent_statuses() -> Result<Vec<crate::agents::AgentStatus>> {
+    crate::agents::statuses()
+}
+
+#[tauri::command]
+pub async fn connect_agent(agent: crate::agents::Agent) -> Result<Vec<crate::agents::AgentStatus>> {
+    tauri::async_runtime::spawn_blocking(move || crate::agents::connect(agent))
+        .await
+        .map_err(|e| crate::core::Error::message(e.to_string()))??;
+    crate::agents::statuses()
+}
+
 #[tauri::command]
 pub fn get_state(app: AppState) -> Snapshot {
     app.refresh_permissions();
@@ -159,6 +173,18 @@ pub async fn leave_folder(app: AppState<'_>, id: String) -> Result<()> {
 #[tauri::command]
 pub fn copy_folder_link(app: AppState, id: String) -> Result<()> {
     app.copy_folder_link(&id)
+}
+
+#[tauri::command]
+pub fn copy_folder_connector(app: AppState, id: String) -> Result<()> {
+    app.copy_folder_connector(&id)
+}
+
+/// Copies the Terminal command that connects an agent, for when connecting from Redrule fails.
+#[tauri::command]
+pub fn copy_agent_command(handle: tauri::AppHandle, agent: crate::agents::Agent) -> Result<()> {
+    let status = crate::agents::statuses()?.into_iter().find(|s| s.agent == agent).ok_or_else(|| crate::core::Error::message("Unknown agent."))?;
+    handle.clipboard().write_text(status.command).map_err(|e| crate::core::Error::message(format!("The command could not be copied. {e}")))
 }
 
 #[tauri::command]

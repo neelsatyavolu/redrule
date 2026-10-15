@@ -3,6 +3,7 @@ import { api } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
 import { LOCAL_NOTES, writesNotesLocally, type Microphone, type ModelOption } from "../../lib/types";
 import { Button, Dialog, Segmented, SettingRow, Switch, TextArea } from "../ui";
+import { AgentSettings } from "./AgentSettings";
 import { ApiKeyRows } from "./ApiKeyRows";
 import { CalendarChoices } from "./CalendarChoices";
 import type { SettingsTab } from "./dialogState";
@@ -24,6 +25,7 @@ export function SettingsDialog({ initialTab = "general", onClose }: { initialTab
           { value: "general", label: "General" },
           { value: "transcription", label: "Models" },
           { value: "accounts", label: "Accounts" },
+          { value: "agents", label: "Agents" },
           { value: "permissions", label: "Permissions" },
         ]}
       />
@@ -37,6 +39,7 @@ export function SettingsDialog({ initialTab = "general", onClose }: { initialTab
             <ApiKeyRows />
           </>
         )}
+        {tab === "agents" && <AgentSettings />}
         {tab === "permissions" && (
           <div className="divide-y divide-rule">
             <PermissionRows />

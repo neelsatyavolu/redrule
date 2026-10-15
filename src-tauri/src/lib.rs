@@ -1,5 +1,6 @@
 pub use minutes_core as core;
 
+pub mod agents;
 mod app;
 mod commands;
 pub mod platform;
@@ -70,6 +71,8 @@ pub fn run() {
             commands::app_ready,
             commands::open_at_login,
             commands::set_open_at_login,
+            commands::agent_statuses,
+            commands::connect_agent,
             commands::get_state,
             commands::meeting_detail,
             commands::start_recording,
@@ -89,6 +92,8 @@ pub fn run() {
             commands::delete_folder,
             commands::leave_folder,
             commands::copy_folder_link,
+            commands::copy_folder_connector,
+            commands::copy_agent_command,
             commands::delete_meeting,
             commands::save_note,
             commands::copy_markdown,

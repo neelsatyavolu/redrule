@@ -168,6 +168,16 @@ export interface NotesProgress {
   percent: number;
 }
 
+/** A coding agent on this Mac that can read notes through Redrule's MCP server. */
+export type Agent = "claude" | "codex" | "grok";
+
+export interface AgentStatus {
+  agent: Agent;
+  connected: boolean;
+  /** What to run in Terminal if connecting from Redrule fails. */
+  command: string;
+}
+
 export interface AppState {
   meetings: Meeting[];
   recordingId: string | null;

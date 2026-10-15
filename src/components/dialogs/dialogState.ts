@@ -14,7 +14,7 @@ export type OpenDialog =
   | { kind: "delete"; meeting: Meeting }
   | { kind: "settings"; tab?: SettingsTab };
 
-export type SettingsTab = "general" | "transcription" | "accounts" | "permissions";
+export type SettingsTab = "general" | "transcription" | "accounts" | "agents" | "permissions";
 
 interface DialogState {
   current: OpenDialog | null;

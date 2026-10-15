@@ -168,6 +168,13 @@ mockIPC((command, args) => {
         { id: "home", title: "Home", account: "iCloud" },
         { id: "birthdays", title: "Birthdays", account: "Other" },
       ];
+    case "agent_statuses":
+    case "connect_agent":
+      return [
+        { agent: "claude", connected: command === "connect_agent", command: "claude mcp add --scope user redrule -- '/Applications/Redrule.app/Contents/MacOS/Redrule' --mcp" },
+        { agent: "codex", connected: false, command: "codex mcp add redrule -- '/Applications/Redrule.app/Contents/MacOS/Redrule' --mcp" },
+        { agent: "grok", connected: true, command: "grok mcp add --scope user redrule '/Applications/Redrule.app/Contents/MacOS/Redrule' -- --mcp" },
+      ];
     case "open_at_login":
       return false;
     case "set_open_at_login":

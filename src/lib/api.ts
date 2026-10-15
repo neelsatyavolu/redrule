@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  Agent,
+  AgentStatus,
   ApiProvider,
   AppState,
   Calendar,
@@ -23,6 +25,11 @@ export const api = {
   openAtLogin: () => invoke<boolean>("open_at_login"),
   /** Resolves to whether Redrule is a login item afterwards. */
   setOpenAtLogin: (enabled: boolean) => invoke<boolean>("set_open_at_login", { enabled }),
+  agentStatuses: () => invoke<AgentStatus[]>("agent_statuses"),
+  /** Resolves to the refreshed statuses. */
+  connectAgent: (agent: Agent) => invoke<AgentStatus[]>("connect_agent", { agent }),
+  copyAgentCommand: (agent: Agent) => invoke<void>("copy_agent_command", { agent }),
+  copyFolderConnector: (id: string) => invoke<void>("copy_folder_connector", { id }),
   getState: () => invoke<AppState>("get_state"),
   meetingDetail: (id: string) => invoke<MeetingDetail>("meeting_detail", { id }),
   startRecording: (source: MeetingApp = "manual", folder?: string) => invoke<void>("start_recording", { source, folder }),

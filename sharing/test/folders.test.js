@@ -36,6 +36,7 @@ const {default:folderAPI} = await import('../api/folder.js');
 const {default:meetingAPI} = await import('../api/folder-meeting.js');
 const {default:resetAPI} = await import('../api/folder-reset.js');
 const {default:pageAPI} = await import('../api/folder-page.js');
+const {default:mcpAPI} = await import('../api/folder-mcp.js');
 const {validateMeeting} = await import('../lib/folders.js');
 const {formatDate, formatTime} = await import('../lib/folder-render.js');
 
@@ -188,6 +189,31 @@ test('folder and meeting pages have Markdown versions for AI agents', async () =
   assert.match(res.headers['Content-Type'], /^text\/markdown/);
   assert.ok(res.body.startsWith('# Not found\n\nThis meeting is no longer in the shared folder.') && res.body.includes('https://share.example/llms.txt'));
   assert.equal((await get({id:'d'.repeat(64)}, {accept:'text/markdown'})).headers['Content-Type'], 'text/markdown; charset=utf-8');
+});
+
+test('a folder is a read-only MCP server for cloud agents', async () => {
+  const f = await newFolder('Team');
+  await put(f, M1, editA, meeting({title:'Older', startedAt:'2026-09-01T12:00:00Z'}));
+  await put(f, M2, editB, meeting({title:'Newer'}));
+  const rpc = async (body, id = f.id, method = 'POST') => { const res = response(); await mcpAPI({method, query:{id}, body, headers:{host:'share.example'}}, res); return res; };
+  let res = await rpc({jsonrpc:'2.0', id:1, method:'initialize', params:{protocolVersion:'2025-03-26'}});
+  assert.equal(res.code, 200);
+  assert.equal(res.body.result.protocolVersion, '2025-03-26');
+  assert.equal((await rpc({jsonrpc:'2.0', method:'notifications/initialized'})).code, 202);
+  res = await rpc(JSON.stringify({jsonrpc:'2.0', id:2, method:'tools/list'}));
+  assert.deepEqual(res.body.result.tools.map(t => t.name), ['list_meetings', 'get_meeting']);
+  res = await rpc({jsonrpc:'2.0', id:3, method:'tools/call', params:{name:'list_meetings'}});
+  assert.equal(res.body.result.content[0].text, `# Team\n\n- ${M2} · 22 Sep 2026 · Newer · Recorded by Dana\n- ${M1} · 1 Sep 2026 · Older · Recorded by Dana`);
+  res = await rpc({jsonrpc:'2.0', id:4, method:'tools/call', params:{name:'get_meeting', arguments:{id:M2.toLowerCase()}}});
+  assert.ok(res.body.result.content[0].text.startsWith('# Planning notes\n\nRecorded by Dana'));
+  assert.ok(res.body.result.content[0].text.includes('Lee'));
+  res = await rpc({jsonrpc:'2.0', id:5, method:'tools/call', params:{name:'get_meeting', arguments:{id:'../secret'}}});
+  assert.equal(res.body.result.isError, true);
+  assert.equal((await rpc({jsonrpc:'2.0', id:6, method:'resources/list'})).body.error.code, -32601);
+  assert.equal((await rpc('{not json')).code, 400);
+  assert.equal((await rpc({jsonrpc:'2.0', id:7, method:'ping'}, 'd'.repeat(64))).code, 404);
+  assert.equal((await rpc({jsonrpc:'2.0', id:8, method:'ping'}, '../etc')).code, 404);
+  assert.equal((await rpc(undefined, f.id, 'GET')).code, 405);
 });
 
 test('folder and meeting pages render escaped, dated and linked', async () => {

@@ -11,6 +11,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/f/:id/mcp", "destination": "/api/folder-mcp?id=:id" },
     { "source": "/s/:id", "destination": "/api/note?id=:id" },
     { "source": "/f/:id", "destination": "/api/folder-page?id=:id" },
     { "source": "/f/:id/m/:meeting", "destination": "/api/folder-page?id=:id&meeting=:meeting" }

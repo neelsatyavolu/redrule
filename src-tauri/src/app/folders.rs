@@ -280,6 +280,15 @@ impl App {
             .map_err(|e| Error::message(format!("The link could not be copied. {e}")))
     }
 
+    /// The folder's MCP address, for agents that run in the cloud such as Grok Bot. It reads what the folder page shows.
+    pub fn copy_folder_connector(&self, id: &str) -> Result<()> {
+        let folder = self.folders.joined(id)?;
+        self.handle
+            .clipboard()
+            .write_text(format!("{BASE_URL}/f/{}/mcp", folder.id))
+            .map_err(|e| Error::message(format!("The address could not be copied. {e}")))
+    }
+
     /// Puts one of this Mac's meetings in a folder, or takes it out with None.
     pub fn set_meeting_folder(&self, id: &str, folder_id: Option<String>) -> Result<()> {
         let meeting = self.editable(id)?;
