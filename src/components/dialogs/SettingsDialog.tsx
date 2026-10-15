@@ -51,6 +51,7 @@ export function SettingsDialog({ initialTab = "general", onClose }: { initialTab
 function GeneralSettings() {
   const app = useStore((s) => s.app);
   const microphones = useMicrophones();
+  const [openAtLogin, setOpenAtLogin] = useOpenAtLogin();
   const [models, setModels] = useState<ModelOption[]>([]);
   const [localModels] = useLocalModels();
   useEffect(() => void api.modelChoices().then(setModels), []);
@@ -63,6 +64,10 @@ function GeneralSettings() {
     <div className="divide-y divide-rule">
       <SettingRow title="Show in Dock" detail="When off, open Redrule from its menu bar icon. Closing the window keeps Redrule running in the menu bar.">
         <Switch label="Show in Dock" checked={settings.showInDock} onChange={(showInDock) => update({ showInDock })} />
+      </SettingRow>
+
+      <SettingRow title="Open at Login" detail="Starts Redrule quietly in the menu bar when you log in, so it's ready for your first call.">
+        <Switch label="Open at Login" checked={openAtLogin} onChange={setOpenAtLogin} />
       </SettingRow>
 
       <SettingRow title="Microphone" detail="Changes apply to the next recording.">
@@ -210,6 +215,20 @@ function ConsentNoticeField({ saved, onSave }: { saved: string; onSave: (text: s
       />
     </div>
   );
+}
+
+/** Whether Redrule is a login item, read from macOS each time settings open. */
+function useOpenAtLogin(): [boolean, (enabled: boolean) => void] {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    let current = true;
+    void attempt(() => api.openAtLogin().then((value) => current && setEnabled(value)));
+    return () => {
+      current = false;
+    };
+  }, []);
+  const change = (value: boolean) => void attempt(() => api.setOpenAtLogin(value).then(setEnabled));
+  return [enabled, change];
 }
 
 /** Input devices, refreshed while settings are open so a newly plugged-in headset appears. */

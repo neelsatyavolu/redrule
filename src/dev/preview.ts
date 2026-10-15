@@ -168,6 +168,10 @@ mockIPC((command, args) => {
         { id: "home", title: "Home", account: "iCloud" },
         { id: "birthdays", title: "Birthdays", account: "Other" },
       ];
+    case "open_at_login":
+      return false;
+    case "set_open_at_login":
+      return (args as { enabled?: boolean } | undefined)?.enabled ?? false;
     case "microphones":
       return [{ id: "a", name: "MacBook Pro Microphone" }, { id: "b", name: "AirPods Pro" }];
     default:

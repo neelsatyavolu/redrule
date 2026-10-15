@@ -19,6 +19,12 @@ const BANNER_SIZE: (f64, f64) = (372.0, 132.0);
 const BANNER_MARGIN: f64 = 14.0;
 /// Asks the main window to open its settings sheet.
 pub const OPEN_SETTINGS_EVENT: &str = "open-settings";
+/// The login item passes this so Redrule starts in the menu bar without opening its window.
+pub const LOGIN_ARG: &str = "--login";
+
+pub fn launched_at_login() -> bool {
+    std::env::args().any(|arg| arg == LOGIN_ARG)
+}
 
 tauri_panel! {
     panel!(BannerPanel {

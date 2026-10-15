@@ -4,6 +4,7 @@ use std::sync::Arc;
 use minutes_engine::Microphone;
 use serde::Serialize;
 use tauri::State;
+use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use crate::app::{App, LocalModels, MeetingDetail, ModelKind, Settings, SettingsPatch, State as Snapshot};
@@ -31,9 +32,25 @@ pub struct ModelOption {
 }
 
 /// Shows the main window once the page has painted, so it never flashes blank.
+/// Opened at login, Redrule waits in the menu bar instead.
 #[tauri::command]
 pub fn app_ready(handle: tauri::AppHandle) {
-    shell::show_main(&handle);
+    if !shell::launched_at_login() {
+        shell::show_main(&handle);
+    }
+}
+
+/// Whether Redrule is a login item. The Login Items list in System Settings can change it too.
+#[tauri::command]
+pub fn open_at_login(handle: tauri::AppHandle) -> Result<bool> {
+    handle.autolaunch().is_enabled().map_err(|error| crate::core::Error::message(error.to_string()))
+}
+
+#[tauri::command]
+pub fn set_open_at_login(handle: tauri::AppHandle, enabled: bool) -> Result<bool> {
+    let login = handle.autolaunch();
+    let changed = if enabled { login.enable() } else { login.disable() };
+    changed.and_then(|()| login.is_enabled()).map_err(|error| crate::core::Error::message(error.to_string()))
 }
 
 #[tauri::command]

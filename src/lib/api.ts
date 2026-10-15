@@ -20,6 +20,9 @@ import type {
 /** Typed wrappers for the backend commands in src-tauri/src/commands.rs. */
 export const api = {
   appReady: () => invoke<void>("app_ready"),
+  openAtLogin: () => invoke<boolean>("open_at_login"),
+  /** Resolves to whether Redrule is a login item afterwards. */
+  setOpenAtLogin: (enabled: boolean) => invoke<boolean>("set_open_at_login", { enabled }),
   getState: () => invoke<AppState>("get_state"),
   meetingDetail: (id: string) => invoke<MeetingDetail>("meeting_detail", { id }),
   startRecording: (source: MeetingApp = "manual", folder?: string) => invoke<void>("start_recording", { source, folder }),

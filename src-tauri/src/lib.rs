@@ -26,6 +26,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_nspanel::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_autostart::Builder::new().arg(shell::LOGIN_ARG).build())
         .setup(|tauri_app| {
             let handle = tauri_app.handle().clone();
             let support = core::store::support_folder().unwrap_or_else(|_| dirs::data_dir().unwrap_or_default().join("Redrule"));
@@ -36,6 +37,11 @@ pub fn run() {
             app.start();
             updates::check_in_background(&handle);
             usage_ping::start();
+            // Opened at login: stay in the menu bar until the person opens the window.
+            if shell::launched_at_login() {
+                shell::hide_to_menu_bar(&handle);
+                return Ok(());
+            }
             // The page shows the window once it has painted; if it never does, show it anyway.
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_secs(4)).await;
@@ -62,6 +68,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::app_ready,
+            commands::open_at_login,
+            commands::set_open_at_login,
             commands::get_state,
             commands::meeting_detail,
             commands::start_recording,
