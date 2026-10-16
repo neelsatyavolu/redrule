@@ -37,7 +37,7 @@ impl App {
         Ok(MeetingDetail {
             transcript: transcript::merge(&store.transcript(id)?),
             note: store.note(id)?,
-            // Rebuilt from the id: meetings shared before the move to n3el.dev saved the old host.
+            // Rebuilt from the id: meetings shared before a host move saved the old host.
             share: store.share(id)?.map(|share| MeetingShare { url: share_client::share_url(&share.id), ..share }),
         })
     }

@@ -297,12 +297,13 @@ mod tests {
 
     #[test]
     fn links_round_trip_and_reject_anything_else() {
-        let url = link("https://redrule.n3el.dev", ID, KEY);
+        let url = link("https://redrule.xanom.co", ID, KEY);
         assert_eq!(parse_link(&format!("  {url}\n")).unwrap(), (ID.to_string(), KEY.to_string()));
-        // Links shared before the move to n3el.dev keep working.
+        // Links shared from the earlier hosts keep working.
+        assert_eq!(parse_link(&link("https://redrule.n3el.dev", ID, KEY)).unwrap(), (ID.to_string(), KEY.to_string()));
         assert_eq!(parse_link(&link("https://redrule.vercel.app", ID, KEY)).unwrap(), (ID.to_string(), KEY.to_string()));
-        assert!(parse_link(&format!("https://redrule.n3el.dev/f/{ID}")).is_err());
-        assert!(parse_link(&format!("https://redrule.n3el.dev/s/{ID}#{KEY}")).is_err());
+        assert!(parse_link(&format!("https://redrule.xanom.co/f/{ID}")).is_err());
+        assert!(parse_link(&format!("https://redrule.xanom.co/s/{ID}#{KEY}")).is_err());
         assert!(parse_link(&format!("https://x/f/../../etc#{KEY}")).is_err());
         assert!(parse_link(&format!("https://x/f/{}#{KEY}", ID.to_uppercase())).is_err());
     }

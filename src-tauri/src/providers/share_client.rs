@@ -8,7 +8,7 @@ use crate::core::models::{MeetingNote, MeetingShare, TranscriptSegment};
 use crate::core::transcript::timestamp;
 use crate::core::{Error, Result};
 
-pub const BASE_URL: &str = "https://redrule.n3el.dev";
+pub const BASE_URL: &str = "https://redrule.xanom.co";
 const MAX_PAYLOAD: usize = 2_000_000;
 const TIMEOUT: Duration = Duration::from_secs(45);
 
