@@ -4,6 +4,13 @@
   "outputDirectory": "public",
   "cleanUrls": true,
   "redirects": [
+    { "source": "/", "has": [{ "type": "host", "value": "redrule.n3el.dev" }], "destination": "https://redrule.xanom.co/", "permanent": true },
+    { "source": "/index.html", "has": [{ "type": "host", "value": "redrule.n3el.dev" }], "destination": "https://redrule.xanom.co/", "permanent": true },
+    { "source": "/privacy", "has": [{ "type": "host", "value": "redrule.n3el.dev" }], "destination": "https://redrule.xanom.co/privacy", "permanent": true },
+    { "source": "/privacy.html", "has": [{ "type": "host", "value": "redrule.n3el.dev" }], "destination": "https://redrule.xanom.co/privacy", "permanent": true },
+    { "source": "/terms", "has": [{ "type": "host", "value": "redrule.n3el.dev" }], "destination": "https://redrule.xanom.co/terms", "permanent": true },
+    { "source": "/terms.html", "has": [{ "type": "host", "value": "redrule.n3el.dev" }], "destination": "https://redrule.xanom.co/terms", "permanent": true },
+    { "source": "/llms.txt", "has": [{ "type": "host", "value": "redrule.n3el.dev" }], "destination": "https://redrule.xanom.co/llms.txt", "permanent": true },
     {
       "source": "/download",
       "destination": "https://github.com/neelsatyavolu/redrule/releases/latest/download/Redrule.dmg",

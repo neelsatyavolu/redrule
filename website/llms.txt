@@ -15,5 +15,5 @@
 ## More
 
 - [Source code](https://github.com/neelsatyavolu/redrule): MIT licensed
-- [Download for Mac](https://redrule.n3el.dev/download)
-- [Privacy policy](https://redrule.n3el.dev/privacy)
+- [Download for Mac](https://redrule.xanom.co/download)
+- [Privacy policy](https://redrule.xanom.co/privacy)
