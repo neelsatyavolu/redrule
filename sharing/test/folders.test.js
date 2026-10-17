@@ -240,6 +240,7 @@ test('folder and meeting pages render escaped, dated and linked', async () => {
   assert.ok(res.body.includes(`<a href="/f/${f.id}">← &lt;b&gt;Team&lt;/b&gt;</a>`));
   assert.ok(res.body.includes('Recorded by &lt;i&gt;Eve&lt;/i&gt; · 23 Sep 2026'));
   assert.ok(res.body.includes('&lt;script&gt;alert(1)&lt;/script&gt;') && !res.body.includes('<script>') && !res.body.includes('<img'));
+  assert.ok(res.body.includes('class="done"') && res.body.includes('Done. ') && res.body.includes('Write spec'));
   assert.ok(res.body.includes('&lt;i&gt;Eve&lt;/i&gt; <time>01:15</time>'));
   assert.ok(res.body.includes('Speaker 2 <time>60:00</time>'));
 

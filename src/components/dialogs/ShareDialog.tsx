@@ -1,6 +1,6 @@
 import { Link2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { api, errorMessage } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
 import type { Meeting, MeetingShare } from "../../lib/types";
 import { Button, Dialog, Spinner, Switch } from "../ui";
@@ -10,12 +10,21 @@ export function ShareDialog({ meeting, onClose }: { meeting: Meeting; onClose: (
   const [share, setShare] = useState<MeetingShare | null>(null);
   const [includeTranscript, setIncludeTranscript] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    void api.meetingDetail(meeting.id).then(({ share }) => {
-      setShare(share);
-      if (share) setIncludeTranscript(share.includesTranscript);
-    });
+    let current = true;
+    api
+      .meetingDetail(meeting.id)
+      .then(({ share }) => {
+        if (!current) return;
+        setShare(share);
+        if (share) setIncludeTranscript(share.includesTranscript);
+      })
+      .catch((error) => current && setLoadError(errorMessage(error)));
+    return () => {
+      current = false;
+    };
   }, [meeting.id]);
 
   const publish = async () => {
@@ -84,6 +93,7 @@ export function ShareDialog({ meeting, onClose }: { meeting: Meeting; onClose: (
         </label>
       </div>
 
+      {loadError && <p className="mt-4 text-[12.5px] text-margin">The current link could not be loaded. {loadError}</p>}
       {share?.url && (
         <div className="mt-4 flex items-center gap-2.5 rounded-[10px] bg-wash px-3.5 py-2.5">
           <Link2 size={14} className="shrink-0 text-graphite" aria-hidden />

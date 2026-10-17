@@ -68,6 +68,11 @@ test('a shared note has a Markdown version for AI agents',async()=>{
  let res=await get({id:`${id}.md`});
  assert.equal(res.code,200);assert.match(res.headers['Content-Type'],/^text\/markdown/);assert.match(res.headers['Cache-Control'],/no-store/);
  assert.equal(res.body,'# Test meeting\n\n## Summary\n\nSummary\n\n## Scope\n\n- One\n  line two\n\n## Decisions\n\n- Go\n\n## Action items\n\n- [ ] **Sam:** Write spec\n- [ ] Review\n\n## Transcript\n\n**Alice** [00:01]: Hello\n');
+ notes.set(id,{...notes.get(id),note:{...notes.get(id).note,actionItems:[{owner:'Sam',task:'Write spec',done:true},{owner:null,task:'Review'}]}});
+ res=await get({id:`${id}.md`});
+ assert.ok(res.body.includes('- [x] **Sam:** Write spec'));
+ res=await get({id});
+ assert.ok(res.body.includes('class="done"') && res.body.includes('Done. ') && res.body.includes('Write spec'));
  res=await get({id},{accept:'text/markdown, text/html, */*'});assert.match(res.headers['Content-Type'],/^text\/markdown/);assert.equal(res.headers.Vary,'Accept');
  res=await get({id},{accept:'text/html,application/xhtml+xml,*/*;q=0.8'});assert.match(res.headers['Content-Type'],/^text\/html/);
  assert.ok(res.body.includes(`<link rel="alternate" type="text/markdown" href="/s/${id}.md">`));

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { api, errorMessage } from "../../lib/api";
 import { attempt, useStore } from "../../lib/store";
 import { LOCAL_NOTES, type LocalModel, type LocalModels, type ModelKind, type Settings, type SpeechModel } from "../../lib/types";
 import { Button, Spinner } from "../ui";
@@ -11,20 +11,41 @@ const SETTING: Record<ModelKind, (id: string) => Partial<Settings>> = {
 };
 
 /** The on-device models, refreshed when a download finishes so "Downloaded" stays true. */
-export function useLocalModels(): [LocalModels | null, () => void] {
+export function useLocalModels(): [LocalModels | null, () => void, string | null] {
   const [models, setModels] = useState<LocalModels | null>(null);
-  const reload = useCallback(() => void api.localModels().then(setModels), []);
+  const [error, setError] = useState<string | null>(null);
+  const reload = useCallback(() => {
+    void api
+      .localModels()
+      .then((list) => {
+        setModels(list);
+        setError(null);
+      })
+      .catch((failure) => setError(errorMessage(failure)));
+  }, []);
   const speech = useStore((s) => s.app?.speechModel.state);
   const notes = useStore((s) => s.app?.noteModel?.state);
   useEffect(reload, [reload, speech, notes]);
-  return [models, reload];
+  return [models, reload, error];
 }
 
 /** Choosing the on-device speech, speaker and note models. */
 export function TranscriptionSettings() {
   const app = useStore((s) => s.app);
-  const [models, reload] = useLocalModels();
-  if (!app || !models) return null;
+  const [models, reload, modelsError] = useLocalModels();
+  if (!app) return null;
+  if (!models) {
+    return modelsError ? (
+      <div className="space-y-3">
+        <p className="text-[13px] text-margin">The models could not be loaded. {modelsError}</p>
+        <Button size="sm" onClick={reload}>
+          Try again
+        </Button>
+      </div>
+    ) : (
+      <Spinner />
+    );
+  }
 
   const { settings, speechModel, noteModel } = app;
   const recording = app.recordingId !== null;
@@ -35,6 +56,7 @@ export function TranscriptionSettings() {
 
   return (
     <div className="space-y-5">
+      {modelsError && <p className="text-[13px] text-margin">The model list could not be refreshed. {modelsError}</p>}
       <p className="text-[12px] leading-relaxed text-graphite">
         These run on this Mac, so nothing you say leaves it until notes are written. Recommendations suit this Mac (
         {describeHardware(models.hardware)}) and stay light enough to run alongside a call.
