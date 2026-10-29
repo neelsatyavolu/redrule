@@ -1,23 +1,24 @@
 # Redrule
 
-Redrule is a free macOS app that notices when you are in a Zoom or Google Meet call, records the call and your microphone, and transcribes both on your Mac. When the call ends, it writes the notes: a summary, decisions and action items. No bot joins the meeting, and audio never leaves your Mac.
+Redrule is a free macOS app that notices when you are in a video call, records the call and your microphone, and transcribes both on your Mac. When the call ends, it writes the notes: a summary, decisions and action items. No bot joins the meeting, and audio never leaves your Mac.
 
 **[Download for Mac](https://redrule.xanom.co/download)**. Requires macOS 15 or later on Apple Silicon.
 
 ## Features
 
-- Offers to record when a Zoom or Google Meet call starts. Other calls can be recorded from the menu bar.
+- Offers to record when a Zoom, Google Meet, Microsoft Teams, Slack, Webex or FaceTime call starts. Other calls can be recorded from the menu bar.
 - Live transcription on your Mac with NVIDIA Parakeet. Your microphone is labelled **Me**, and other voices are told apart.
 - Notes written on your Mac by a local Qwen3.5 model, or by the provider you choose.
-- Ask questions about a meeting, check off action items and tag meetings.
-- Share a meeting's notes, and optionally its transcript, with a link. **Stop sharing** removes the hosted copy.
+- Ask questions about a meeting, check off action items, tag meetings, search all meetings and export a meeting as Markdown or plain text.
+- Share a meeting's notes, and optionally its transcript, with a link. **Stop sharing** removes the hosted copy. Shared folders collect meetings from several people behind one link.
+- AI agents can read your notes over MCP. Claude Code, Codex and Grok Build connect from Settings → Agents to a read-only server on your Mac, and each shared folder is also a read-only MCP server for cloud agents.
 - Updates install in the background, never during a recording.
 
 ## Privacy
 
-Recording and transcription happen on your Mac. Meetings are plain files in `~/Library/Application Support/Redrule/meetings`, and audio isn't saved unless you turn on **Keep audio recordings**. The transcript leaves your Mac only if you choose a provider to write notes, or share a meeting. Redrule has no accounts or ads.
+Recording and transcription happen on your Mac. Meetings are plain files in `~/Library/Application Support/Redrule/meetings`, and audio isn't saved unless you turn on **Keep audio recordings**. The transcript leaves your Mac only if you choose a provider to write notes, share a meeting, or connect an AI agent (which then sends what it reads to its own model). Redrule has no accounts or ads.
 
-Once a day Redrule sends an anonymous usage ping to `analytics.n3el.dev`, run by the developer: a random install ID, the app version, the macOS version and the chip type. It carries no meeting content, names, emails or file paths, and no IP address is stored. Turn off **Share anonymous usage stats** in Settings to stop it. The website counts visits without cookies. The [privacy policy](https://redrule.xanom.co/privacy) has the details.
+Once a day Redrule sends an anonymous usage ping to `analytics.n3el.dev`, run by the developer: a random install ID, the app version, the macOS version and the chip type. It carries no meeting content, names, emails or file paths, and no IP address is stored. Turn off **Share anonymous usage stats** in Settings to stop it. Crash reports to Sentry are off by default and are sent only if you turn on **Send crash reports**; they never include recordings, transcripts or notes. The website counts visits without cookies. The [privacy policy](https://redrule.xanom.co/privacy) has the details.
 
 ## Note-writing providers
 
